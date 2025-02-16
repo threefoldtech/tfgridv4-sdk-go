@@ -39,6 +39,8 @@ jobs:
             cmds/proxy_server/server -v
           elif [ ${{ matrix.dir }} == 'grid-cli' ]; then
             bin/tfcmd version
+          elif [ ${{ matrix.dir }} == 'node-registrar' ]; then
+            bin/server -v
           else
             bin/${{ matrix.dir }} version
           fi

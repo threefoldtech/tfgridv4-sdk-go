@@ -1,4 +1,4 @@
-module github.com/threefoldtech/tfgrid-sdk-go/node-registrar
+module github.com/threefoldtech/tfgrid4-sdk-go/node-registrar
 
 go 1.21
 

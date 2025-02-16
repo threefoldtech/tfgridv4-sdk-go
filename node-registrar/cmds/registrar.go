@@ -12,8 +12,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"github.com/threefoldtech/tfgrid-sdk-go/node-registrar/pkg/db"
-	"github.com/threefoldtech/tfgrid-sdk-go/node-registrar/pkg/server"
+	"github.com/threefoldtech/tfgrid4-sdk-go/node-registrar/pkg/db"
+	"github.com/threefoldtech/tfgrid4-sdk-go/node-registrar/pkg/server"
 	"gorm.io/gorm/logger"
 )
 

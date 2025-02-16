@@ -19,16 +19,7 @@ jobs:
       fail-fast: false
       matrix:
         dir:
-          - activation-service
-          - farmerbot 
-          - grid-cli
-          - grid-proxy
-          # - grid-client
-          - gridify
-          - monitoring-bot
-          # - rmb-sdk-go
-          - user-contracts-mon 
-          - tfrobot
+          - node-registrar
 
     steps:
       - uses: actions/checkout@v4
@@ -58,16 +49,7 @@ jobs:
       fail-fast: false
       matrix:
         dir:
-          - activation-service
-          - farmerbot 
-          - grid-cli
-          - grid-proxy
-          # - grid-client
-          - gridify
-          - monitoring-bot
-          # - rmb-sdk-go
-          - user-contracts-mon 
-          - tfrobot
+          - node-registrar
 
     steps:
       - name: Checkout the repo

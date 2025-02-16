@@ -11,7 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/lib/pq"
 	"github.com/rs/zerolog/log"
-	"github.com/threefoldtech/tfgrid-sdk-go/node-registrar/pkg/db"
+	"github.com/threefoldtech/tfgrid4-sdk-go/node-registrar/pkg/db"
 )
 
 const (

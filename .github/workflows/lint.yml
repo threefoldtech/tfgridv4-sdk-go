@@ -27,13 +27,4 @@ jobs:
       fail-fast: false
       matrix:
         dir:
-          - activation-service
-          - farmerbot 
-          - grid-cli
-          - grid-client
-          - grid-proxy
-          - gridify
-          - monitoring-bot
-          - rmb-sdk-go
-          - user-contracts-mon 
-          - tfrobot
+          - node-registrar

@@ -1,7 +1,7 @@
 package server
 
 import (
-	_ "github.com/threefoldtech/tfgrid-sdk-go/node-registrar/docs"
+	_ "github.com/threefoldtech/tfgrid4-sdk-go/node-registrar/docs"
 
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -44,5 +44,4 @@ func (s *Server) SetupRoutes() {
 	// protected by admin key
 	zosRoutes.Use(s.AuthMiddleware())
 	zosRoutes.PUT("/version", s.setZOSVersionHandler)
-
 }

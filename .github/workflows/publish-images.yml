@@ -26,14 +26,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - dir: "activation-service"
-            image: "tfactivation"
-          - dir: "farmerbot"
-            image: "tffarmerbot"
-          - dir: "grid-proxy"
-            image: "tfgridproxy"
-          - dir: "tools/relay-cache-warmer"
-            image: "relay-cache-warmer"
           - dir: "node-registrar"
             image: "tfregistrar"
 

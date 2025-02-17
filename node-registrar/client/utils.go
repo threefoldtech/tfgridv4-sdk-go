@@ -6,16 +6,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"time"
 
 	"github.com/pkg/errors"
 )
 
-func (c RegistrarClient) signRequest() (authHeader string) {
-	timestamp := time.Now().Unix()
+func (c RegistrarClient) signRequest(timestamp int64) (authHeader string) {
 	challenge := []byte(fmt.Sprintf("%d:%v", timestamp, c.twinID))
 
-	signature := ed25519.Sign(c.privateKey, challenge)
+	signature := ed25519.Sign(c.keyPair.privateKey, challenge)
 
 	authHeader = fmt.Sprintf(
 		"%s:%s",

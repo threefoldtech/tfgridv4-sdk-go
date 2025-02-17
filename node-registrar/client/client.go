@@ -7,9 +7,14 @@ import (
 	"github.com/pkg/errors"
 )
 
+type keyPair struct {
+	privateKey ed25519.PrivateKey
+	publicKey  ed25519.PublicKey
+}
+
 type RegistrarClient struct {
 	httpClient http.Client
-	privateKey ed25519.PrivateKey
+	keyPair    keyPair
 	nodeID     uint64
 	twinID     uint64
 	baseURL    string
@@ -19,18 +24,18 @@ func NewRegistrarClient(baseURL string, privateKey []byte) (cli RegistrarClient,
 	client := http.DefaultClient
 
 	sk := ed25519.NewKeyFromSeed(privateKey)
-	pk, ok := sk.Public().(ed25519.PublicKey)
+	publicKey, ok := sk.Public().(ed25519.PublicKey)
 	if !ok {
 		return cli, errors.Wrap(err, "failed to get public key of provided private key")
 	}
 
 	cli = RegistrarClient{
 		httpClient: *client,
-		privateKey: privateKey,
+		keyPair:    keyPair{privateKey, publicKey},
 		baseURL:    baseURL,
 	}
 
-	account, err := cli.GetAccountByPK(pk)
+	account, err := cli.GetAccountByPK(publicKey)
 	if errors.Is(err, ErrorAccountNotFround) {
 		return cli, nil
 	} else if err != nil {

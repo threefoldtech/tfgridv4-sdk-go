@@ -1,31 +1,215 @@
 package client
 
 import (
+	"bytes"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/url"
+	"time"
+
+	"github.com/pkg/errors"
 )
 
 var ErrorAccountNotFround = fmt.Errorf("failed to get requested account from node regiatrar")
 
 func (c RegistrarClient) CreateAccount(relays []string, rmbEncKey string) (account Account, err error) {
-	return c.createTwin(relays, rmbEncKey)
-}
-
-func (c RegistrarClient) UpdateAccount(relays []string, rmbEncKey string) (err error) {
-	return
-}
-
-func (c RegistrarClient) EnsureAccount(pk []byte) (account Account, err error) {
-	return
+	return c.createAccount(relays, rmbEncKey)
 }
 
 func (c RegistrarClient) GetAccount(id uint64) (account Account, err error) {
-	return
+	return c.getAccount(id)
 }
 
 func (c RegistrarClient) GetAccountByPK(pk []byte) (account Account, err error) {
+	return c.getAccountByPK(pk)
+}
+
+func (c RegistrarClient) UpdateAccount(relays []string, rmbEncKey string) (err error) {
+	return c.updateAccount(relays, rmbEncKey)
+}
+
+func (c RegistrarClient) EnsureAccount(pk []byte, relays []string, rmbEncKey string) (account Account, err error) {
+	return c.ensureAccount(pk, relays, rmbEncKey)
+}
+
+func (c *RegistrarClient) createAccount(relays []string, rmbEncKey string) (result Account, err error) {
+	url, err := url.JoinPath(c.baseURL, "accounts")
+	if err != nil {
+		return result, errors.Wrap(err, "failed to construct registrar url")
+	}
+
+	publicKeyBase64 := base64.StdEncoding.EncodeToString(c.keyPair.publicKey)
+
+	timestamp := time.Now().Unix()
+	signature := c.signRequest(timestamp)
+
+	account := map[string]any{
+		"public_key":  publicKeyBase64,
+		"signature":   signature,
+		"timestamp":   timestamp,
+		"rmb_enc_key": rmbEncKey,
+		"relays":      relays,
+	}
+
+	var body bytes.Buffer
+	err = json.NewEncoder(&body).Encode(account)
+	if err != nil {
+		return result, errors.Wrap(err, "failed to parse request body")
+	}
+
+	resp, err := c.httpClient.Post(url, "application/json", &body)
+	if err != nil {
+		return result, errors.Wrap(err, "failed to send request to the registrar")
+	}
+
+	if resp.StatusCode != http.StatusCreated {
+		err = parseResponseError(resp.Body)
+		return result, errors.Wrapf(err, "failed to create account with status %s", resp.Status)
+	}
+	defer resp.Body.Close()
+
+	err = json.NewDecoder(resp.Body).Decode(&result)
+
+	c.twinID = result.TwinID
 	return
 }
 
-func (c *RegistrarClient) createTwin(relays []string, rmbEncKey string) (result Account, err error) {
+func (c RegistrarClient) getAccount(id uint64) (account Account, err error) {
+	url, err := url.JoinPath(c.baseURL, "accounts")
+	if err != nil {
+		return account, errors.Wrap(err, "failed to construct registrar url")
+	}
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return
+	}
+
+	q := req.URL.Query()
+	q.Add("twin_id", fmt.Sprint(id))
+	req.URL.RawQuery = q.Encode()
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return
+	}
+
+	if resp == nil {
+		return account, errors.New("failed to get account, no response received")
+	}
+
+	if resp.StatusCode == http.StatusNotFound {
+		return account, ErrorAccountNotFround
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		err = parseResponseError(resp.Body)
+		return account, errors.Wrapf(err, "failed to get account by twin id with status code %s", resp.Status)
+	}
+	defer resp.Body.Close()
+
+	err = json.NewDecoder(resp.Body).Decode(&account)
+	return
+}
+
+func (c RegistrarClient) updateAccount(relays []string, rmbEncKey string) (err error) {
+	url, err := url.JoinPath(c.baseURL, "accounts", fmt.Sprint(c.twinID))
+	if err != nil {
+		return errors.Wrap(err, "failed to construct registrar url")
+	}
+
+	acc := map[string]any{}
+
+	if len(relays) != 0 {
+		acc["relays"] = relays
+	}
+
+	if len(rmbEncKey) != 0 {
+		acc["rmb_enc_key"] = rmbEncKey
+	}
+
+	var body bytes.Buffer
+	err = json.NewEncoder(&body).Encode(acc)
+	if err != nil {
+		return errors.Wrap(err, "failed to parse request body")
+	}
+
+	req, err := http.NewRequest("PATCH", url, &body)
+	if err != nil {
+		return
+	}
+
+	req.Header.Set("X-Auth", c.signRequest(time.Now().Unix()))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		fmt.Println("Error sending request:", err)
+		return
+	}
+
+	if resp == nil {
+		return errors.New("failed to update account, no response received")
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return parseResponseError(resp.Body)
+	}
+
+	return
+}
+
+func (c RegistrarClient) getAccountByPK(pk []byte) (account Account, err error) {
+	url, err := url.JoinPath(c.baseURL, "accounts", fmt.Sprint(c.twinID))
+	if err != nil {
+		return account, errors.Wrap(err, "failed to construct registrar url")
+	}
+
+	publicKeyBase64 := base64.StdEncoding.EncodeToString(pk)
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return account, err
+	}
+
+	q := req.URL.Query()
+	q.Add("public_key", publicKeyBase64)
+	req.URL.RawQuery = q.Encode()
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return account, err
+	}
+
+	if resp == nil {
+		return account, errors.New("no response received")
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNotFound {
+		return account, ErrorAccountNotFround
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		err = parseResponseError(resp.Body)
+		return account, errors.Wrapf(err, "failed to get account by public_key with status code %s", resp.Status)
+	}
+
+	err = json.NewDecoder(resp.Body).Decode(&account)
+
+	return account, err
+}
+
+func (c RegistrarClient) ensureAccount(pk []byte, relays []string, rmbEncKey string) (account Account, err error) {
+	account, err = c.GetAccountByPK(pk)
+	if errors.Is(err, ErrorAccountNotFround) {
+		return c.CreateAccount(relays, rmbEncKey)
+	} else if err != nil {
+		return account, errors.Wrap(err, "failed to get account from the registrar")
+	}
+
 	return
 }

@@ -163,7 +163,7 @@ func (c RegistrarClient) updateAccount(relays []string, rmbEncKey string) (err e
 }
 
 func (c RegistrarClient) getAccountByPK(pk []byte) (account Account, err error) {
-	url, err := url.JoinPath(c.baseURL, "accounts", fmt.Sprint(c.twinID))
+	url, err := url.JoinPath(c.baseURL, "accounts")
 	if err != nil {
 		return account, errors.Wrap(err, "failed to construct registrar url")
 	}
@@ -212,4 +212,18 @@ func (c RegistrarClient) ensureAccount(pk []byte, relays []string, rmbEncKey str
 	}
 
 	return
+}
+
+func (c *RegistrarClient) ensureTwinID() error {
+	if c.twinID != 0 {
+		return nil
+	}
+
+	twin, err := c.getAccountByPK(c.keyPair.publicKey)
+	if err != nil {
+		return errors.Wrap(err, "failed to get the account of the node, registrar client was not set up properly")
+	}
+
+	c.twinID = twin.TwinID
+	return nil
 }

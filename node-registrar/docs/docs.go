@@ -280,9 +280,12 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "201": {
-                        "description": "Farm created successfully",
+                        "description": "'farm_id': farmID\"]",
                         "schema": {
-                            "$ref": "#/definitions/db.Farm"
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "integer"
+                            }
                         }
                     },
                     "400": {
@@ -533,9 +536,12 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "201": {
-                        "description": "ID of the created node",
+                        "description": "'node_id': nodeID",
                         "schema": {
-                            "type": "integer"
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "integer"
+                            }
                         }
                     },
                     "400": {
@@ -853,7 +859,7 @@ const docTemplate = `{
         "db.Account": {
             "type": "object",
             "properties": {
-                "createdAt": {
+                "created_at": {
                     "type": "string"
                 },
                 "farms": {
@@ -881,7 +887,7 @@ const docTemplate = `{
                 "twin_id": {
                     "type": "integer"
                 },
-                "updatedAt": {
+                "updated_at": {
                     "type": "string"
                 }
             }
@@ -889,7 +895,7 @@ const docTemplate = `{
         "db.Farm": {
             "type": "object",
             "properties": {
-                "createdAt": {
+                "created_at": {
                     "type": "string"
                 },
                 "dedicated": {
@@ -912,7 +918,7 @@ const docTemplate = `{
                     "description": "Farmer account reference",
                     "type": "integer"
                 },
-                "updatedAt": {
+                "updated_at": {
                     "type": "string"
                 }
             }
@@ -954,7 +960,7 @@ const docTemplate = `{
                 "approved": {
                     "type": "boolean"
                 },
-                "createdAt": {
+                "created_at": {
                     "type": "string"
                 },
                 "farm_id": {
@@ -981,17 +987,17 @@ const docTemplate = `{
                         }
                     ]
                 },
-                "secureBoot": {
+                "secure_boot": {
                     "type": "boolean"
                 },
-                "serialNumber": {
+                "serial_number": {
                     "type": "string"
                 },
                 "twin_id": {
                     "description": "Node account reference",
                     "type": "integer"
                 },
-                "updatedAt": {
+                "updated_at": {
                     "type": "string"
                 },
                 "uptime": {
@@ -1025,7 +1031,7 @@ const docTemplate = `{
         "db.UptimeReport": {
             "type": "object",
             "properties": {
-                "createdAt": {
+                "created_at": {
                     "type": "string"
                 },
                 "duration": {
@@ -1041,7 +1047,7 @@ const docTemplate = `{
                 "timestamp": {
                     "type": "string"
                 },
-                "wasRestart": {
+                "was_restart": {
                     "description": "True if this report followed a restart",
                     "type": "boolean"
                 }
@@ -1120,18 +1126,7 @@ const docTemplate = `{
             }
         },
         "server.UpdateAccountRequest": {
-            "type": "object",
-            "properties": {
-                "relays": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "rmb_enc_key": {
-                    "type": "string"
-                }
-            }
+            "type": "object"
         },
         "server.UpdateFarmRequest": {
             "type": "object",
@@ -1184,19 +1179,7 @@ const docTemplate = `{
             }
         },
         "server.UptimeReportRequest": {
-            "type": "object",
-            "required": [
-                "timestamp",
-                "uptime"
-            ],
-            "properties": {
-                "timestamp": {
-                    "type": "string"
-                },
-                "uptime": {
-                    "$ref": "#/definitions/time.Duration"
-                }
-            }
+            "type": "object"
         },
         "server.ZOSVersionRequest": {
             "type": "object",
@@ -1208,57 +1191,18 @@ const docTemplate = `{
                     "type": "string"
                 }
             }
-        },
-        "time.Duration": {
-            "type": "integer",
-            "enum": [
-                -9223372036854775808,
-                9223372036854775807,
-                1,
-                1000,
-                1000000,
-                1000000000,
-                60000000000,
-                3600000000000,
-                -9223372036854775808,
-                9223372036854775807,
-                1,
-                1000,
-                1000000,
-                1000000000,
-                60000000000,
-                3600000000000
-            ],
-            "x-enum-varnames": [
-                "minDuration",
-                "maxDuration",
-                "Nanosecond",
-                "Microsecond",
-                "Millisecond",
-                "Second",
-                "Minute",
-                "Hour",
-                "minDuration",
-                "maxDuration",
-                "Nanosecond",
-                "Microsecond",
-                "Millisecond",
-                "Second",
-                "Minute",
-                "Hour"
-            ]
         }
     }
 }`
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "1.0",
+	Version:          "",
 	Host:             "",
-	BasePath:         "/v1",
+	BasePath:         "",
 	Schemes:          []string{},
-	Title:            "Node Registrar API",
-	Description:      "API for managing TFGrid node registration",
+	Title:            "",
+	Description:      "",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

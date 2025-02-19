@@ -96,7 +96,7 @@ func (s Server) getFarmHandler(c *gin.Context) {
 // @Produce json
 // @Param X-Auth header string true "Authentication format: Base64(<unix_timestamp>:<twin_id>):Base64(signature)"
 // @Param farm body db.Farm true "Farm creation data"
-// @Success 201 {object} db.Farm "Farm created successfully"
+// @Success 201 {object} map[string]uint64 "'farm_id': farmID"]
 // @Failure 400 {object} map[string]any "Invalid request"
 // @Failure 401 {object} map[string]any "Unauthorized"
 // @Failure 409 {object} map[string]any "Farm already exists"
@@ -126,7 +126,7 @@ func (s Server) createFarmHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, farmID)
+	c.JSON(http.StatusCreated, gin.H{"farm_id": farmID})
 }
 
 type UpdateFarmRequest struct {
@@ -281,7 +281,7 @@ type NodeRegistrationRequest struct {
 // @Produce json
 // @Param X-Auth header string true "Authentication format: Base64(<unix_timestamp>:<twin_id>):Base64(signature)"
 // @Param request body NodeRegistrationRequest true "Node registration data"
-// @Success 201 {object} uint64 "ID of the created node"
+// @Success 201 {object} map[string]uint64 "'node_id': nodeID"
 // @Failure 400 {object} map[string]any "Invalid request"
 // @Failure 401 {object} map[string]any "Unauthorized"
 // @Failure 409 {object} map[string]any "Node already exists"
@@ -323,7 +323,7 @@ func (s Server) registerNodeHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, nodeID)
+	c.JSON(http.StatusCreated, gin.H{"node_id": nodeID})
 }
 
 type UpdateNodeRequest struct {

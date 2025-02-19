@@ -1,8 +1,7 @@
-basePath: /v1
 definitions:
   db.Account:
     properties:
-      createdAt:
+      created_at:
         type: string
       farms:
         description: |-
@@ -26,12 +25,12 @@ definitions:
         type: string
       twin_id:
         type: integer
-      updatedAt:
+      updated_at:
         type: string
     type: object
   db.Farm:
     properties:
-      createdAt:
+      created_at:
         type: string
       dedicated:
         type: boolean
@@ -47,7 +46,7 @@ definitions:
       twin_id:
         description: Farmer account reference
         type: integer
-      updatedAt:
+      updated_at:
         type: string
     type: object
   db.Interface:
@@ -74,7 +73,7 @@ definitions:
     properties:
       approved:
         type: boolean
-      createdAt:
+      created_at:
         type: string
       farm_id:
         description: Constraints set to prevents unintended account deletion if linked
@@ -92,14 +91,14 @@ definitions:
         allOf:
         - $ref: '#/definitions/db.Resources'
         description: PublicConfig PublicConfig `json:"public_config" gorm:"type:json"`
-      secureBoot:
+      secure_boot:
         type: boolean
-      serialNumber:
+      serial_number:
         type: string
       twin_id:
         description: Node account reference
         type: integer
-      updatedAt:
+      updated_at:
         type: string
       uptime:
         items:
@@ -121,7 +120,7 @@ definitions:
     type: object
   db.UptimeReport:
     properties:
-      createdAt:
+      created_at:
         type: string
       duration:
         description: Uptime duration for this period
@@ -132,7 +131,7 @@ definitions:
         type: integer
       timestamp:
         type: string
-      wasRestart:
+      was_restart:
         description: True if this report followed a restart
         type: boolean
     type: object
@@ -190,13 +189,6 @@ definitions:
     - twin_id
     type: object
   server.UpdateAccountRequest:
-    properties:
-      relays:
-        items:
-          type: string
-        type: array
-      rmb_enc_key:
-        type: string
     type: object
   server.UpdateFarmRequest:
     properties:
@@ -234,14 +226,6 @@ definitions:
     - serial_number
     type: object
   server.UptimeReportRequest:
-    properties:
-      timestamp:
-        type: string
-      uptime:
-        $ref: '#/definitions/time.Duration'
-    required:
-    - timestamp
-    - uptime
     type: object
   server.ZOSVersionRequest:
     properties:
@@ -250,47 +234,8 @@ definitions:
     required:
     - version
     type: object
-  time.Duration:
-    enum:
-    - -9223372036854775808
-    - 9223372036854775807
-    - 1
-    - 1000
-    - 1000000
-    - 1000000000
-    - 60000000000
-    - 3600000000000
-    - -9223372036854775808
-    - 9223372036854775807
-    - 1
-    - 1000
-    - 1000000
-    - 1000000000
-    - 60000000000
-    - 3600000000000
-    type: integer
-    x-enum-varnames:
-    - minDuration
-    - maxDuration
-    - Nanosecond
-    - Microsecond
-    - Millisecond
-    - Second
-    - Minute
-    - Hour
-    - minDuration
-    - maxDuration
-    - Nanosecond
-    - Microsecond
-    - Millisecond
-    - Second
-    - Minute
-    - Hour
 info:
   contact: {}
-  description: API for managing TFGrid node registration
-  title: Node Registrar API
-  version: "1.0"
 paths:
   /accounts:
     get:
@@ -470,9 +415,11 @@ paths:
       - application/json
       responses:
         "201":
-          description: Farm created successfully
+          description: '''farm_id'': farmID"]'
           schema:
-            $ref: '#/definitions/db.Farm'
+            additionalProperties:
+              type: integer
+            type: object
         "400":
           description: Invalid request
           schema:
@@ -642,9 +589,11 @@ paths:
       - application/json
       responses:
         "201":
-          description: ID of the created node
+          description: '''node_id'': nodeID'
           schema:
-            type: integer
+            additionalProperties:
+              type: integer
+            type: object
         "400":
           description: Invalid request
           schema:

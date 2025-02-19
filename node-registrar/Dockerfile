@@ -8,7 +8,7 @@ RUN go mod download
 
 COPY /node-registrar .
 
-RUN go build -o server ./cmds/registrar.go
+RUN go build -o server ./cmds/main.go
 
 FROM alpine:3.21
 

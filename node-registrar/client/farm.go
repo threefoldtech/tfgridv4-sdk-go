@@ -97,10 +97,10 @@ func (c RegistrarClient) createFarm(farmName string, twinID uint64, dedicated bo
 		return farmID, errors.Wrap(err, "failed to construct registrar url")
 	}
 
-	data := map[string]any{
-		"farm_name": farmName,
-		"twin_id":   twinID,
-		"dedicated": dedicated,
+	data := Farm{
+		FarmName:  farmName,
+		TwinID:    twinID,
+		Dedicated: dedicated,
 	}
 
 	var body bytes.Buffer
@@ -129,12 +129,15 @@ func (c RegistrarClient) createFarm(farmName string, twinID uint64, dedicated bo
 		return farmID, fmt.Errorf("failed to create farm with status code %s", resp.Status)
 	}
 
-	var result uint64
+	result := struct {
+		FarmID uint64 `json:"farm_id"`
+	}{}
+
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return farmID, errors.Wrap(err, "failed to decode response body")
 	}
 
-	return result, nil
+	return result.FarmID, nil
 }
 
 func (c RegistrarClient) updateFarm(farmID uint64, opts []UpdateFarmOpts) (err error) {
@@ -144,7 +147,7 @@ func (c RegistrarClient) updateFarm(farmID uint64, opts []UpdateFarmOpts) (err e
 	}
 
 	var body bytes.Buffer
-	data := parseUpdateFarmOpts(opts...)
+	data := parseUpdateFarmOpts(opts)
 
 	err = json.NewEncoder(&body).Encode(data)
 	if err != nil {
@@ -215,16 +218,17 @@ func (c RegistrarClient) listFarms(opts ...ListFarmOpts) (farms []Farm, err erro
 
 	data := parseListFarmOpts(opts)
 
-	var body bytes.Buffer
-	err = json.NewEncoder(&body).Encode(data)
-	if err != nil {
-		return farms, errors.Wrap(err, "failed to encode request body")
-	}
-
-	req, err := http.NewRequest("GET", url, &body)
+	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return farms, errors.Wrap(err, "failed to construct http request to the registrar")
 	}
+
+	q := req.URL.Query()
+
+	for key, val := range data {
+		q.Add(key, fmt.Sprint(val))
+	}
+	req.URL.RawQuery = q.Encode()
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -282,7 +286,7 @@ func parseListFarmOpts(opts []ListFarmOpts) map[string]any {
 	return data
 }
 
-func parseUpdateFarmOpts(opts ...UpdateFarmOpts) map[string]any {
+func parseUpdateFarmOpts(opts []UpdateFarmOpts) map[string]any {
 	cfg := farmCfg{
 		farmName:  "",
 		dedicated: false,

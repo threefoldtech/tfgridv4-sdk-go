@@ -26,18 +26,18 @@ func (c RegistrarClient) GetAccountByPK(pk []byte) (account Account, err error) 
 	return c.getAccountByPK(pk)
 }
 
-func (c RegistrarClient) UpdateAccount(relays []string, rmbEncKey string) (err error) {
-	return c.updateAccount(relays, rmbEncKey)
+func (c RegistrarClient) UpdateAccount(opts ...UpdateAccountOpts) (err error) {
+	return c.updateAccount(opts)
 }
 
 func (c RegistrarClient) EnsureAccount(pk []byte, relays []string, rmbEncKey string) (account Account, err error) {
 	return c.ensureAccount(pk, relays, rmbEncKey)
 }
 
-func (c *RegistrarClient) createAccount(relays []string, rmbEncKey string) (result Account, err error) {
+func (c *RegistrarClient) createAccount(relays []string, rmbEncKey string) (account Account, err error) {
 	url, err := url.JoinPath(c.baseURL, "accounts")
 	if err != nil {
-		return result, errors.Wrap(err, "failed to construct registrar url")
+		return account, errors.Wrap(err, "failed to construct registrar url")
 	}
 
 	publicKeyBase64 := base64.StdEncoding.EncodeToString(c.keyPair.publicKey)
@@ -45,7 +45,7 @@ func (c *RegistrarClient) createAccount(relays []string, rmbEncKey string) (resu
 	timestamp := time.Now().Unix()
 	signature := c.signRequest(timestamp)
 
-	account := map[string]any{
+	data := map[string]any{
 		"public_key":  publicKeyBase64,
 		"signature":   signature,
 		"timestamp":   timestamp,
@@ -54,25 +54,25 @@ func (c *RegistrarClient) createAccount(relays []string, rmbEncKey string) (resu
 	}
 
 	var body bytes.Buffer
-	err = json.NewEncoder(&body).Encode(account)
+	err = json.NewEncoder(&body).Encode(data)
 	if err != nil {
-		return result, errors.Wrap(err, "failed to parse request body")
+		return account, errors.Wrap(err, "failed to parse request body")
 	}
 
 	resp, err := c.httpClient.Post(url, "application/json", &body)
 	if err != nil {
-		return result, errors.Wrap(err, "failed to send request to the registrar")
+		return account, errors.Wrap(err, "failed to send request to the registrar")
 	}
 
 	if resp.StatusCode != http.StatusCreated {
 		err = parseResponseError(resp.Body)
-		return result, errors.Wrapf(err, "failed to create account with status %s", resp.Status)
+		return account, errors.Wrapf(err, "failed to create account with status %s", resp.Status)
 	}
 	defer resp.Body.Close()
 
-	err = json.NewDecoder(resp.Body).Decode(&result)
+	err = json.NewDecoder(resp.Body).Decode(&account)
 
-	c.twinID = result.TwinID
+	c.twinID = account.TwinID
 	return
 }
 
@@ -111,54 +111,6 @@ func (c RegistrarClient) getAccount(id uint64) (account Account, err error) {
 	defer resp.Body.Close()
 
 	err = json.NewDecoder(resp.Body).Decode(&account)
-	return
-}
-
-func (c RegistrarClient) updateAccount(relays []string, rmbEncKey string) (err error) {
-	url, err := url.JoinPath(c.baseURL, "accounts", fmt.Sprint(c.twinID))
-	if err != nil {
-		return errors.Wrap(err, "failed to construct registrar url")
-	}
-
-	acc := map[string]any{}
-
-	if len(relays) != 0 {
-		acc["relays"] = relays
-	}
-
-	if len(rmbEncKey) != 0 {
-		acc["rmb_enc_key"] = rmbEncKey
-	}
-
-	var body bytes.Buffer
-	err = json.NewEncoder(&body).Encode(acc)
-	if err != nil {
-		return errors.Wrap(err, "failed to parse request body")
-	}
-
-	req, err := http.NewRequest("PATCH", url, &body)
-	if err != nil {
-		return
-	}
-
-	req.Header.Set("X-Auth", c.signRequest(time.Now().Unix()))
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		fmt.Println("Error sending request:", err)
-		return
-	}
-
-	if resp == nil {
-		return errors.New("failed to update account, no response received")
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return parseResponseError(resp.Body)
-	}
-
 	return
 }
 
@@ -203,6 +155,67 @@ func (c RegistrarClient) getAccountByPK(pk []byte) (account Account, err error) 
 	return account, err
 }
 
+func (c RegistrarClient) updateAccount(opts []UpdateAccountOpts) (err error) {
+	url, err := url.JoinPath(c.baseURL, "accounts", fmt.Sprint(c.twinID))
+	if err != nil {
+		return errors.Wrap(err, "failed to construct registrar url")
+	}
+
+	var body bytes.Buffer
+	data := parseUpdateAccountOpts(opts)
+
+	err = json.NewEncoder(&body).Encode(data)
+	if err != nil {
+		return errors.Wrap(err, "failed to parse request body")
+	}
+
+	req, err := http.NewRequest("PATCH", url, &body)
+	if err != nil {
+		return
+	}
+
+	req.Header.Set("X-Auth", c.signRequest(time.Now().Unix()))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		fmt.Println("Error sending request:", err)
+		return
+	}
+
+	if resp == nil {
+		return errors.New("failed to update account, no response received")
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return parseResponseError(resp.Body)
+	}
+
+	return
+}
+
+type accountCfg struct {
+	relays    []string
+	rmbEncKey string
+}
+
+type (
+	UpdateAccountOpts func(*accountCfg)
+)
+
+func UpdateAccountWithRelays(relays []string) UpdateAccountOpts {
+	return func(n *accountCfg) {
+		n.relays = relays
+	}
+}
+
+func UpdateAccountWithRMBEncKey(rmbEncKey string) UpdateAccountOpts {
+	return func(n *accountCfg) {
+		n.rmbEncKey = rmbEncKey
+	}
+}
+
 func (c RegistrarClient) ensureAccount(pk []byte, relays []string, rmbEncKey string) (account Account, err error) {
 	account, err = c.GetAccountByPK(pk)
 	if errors.Is(err, ErrorAccountNotFround) {
@@ -226,4 +239,27 @@ func (c *RegistrarClient) ensureTwinID() error {
 
 	c.twinID = twin.TwinID
 	return nil
+}
+
+func parseUpdateAccountOpts(opts []UpdateAccountOpts) map[string]any {
+	cfg := accountCfg{
+		rmbEncKey: "",
+		relays:    []string{},
+	}
+
+	for _, opt := range opts {
+		opt(&cfg)
+	}
+
+	data := map[string]any{}
+
+	if len(cfg.relays) != 0 {
+		data["relays"] = cfg.relays
+	}
+
+	if len(cfg.rmbEncKey) != 0 {
+		data["rmb_enc_key"] = cfg.rmbEncKey
+	}
+
+	return data
 }

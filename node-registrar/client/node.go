@@ -44,7 +44,7 @@ func (c RegistrarClient) GetNodeByTwinID(id uint64) (node Node, err error) {
 }
 
 func (c RegistrarClient) ListNodes(opts ...ListNodeOpts) (nodes []Node, err error) {
-	return c.ListNodes(opts)
+	return c.listNodes(opts)
 }
 
 type nodeCfg struct {
@@ -211,10 +211,14 @@ func (c RegistrarClient) registerNode(
 	}
 	defer resp.Body.Close()
 
-	err = json.NewDecoder(resp.Body).Decode(&nodeID)
+	result := struct {
+		NodeID uint64 `json:"node_id"`
+	}{}
 
-	c.nodeID = nodeID
-	return
+	err = json.NewDecoder(resp.Body).Decode(&result)
+
+	c.nodeID = result.NodeID
+	return result.NodeID, err
 }
 
 func (c RegistrarClient) updateNode(opts []UpdateNodeOpts) (err error) {
@@ -274,6 +278,38 @@ func (c RegistrarClient) reportUptime(report UptimeReport) (err error) {
 		return errors.Wrap(err, "failed to construct registrar url")
 	}
 
+	timestamp := time.Now().Unix()
+	var body bytes.Buffer
+
+	data := map[string]any{
+		"uptime":    report,
+		"timestamp": timestamp,
+	}
+
+	err = json.NewEncoder(&body).Encode(data)
+	if err != nil {
+		return errors.Wrap(err, "failed to encode request body")
+	}
+
+	req, err := http.NewRequest("PATCH", url, &body)
+	if err != nil {
+		return errors.Wrap(err, "failed to construct http request to the registrar")
+	}
+
+	req.Header.Set("X-Auth", c.signRequest(time.Now().Unix()))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return errors.Wrap(err, "failed to send request to update uptime of the node")
+	}
+
+	if resp == nil || resp.StatusCode != http.StatusOK {
+		err = parseResponseError(resp.Body)
+		return errors.Wrapf(err, "failed to update node uptime for node with id %d with status code %s", c.nodeID, resp.Status)
+	}
+	defer resp.Body.Close()
+
 	return
 }
 
@@ -281,6 +317,26 @@ func (c RegistrarClient) getNode(id uint64) (node Node, err error) {
 	url, err := url.JoinPath(c.baseURL, "nodes", fmt.Sprint(id))
 	if err != nil {
 		return node, errors.Wrap(err, "failed to construct registrar url")
+	}
+
+	resp, err := c.httpClient.Get(url)
+	if err != nil {
+		return
+	}
+
+	if resp.StatusCode == http.StatusNotFound {
+		return node, ErrorNodeNotFround
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		err = parseResponseError(resp.Body)
+		return node, errors.Wrapf(err, "failed to get node with status code %s", resp.Status)
+	}
+	defer resp.Body.Close()
+
+	err = json.NewDecoder(resp.Body).Decode(&node)
+	if err != nil {
+		return
 	}
 
 	return
@@ -292,15 +348,92 @@ func (c RegistrarClient) getNodeByTwinID(id uint64) (node Node, err error) {
 		return node, errors.Wrap(err, "failed to construct registrar url")
 	}
 
-	return
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return
+	}
+
+	q := req.URL.Query()
+	q.Add("twin_id", fmt.Sprint(id))
+	req.URL.RawQuery = q.Encode()
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return
+	}
+
+	if resp == nil {
+		return node, errors.New("no response received")
+	}
+
+	if resp.StatusCode == http.StatusNotFound {
+		return node, ErrorNodeNotFround
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		err = parseResponseError(resp.Body)
+		return node, errors.Wrapf(err, "failed to get node by twin id with status code %s", resp.Status)
+	}
+
+	defer resp.Body.Close()
+
+	var nodes []Node
+	err = json.NewDecoder(resp.Body).Decode(&nodes)
+	if err != nil {
+		return
+	}
+	if len(nodes) == 0 {
+		return node, ErrorNodeNotFround
+	}
+
+	return nodes[0], nil
 }
 
-func (c RegistrarClient) listNodes(opts ...ListNodeOpts) (nodes []Node, err error) {
+func (c RegistrarClient) listNodes(opts []ListNodeOpts) (nodes []Node, err error) {
 	url, err := url.JoinPath(c.baseURL, "nodes")
 	if err != nil {
 		return nodes, errors.Wrap(err, "failed to construct registrar url")
 	}
-	return
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nodes, errors.Wrap(err, "failed to construct http request to the registrar")
+	}
+
+	q := req.URL.Query()
+	data := parseListNodeOpts(opts)
+
+	for key, val := range data {
+		q.Add(key, fmt.Sprint(val))
+	}
+
+	req.URL.RawQuery = q.Encode()
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return
+	}
+
+	if resp == nil {
+		return nodes, errors.New("no response received")
+	}
+
+	if resp.StatusCode == http.StatusNotFound {
+		return nodes, ErrorNodeNotFround
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		err = parseResponseError(resp.Body)
+		return nodes, errors.Wrapf(err, "failed to list nodes with with status code %s", resp.Status)
+	}
+	defer resp.Body.Close()
+
+	err = json.NewDecoder(resp.Body).Decode(&nodes)
+	if err != nil {
+		return
+	}
+
+	return nodes, nil
 }
 
 func (c *RegistrarClient) ensureNodeID() error {
@@ -354,4 +487,44 @@ func (c RegistrarClient) parseUpdateNodeOpts(node Node, opts []UpdateNodeOpts) N
 	}
 
 	return node
+}
+
+func parseListNodeOpts(opts []ListNodeOpts) map[string]any {
+	cfg := nodeCfg{
+		nodeID:  0,
+		twinID:  0,
+		farmID:  0,
+		status:  "",
+		healthy: false,
+		size:    50,
+		page:    1,
+	}
+
+	for _, opt := range opts {
+		opt(&cfg)
+	}
+
+	data := map[string]any{}
+
+	if cfg.nodeID != 0 {
+		data["node_id"] = cfg.nodeID
+	}
+
+	if cfg.twinID != 0 {
+		data["twin_id"] = cfg.twinID
+	}
+
+	if cfg.farmID != 0 {
+		data["farm_id"] = cfg.farmID
+	}
+
+	if len(cfg.status) != 0 {
+		data["status"] = cfg.status
+	}
+
+	data["healthy"] = cfg.healthy
+	data["farm_id"] = cfg.farmID
+	data["farm_id"] = cfg.farmID
+
+	return data
 }

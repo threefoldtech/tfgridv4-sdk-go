@@ -2,7 +2,7 @@
 # Make sure to check the documentation at https://goreleaser.com
 version: 2
 builds:
-  - dir: ./node-registrar
+  - dir: ./node-registrar/cmds
     env:
       - CGO_ENABLED=0
     goos:

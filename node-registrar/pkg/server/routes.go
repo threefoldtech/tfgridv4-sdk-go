@@ -11,6 +11,8 @@ func (s *Server) SetupRoutes() {
 	s.router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	v1 := s.router.Group("v1")
 
+	v1.Use(corsMiddleware())
+
 	// farms routes
 	farmRoutes := v1.Group("farms")
 	farmRoutes.GET("/", s.listFarmsHandler)

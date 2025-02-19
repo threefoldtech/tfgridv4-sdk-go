@@ -1,6 +1,9 @@
 package server
 
 import (
+	"time"
+
+	"github.com/gin-contrib/cors"
 	_ "github.com/threefoldtech/tfgrid4-sdk-go/node-registrar/docs"
 
 	swaggerFiles "github.com/swaggo/files"
@@ -8,6 +11,15 @@ import (
 )
 
 func (s *Server) SetupRoutes() {
+	s.router.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"*"},
+		AllowMethods:     []string{"POST", "OPTIONS", "GET", "PUT", "DELETE"},
+		AllowHeaders:     []string{"*"},
+		ExposeHeaders:    []string{"*"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
+
 	s.router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	v1 := s.router.Group("v1")
 

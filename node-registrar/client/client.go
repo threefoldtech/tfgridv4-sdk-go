@@ -20,11 +20,11 @@ type RegistrarClient struct {
 	baseURL    string
 }
 
-func NewRegistrarClient(baseURL string, privateKey []byte) (cli RegistrarClient, err error) {
+func NewRegistrarClient(baseURL string, sk []byte) (cli RegistrarClient, err error) {
 	client := http.DefaultClient
 
-	sk := ed25519.NewKeyFromSeed(privateKey)
-	publicKey, ok := sk.Public().(ed25519.PublicKey)
+	privateKey := ed25519.NewKeyFromSeed(sk)
+	publicKey, ok := privateKey.Public().(ed25519.PublicKey)
 	if !ok {
 		return cli, errors.Wrap(err, "failed to get public key of provided private key")
 	}

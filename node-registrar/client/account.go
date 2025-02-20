@@ -2,6 +2,7 @@ package client
 
 import (
 	"bytes"
+	"crypto/ed25519"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -40,13 +41,14 @@ func (c *RegistrarClient) createAccount(relays []string, rmbEncKey string) (acco
 		return account, errors.Wrap(err, "failed to construct registrar url")
 	}
 
+	timestamp := time.Now().Unix()
 	publicKeyBase64 := base64.StdEncoding.EncodeToString(c.keyPair.publicKey)
 
-	timestamp := time.Now().Unix()
-	signature := c.signRequest(timestamp)
+	challenge := []byte(fmt.Sprintf("%d:%v", timestamp, publicKeyBase64))
+	signature := ed25519.Sign(c.keyPair.privateKey, challenge)
 
 	data := map[string]any{
-		"public_key":  publicKeyBase64,
+		"public_key":  c.keyPair.publicKey,
 		"signature":   signature,
 		"timestamp":   timestamp,
 		"rmb_enc_key": rmbEncKey,

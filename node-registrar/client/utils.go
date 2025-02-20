@@ -12,7 +12,6 @@ import (
 
 func (c RegistrarClient) signRequest(timestamp int64) (authHeader string) {
 	challenge := []byte(fmt.Sprintf("%d:%v", timestamp, c.twinID))
-
 	signature := ed25519.Sign(c.keyPair.privateKey, challenge)
 
 	authHeader = fmt.Sprintf(

@@ -19,7 +19,7 @@ This tool allows users to create a farm account on a specified network.
 
 ## Usage
 ```sh
-./farm-tool -seed <seed> -network <network> -farm_name <farm_name>
+./new-farm -seed <seed> -network <network> -farm_name <farm_name>
 ```
 
 ### Parameters
@@ -29,5 +29,5 @@ This tool allows users to create a farm account on a specified network.
 
 ### Example Usage
 ```sh
-./farm-tool -seed aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899 -network dev -farm_name MyFarm
+./new-farm -seed aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899 -network dev -farm_name MyFarm
 ```

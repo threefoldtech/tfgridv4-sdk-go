@@ -18,6 +18,32 @@ builds:
       - -X github.com/threefoldtech/tfgrid4-sdk-go/node-registrar/cmd.version={{.Tag}}
       - -X github.com/threefoldtech/tfgrid-sdk-go/node-registrar/cmd.commit={{.Commit}}
 
+  - dir: ./node-registrar/tools/account
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    binary: new-account
+    id: new-account
+
+    ignore:
+      - goos: windows
+
+  - dir: ./node-registrar/tools/farm
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    binary: new-farm
+    id: new-farm
+
+    ignore:
+      - goos: windows
+
 
 archives:
   - format: tar.gz

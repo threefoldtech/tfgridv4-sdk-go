@@ -158,6 +158,10 @@ func (c RegistrarClient) getAccountByPK(pk []byte) (account Account, err error) 
 }
 
 func (c RegistrarClient) updateAccount(opts []UpdateAccountOpts) (err error) {
+	err = c.ensureTwinID()
+	if err != nil {
+		return errors.Wrap(err, "failed to ensure twin id")
+	}
 	url, err := url.JoinPath(c.baseURL, "accounts", fmt.Sprint(c.twinID))
 	if err != nil {
 		return errors.Wrap(err, "failed to construct registrar url")

@@ -551,6 +551,8 @@ func (s *Server) createAccountHandler(c *gin.Context) {
 	// Now we can create new account
 	account := &db.Account{
 		PublicKey: req.PublicKey,
+		Relays:    req.Relays,
+		RMBEncKey: req.RMBEncKey,
 	}
 
 	if err := s.db.CreateAccount(account); err != nil {

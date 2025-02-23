@@ -11,7 +11,7 @@ It generates a public-private key pair from a seed and sends a signed request to
    ```
 2. Navigate to the project directory:
    ```sh
-   cd node-registrar
+   cd tfgrid4-sdk-go/node-registrar/tools/account
    ```
 3. Build the application:
    ```sh

@@ -1,7 +1,6 @@
 package client
 
 import (
-	"encoding/base64"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -15,13 +14,12 @@ func TestNewRegistrarClient(t *testing.T) {
 	var count int
 	require := require.New(t)
 
-	pk, seed, err := aliceKeys()
+	pk, seed, publicKeyBase64, err := aliceKeys()
 	require.NoError(err)
-	publicKeyBase64 := base64.StdEncoding.EncodeToString(pk)
 	account.PublicKey = publicKeyBase64
 
 	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		statusCode, body := accountHandler(r, request, count, require)
+		statusCode, body := serverHandler(r, request, count, require)
 		w.WriteHeader(statusCode)
 		_, err := w.Write(body)
 		require.NoError(err)
@@ -37,8 +35,8 @@ func TestNewRegistrarClient(t *testing.T) {
 		request = newClientWithNoAccount
 		c, err := NewRegistrarClient(baseURL, seed)
 		require.NoError(err)
-		require.Equal(c.twinID, uint64(0))
-		require.Equal(c.nodeID, uint64(0))
+		require.Equal(uint64(0), c.twinID)
+		require.Equal(uint64(0), c.nodeID)
 		require.Equal([]byte(c.keyPair.publicKey), pk)
 	})
 
@@ -47,17 +45,17 @@ func TestNewRegistrarClient(t *testing.T) {
 		request = newClientWithAccountNoNode
 		c, err := NewRegistrarClient(baseURL, seed)
 		require.NoError(err)
-		require.Equal(c.twinID, account.TwinID)
-		require.Equal(c.nodeID, uint64(0))
-		require.Equal([]byte(c.keyPair.publicKey), pk)
+		require.Equal(account.TwinID, c.twinID)
+		require.Equal(uint64(0), c.nodeID)
+		require.Equal(pk, []byte(c.keyPair.publicKey))
 	})
-	t.Run("test new registrar client with no account", func(t *testing.T) {
+	t.Run("test new registrar client with account and node", func(t *testing.T) {
 		count = 0
 		request = newClientWithAccountAndNode
 		c, err := NewRegistrarClient(baseURL, seed)
 		require.NoError(err)
-		require.Equal(c.twinID, account.TwinID)
-		require.Equal(c.nodeID, uint64(1))
-		require.Equal([]byte(c.keyPair.publicKey), pk)
+		require.Equal(account.TwinID, c.twinID)
+		require.Equal(nodeID, c.nodeID)
+		require.Equal(pk, []byte(c.keyPair.publicKey))
 	})
 }

@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestCreateAccount(t *testing.T) {
+func TestCreateFarm(t *testing.T) {
 	var request int
 	var count int
 	require := require.New(t)
@@ -30,24 +30,30 @@ func TestCreateAccount(t *testing.T) {
 	baseURL, err := url.JoinPath(testServer.URL, "v1")
 	require.NoError(err)
 
-	request = newClientWithNoAccount
+	request = newClientWithAccountNoNode
 	c, err := NewRegistrarClient(baseURL, seed)
 	require.NoError(err)
 
-	t.Run("test create account created successfully", func(t *testing.T) {
-		request = createAccountStatusCreated
-		result, err := c.CreateAccount(account.Relays, account.RMBEncKey)
+	t.Run("test create farm with status conflict", func(t *testing.T) {
+		request = createFarmStatusConflict
+		_, err = c.CreateFarm(farm.FarmName, farm.TwinID, farm.Dedicated)
+		require.Error(err)
+	})
+
+	t.Run("test create farm with status ok", func(t *testing.T) {
+		request = createFarmStatusCreated
+		result, err := c.CreateFarm(farm.FarmName, farm.TwinID, farm.Dedicated)
 		require.NoError(err)
-		require.Equal(account, result)
+		require.Equal(farm.FarmID, result)
 	})
 }
 
-func TestUpdateAccount(t *testing.T) {
+func TestUpdateFarm(t *testing.T) {
 	var request int
 	var count int
 	require := require.New(t)
 
-	pk, seed, publicKeyBase64, err := aliceKeys()
+	_, seed, publicKeyBase64, err := aliceKeys()
 	require.NoError(err)
 	account.PublicKey = publicKeyBase64
 
@@ -56,7 +62,6 @@ func TestUpdateAccount(t *testing.T) {
 		w.WriteHeader(statusCode)
 		_, err := w.Write(body)
 		require.NoError(err)
-
 		count++
 	}))
 	defer testServer.Close()
@@ -64,41 +69,34 @@ func TestUpdateAccount(t *testing.T) {
 	baseURL, err := url.JoinPath(testServer.URL, "v1")
 	require.NoError(err)
 
-	t.Run("test update account updated successfully", func(t *testing.T) {
+	t.Run("test update farm with status unauthorzed", func(t *testing.T) {
+		request = newClientWithNoAccount
+		c, err := NewRegistrarClient(baseURL, seed)
+		require.NoError(err)
+
+		request = updateFarmWithStatusUnauthorized
+		err = c.UpdateFarm(farmID, UpdateFarmWithName("notFreeFarm"))
+		require.Error(err)
+	})
+
+	t.Run("test update farm with status ok", func(t *testing.T) {
 		count = 0
 		request = newClientWithAccountNoNode
 		c, err := NewRegistrarClient(baseURL, seed)
-
 		require.NoError(err)
-		require.Equal(c.twinID, account.TwinID)
-		require.Equal([]byte(c.keyPair.publicKey), pk)
 
-		request = updateAccountWithStatusOK
-		relays := []string{"relay1"}
-		err = c.UpdateAccount(UpdateAccountWithRelays(relays))
+		request = updateFarmWithStatusOK
+		err = c.UpdateFarm(farmID, UpdateFarmWithName("notFreeFarm"))
 		require.NoError(err)
-	})
-
-	t.Run("test update account account not found", func(t *testing.T) {
-		request = newClientWithNoAccount
-		c, err := NewRegistrarClient(baseURL, seed)
-
-		require.NoError(err)
-		require.Equal([]byte(c.keyPair.publicKey), pk)
-
-		request = updateAccountWithNoAccount
-		relays := []string{"relay1"}
-		err = c.UpdateAccount(UpdateAccountWithRelays(relays))
-		require.Error(err)
 	})
 }
 
-func TestGetAccount(t *testing.T) {
+func TestGetFarm(t *testing.T) {
 	var request int
 	var count int
 	require := require.New(t)
 
-	pk, seed, publicKeyBase64, err := aliceKeys()
+	_, seed, publicKeyBase64, err := aliceKeys()
 	require.NoError(err)
 	account.PublicKey = publicKeyBase64
 
@@ -118,19 +116,17 @@ func TestGetAccount(t *testing.T) {
 	request = newClientWithAccountNoNode
 	c, err := NewRegistrarClient(baseURL, seed)
 	require.NoError(err)
-	require.Equal(c.twinID, account.TwinID)
-	require.Equal([]byte(c.keyPair.publicKey), pk)
 
-	t.Run("test get account with id account not found", func(t *testing.T) {
-		request = getAccountWithIDStatusNotFount
-		_, err := c.GetAccount(account.TwinID)
+	t.Run("test get farm with status not found", func(t *testing.T) {
+		request = getFarmWithStatusNotfound
+		_, err = c.GetFarm(farmID)
 		require.Error(err)
 	})
 
-	t.Run("test get account account not found", func(t *testing.T) {
-		request = getAccountWithIDStatusOK
-		acc, err := c.GetAccount(account.TwinID)
+	t.Run("test get farm with status ok", func(t *testing.T) {
+		request = getFarmWithStatusOK
+		result, err := c.GetFarm(farmID)
 		require.NoError(err)
-		require.Equal(account, acc)
+		require.Equal(result, farm)
 	})
 }

@@ -185,7 +185,6 @@ func (c RegistrarClient) updateAccount(opts []UpdateAccountOpts) (err error) {
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		fmt.Println("Error sending request:", err)
 		return
 	}
 

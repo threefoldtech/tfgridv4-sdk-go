@@ -170,6 +170,10 @@ func (c RegistrarClient) registerNode(
 	secureBoot,
 	virtualized bool,
 ) (nodeID uint64, err error) {
+	err = c.ensureTwinID()
+	if err != nil {
+		return nodeID, errors.Wrap(err, "failed to ensure twin id")
+	}
 	url, err := url.JoinPath(c.baseURL, "nodes")
 	if err != nil {
 		return nodeID, errors.Wrap(err, "failed to construct registrar url")
@@ -258,7 +262,7 @@ func (c RegistrarClient) updateNode(opts []UpdateNodeOpts) (err error) {
 		return errors.Wrap(err, "failed to send request to update node")
 	}
 
-	if resp == nil || resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusOK {
 		err = parseResponseError(resp.Body)
 		return errors.Wrapf(err, "failed to update node with twin id %d with status code %s", c.twinID, resp.Status)
 	}
@@ -343,45 +347,11 @@ func (c RegistrarClient) getNode(id uint64) (node Node, err error) {
 }
 
 func (c RegistrarClient) getNodeByTwinID(id uint64) (node Node, err error) {
-	url, err := url.JoinPath(c.baseURL, "nodes")
-	if err != nil {
-		return node, errors.Wrap(err, "failed to construct registrar url")
-	}
-
-	req, err := http.NewRequest("GET", url, nil)
+	nodes, err := c.ListNodes(ListNodesWithTwinID(id))
 	if err != nil {
 		return
 	}
 
-	q := req.URL.Query()
-	q.Add("twin_id", fmt.Sprint(id))
-	req.URL.RawQuery = q.Encode()
-
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return
-	}
-
-	if resp == nil {
-		return node, errors.New("no response received")
-	}
-
-	if resp.StatusCode == http.StatusNotFound {
-		return node, ErrorNodeNotFround
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		err = parseResponseError(resp.Body)
-		return node, errors.Wrapf(err, "failed to get node by twin id with status code %s", resp.Status)
-	}
-
-	defer resp.Body.Close()
-
-	var nodes []Node
-	err = json.NewDecoder(resp.Body).Decode(&nodes)
-	if err != nil {
-		return
-	}
 	if len(nodes) == 0 {
 		return node, ErrorNodeNotFround
 	}

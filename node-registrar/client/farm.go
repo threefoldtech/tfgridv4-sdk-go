@@ -141,6 +141,11 @@ func (c RegistrarClient) createFarm(farmName string, twinID uint64, dedicated bo
 }
 
 func (c RegistrarClient) updateFarm(farmID uint64, opts []UpdateFarmOpts) (err error) {
+	err = c.ensureTwinID()
+	if err != nil {
+		return errors.Wrap(err, "failed to ensure twin id")
+	}
+
 	url, err := url.JoinPath(c.baseURL, "farms", fmt.Sprint(farmID))
 	if err != nil {
 		return errors.Wrap(err, "failed to construct registrar url")
@@ -172,11 +177,6 @@ func (c RegistrarClient) updateFarm(farmID uint64, opts []UpdateFarmOpts) (err e
 	if resp.StatusCode != http.StatusOK {
 		err = parseResponseError(resp.Body)
 		return fmt.Errorf("failed to create farm with status code %s", resp.Status)
-	}
-
-	var result uint64
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return errors.Wrap(err, "failed to decode response body")
 	}
 
 	return

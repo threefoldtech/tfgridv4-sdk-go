@@ -60,6 +60,11 @@ func (c RegistrarClient) getZosVersion() (version ZosVersion, err error) {
 }
 
 func (c RegistrarClient) setZosVersion(v string, safeToUpgrade bool) (err error) {
+	err = c.ensureTwinID()
+	if err != nil {
+		return errors.Wrap(err, "failed to ensure twin id")
+	}
+
 	url, err := url.JoinPath(c.baseURL, "zos", "version")
 	if err != nil {
 		return errors.Wrap(err, "failed to construct registrar url")

@@ -371,7 +371,6 @@ func (s *Server) updateNodeHandler(c *gin.Context) {
 		return
 	}
 
-	log.Info().Any("req is", c.Request.Body)
 	var req UpdateNodeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
@@ -686,7 +685,6 @@ func (s *Server) getAccountHandler(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get account"})
 			return
 		}
-		log.Info().Any("account", account).Send()
 		c.JSON(http.StatusOK, account)
 		return
 	}

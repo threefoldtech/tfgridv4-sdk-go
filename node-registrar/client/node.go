@@ -124,6 +124,12 @@ func UpdateNodesWithInterfaces(interfaces []Interface) UpdateNodeOpts {
 	}
 }
 
+func UpdateNodesWithLocation(location Location) UpdateNodeOpts {
+	return func(n *nodeCfg) {
+		n.Location = location
+	}
+}
+
 func UpdateNodesWithResources(resources Resources) UpdateNodeOpts {
 	return func(n *nodeCfg) {
 		n.Resources = resources
@@ -211,7 +217,7 @@ func (c RegistrarClient) registerNode(
 
 	if resp == nil || resp.StatusCode != http.StatusCreated {
 		err = parseResponseError(resp.Body)
-		return 0, errors.Wrapf(err, "failed to update node on the registrar with status code %s", resp.Status)
+		return 0, errors.Wrapf(err, "failed to create node on the registrar with status code %s", resp.Status)
 	}
 	defer resp.Body.Close()
 
@@ -277,25 +283,19 @@ func (c RegistrarClient) reportUptime(report UptimeReport) (err error) {
 		return err
 	}
 
-	url, err := url.JoinPath(c.baseURL, "nodes", fmt.Sprint(c.nodeID))
+	url, err := url.JoinPath(c.baseURL, "nodes", fmt.Sprint(c.nodeID), "uptime")
 	if err != nil {
 		return errors.Wrap(err, "failed to construct registrar url")
 	}
 
-	timestamp := time.Now().Unix()
 	var body bytes.Buffer
 
-	data := map[string]any{
-		"uptime":    report,
-		"timestamp": timestamp,
-	}
-
-	err = json.NewEncoder(&body).Encode(data)
+	err = json.NewEncoder(&body).Encode(report)
 	if err != nil {
 		return errors.Wrap(err, "failed to encode request body")
 	}
 
-	req, err := http.NewRequest("PATCH", url, &body)
+	req, err := http.NewRequest("POST", url, &body)
 	if err != nil {
 		return errors.Wrap(err, "failed to construct http request to the registrar")
 	}
@@ -308,7 +308,7 @@ func (c RegistrarClient) reportUptime(report UptimeReport) (err error) {
 		return errors.Wrap(err, "failed to send request to update uptime of the node")
 	}
 
-	if resp == nil || resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusCreated {
 		err = parseResponseError(resp.Body)
 		return errors.Wrapf(err, "failed to update node uptime for node with id %d with status code %s", c.nodeID, resp.Status)
 	}
@@ -492,9 +492,12 @@ func parseListNodeOpts(opts []ListNodeOpts) map[string]any {
 		data["status"] = cfg.status
 	}
 
-	data["healthy"] = cfg.healthy
-	data["farm_id"] = cfg.farmID
-	data["farm_id"] = cfg.farmID
+	if cfg.healthy {
+		data["healthy"] = cfg.healthy
+	}
+
+	data["size"] = cfg.size
+	data["page"] = cfg.page
 
 	return data
 }

@@ -92,6 +92,11 @@ func UpdateFarmWithDedicated() UpdateFarmOpts {
 }
 
 func (c RegistrarClient) createFarm(farmName string, twinID uint64, dedicated bool) (farmID uint64, err error) {
+	err = c.ensureTwinID()
+	if err != nil {
+		return farmID, errors.Wrap(err, "failed to ensure twin id")
+	}
+
 	url, err := url.JoinPath(c.baseURL, "farms")
 	if err != nil {
 		return farmID, errors.Wrap(err, "failed to construct registrar url")

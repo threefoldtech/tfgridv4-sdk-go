@@ -24,7 +24,7 @@ type Node struct {
 	TwinID        uint64         `json:"twin_id"`
 	Location      Location       `json:"location"`
 	Resources     Resources      `json:"resources"`
-	Interfaces    []Interface    `json:"interface"`
+	Interfaces    []Interface    `json:"interfaces"`
 	SecureBoot    bool           `json:"secure_boot"`
 	Virtualized   bool           `json:"virtualized"`
 	SerialNumber  string         `json:"serial_number"`
@@ -33,11 +33,8 @@ type Node struct {
 }
 
 type UptimeReport struct {
-	ID         uint64
-	NodeID     uint64        `json:"node_id"`
-	Duration   time.Duration `json:"duration"`
-	Timestamp  time.Time     `json:"timestamp"`
-	WasRestart bool          `json:"was_restart"`
+	Uptime    time.Duration `json:"uptime"`
+	Timestamp time.Time     `json:"timestamp"`
 }
 
 type ZosVersion struct {

@@ -103,11 +103,8 @@ func TestUpdateNode(t *testing.T) {
 		request = updateNodeSendUptimeReport
 
 		report := UptimeReport{
-			ID:         1,
-			NodeID:     1,
-			Duration:   time.Hour,
-			Timestamp:  time.Now(),
-			WasRestart: false,
+			Uptime:    40 * time.Minute,
+			Timestamp: time.Now(),
 		}
 		err = c.ReportUptime(report)
 		require.NoError(err)

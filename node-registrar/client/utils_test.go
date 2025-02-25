@@ -189,10 +189,10 @@ func serverHandler(r *http.Request, request, count int, require *require.Asserti
 		}
 
 	case updateNodeSendUptimeReport:
-		require.Equal("/v1/nodes/1", r.URL.Path)
-		require.Equal(http.MethodPatch, r.Method)
+		require.Equal("/v1/nodes/1/uptime", r.URL.Path)
+		require.Equal(http.MethodPost, r.Method)
 		require.NotEmpty(r.Body)
-		return http.StatusOK, nil
+		return http.StatusCreated, nil
 
 	case getNodeWithIDStatusOK:
 		require.Equal("/v1/nodes/1", r.URL.Path)

@@ -31,8 +31,8 @@ func (c RegistrarClient) UpdateAccount(opts ...UpdateAccountOpts) (err error) {
 	return c.updateAccount(opts)
 }
 
-func (c RegistrarClient) EnsureAccount(pk []byte, relays []string, rmbEncKey string) (account Account, err error) {
-	return c.ensureAccount(pk, relays, rmbEncKey)
+func (c RegistrarClient) EnsureAccount(relays []string, rmbEncKey string) (account Account, err error) {
+	return c.ensureAccount(relays, rmbEncKey)
 }
 
 func (c *RegistrarClient) createAccount(relays []string, rmbEncKey string) (account Account, err error) {
@@ -221,8 +221,8 @@ func UpdateAccountWithRMBEncKey(rmbEncKey string) UpdateAccountOpts {
 	}
 }
 
-func (c RegistrarClient) ensureAccount(pk []byte, relays []string, rmbEncKey string) (account Account, err error) {
-	account, err = c.GetAccountByPK(pk)
+func (c RegistrarClient) ensureAccount(relays []string, rmbEncKey string) (account Account, err error) {
+	account, err = c.GetAccountByPK(c.keyPair.publicKey)
 	if errors.Is(err, ErrorAccountNotFround) {
 		return c.CreateAccount(relays, rmbEncKey)
 	} else if err != nil {

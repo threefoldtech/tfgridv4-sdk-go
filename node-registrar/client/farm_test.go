@@ -1,6 +1,7 @@
 package client
 
 import (
+	"encoding/base64"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -14,9 +15,9 @@ func TestCreateFarm(t *testing.T) {
 	var count int
 	require := require.New(t)
 
-	_, seed, publicKeyBase64, err := aliceKeys()
+	publicKey, privateKey, err := aliceKeys()
 	require.NoError(err)
-	account.PublicKey = publicKeyBase64
+	account.PublicKey = base64.StdEncoding.EncodeToString(publicKey)
 
 	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		statusCode, body := serverHandler(r, request, count, require)
@@ -31,7 +32,7 @@ func TestCreateFarm(t *testing.T) {
 	require.NoError(err)
 
 	request = newClientWithAccountNoNode
-	c, err := NewRegistrarClient(baseURL, seed)
+	c, err := NewRegistrarClient(baseURL, privateKey)
 	require.NoError(err)
 
 	t.Run("test create farm with status conflict", func(t *testing.T) {
@@ -53,9 +54,9 @@ func TestUpdateFarm(t *testing.T) {
 	var count int
 	require := require.New(t)
 
-	_, seed, publicKeyBase64, err := aliceKeys()
+	publicKey, privateKey, err := aliceKeys()
 	require.NoError(err)
-	account.PublicKey = publicKeyBase64
+	account.PublicKey = base64.StdEncoding.EncodeToString(publicKey)
 
 	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		statusCode, body := serverHandler(r, request, count, require)
@@ -71,7 +72,7 @@ func TestUpdateFarm(t *testing.T) {
 
 	t.Run("test update farm with status unauthorzed", func(t *testing.T) {
 		request = newClientWithNoAccount
-		c, err := NewRegistrarClient(baseURL, seed)
+		c, err := NewRegistrarClient(baseURL, privateKey)
 		require.NoError(err)
 
 		request = updateFarmWithStatusUnauthorized
@@ -82,7 +83,7 @@ func TestUpdateFarm(t *testing.T) {
 	t.Run("test update farm with status ok", func(t *testing.T) {
 		count = 0
 		request = newClientWithAccountNoNode
-		c, err := NewRegistrarClient(baseURL, seed)
+		c, err := NewRegistrarClient(baseURL, privateKey)
 		require.NoError(err)
 
 		request = updateFarmWithStatusOK
@@ -96,9 +97,9 @@ func TestGetFarm(t *testing.T) {
 	var count int
 	require := require.New(t)
 
-	_, seed, publicKeyBase64, err := aliceKeys()
+	publicKey, privateKey, err := aliceKeys()
 	require.NoError(err)
-	account.PublicKey = publicKeyBase64
+	account.PublicKey = base64.StdEncoding.EncodeToString(publicKey)
 
 	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		statusCode, body := serverHandler(r, request, count, require)
@@ -114,7 +115,7 @@ func TestGetFarm(t *testing.T) {
 
 	count = 0
 	request = newClientWithAccountNoNode
-	c, err := NewRegistrarClient(baseURL, seed)
+	c, err := NewRegistrarClient(baseURL, privateKey)
 	require.NoError(err)
 
 	t.Run("test get farm with status not found", func(t *testing.T) {

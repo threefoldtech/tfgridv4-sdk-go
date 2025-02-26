@@ -2,7 +2,6 @@ package client
 
 import (
 	"crypto/ed25519"
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -238,19 +237,17 @@ func serverHandler(r *http.Request, request, count int, require *require.Asserti
 	return http.StatusNotAcceptable, nil
 }
 
-func aliceKeys() (pk, seed []byte, pkBase64 string, err error) {
-	seed, err = hex.DecodeString(aliceSeed)
+func aliceKeys() (publicKey ed25519.PublicKey, privateKey ed25519.PrivateKey, err error) {
+	seed, err := hex.DecodeString(aliceSeed)
 	if err != nil {
 		return
 	}
 
-	privateKey := ed25519.NewKeyFromSeed(seed)
-	pk, ok := privateKey.Public().(ed25519.PublicKey)
+	privateKey = ed25519.NewKeyFromSeed(seed)
+	publicKey, ok := privateKey.Public().(ed25519.PublicKey)
 	if !ok {
-		return pk, seed, pkBase64, fmt.Errorf("failed to get public key of provided private key")
+		return publicKey, privateKey, fmt.Errorf("failed to get public key of provided private key")
 	}
 
-	pkBase64 = base64.StdEncoding.EncodeToString(pk)
-
-	return pk, seed, pkBase64, nil
+	return
 }

@@ -36,13 +36,13 @@ func TestCreateFarm(t *testing.T) {
 
 	t.Run("test create farm with status conflict", func(t *testing.T) {
 		request = createFarmStatusConflict
-		_, err = c.CreateFarm(farm.FarmName, farm.TwinID, farm.Dedicated)
+		_, err = c.CreateFarm(farm.FarmName, farm.Dedicated)
 		require.Error(err)
 	})
 
 	t.Run("test create farm with status ok", func(t *testing.T) {
 		request = createFarmStatusCreated
-		result, err := c.CreateFarm(farm.FarmName, farm.TwinID, farm.Dedicated)
+		result, err := c.CreateFarm(farm.FarmName, farm.Dedicated)
 		require.NoError(err)
 		require.Equal(farm.FarmID, result)
 	})

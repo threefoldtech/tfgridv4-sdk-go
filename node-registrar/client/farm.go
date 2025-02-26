@@ -13,8 +13,8 @@ import (
 
 var ErrorFarmNotFround = fmt.Errorf("failed to get requested farm from node regiatrar")
 
-func (c RegistrarClient) CreateFarm(farmName string, twinID uint64, dedicated bool) (farmID uint64, err error) {
-	return c.createFarm(farmName, twinID, dedicated)
+func (c RegistrarClient) CreateFarm(farmName string, dedicated bool) (farmID uint64, err error) {
+	return c.createFarm(farmName, dedicated)
 }
 
 func (c RegistrarClient) UpdateFarm(farmID uint64, opts ...UpdateFarmOpts) (err error) {
@@ -91,7 +91,7 @@ func UpdateFarmWithDedicated() UpdateFarmOpts {
 	}
 }
 
-func (c RegistrarClient) createFarm(farmName string, twinID uint64, dedicated bool) (farmID uint64, err error) {
+func (c RegistrarClient) createFarm(farmName string, dedicated bool) (farmID uint64, err error) {
 	err = c.ensureTwinID()
 	if err != nil {
 		return farmID, errors.Wrap(err, "failed to ensure twin id")
@@ -104,7 +104,7 @@ func (c RegistrarClient) createFarm(farmName string, twinID uint64, dedicated bo
 
 	data := Farm{
 		FarmName:  farmName,
-		TwinID:    twinID,
+		TwinID:    c.twinID,
 		Dedicated: dedicated,
 	}
 

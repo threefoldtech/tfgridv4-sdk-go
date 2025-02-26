@@ -60,7 +60,7 @@ var createAccountCmd = &cobra.Command{
 
 		log.Info().Msgf("public key (Hex): %s", hex.EncodeToString(publicKey))
 
-		cli, err := client.NewRegistrarClient(u, seedBytes)
+		cli, err := client.NewRegistrarClient(u, privateKey)
 		if err != nil {
 			return err
 		}
@@ -93,25 +93,4 @@ func generateRandomSeed() (string, error) {
 
 	seed := hex.EncodeToString(s)
 	return seed, nil
-}
-
-func createAccount(c client.RegistrarClient, relays []string, rmbEncKey string) (client.Account, error) {
-	account, err := c.CreateAccount(relays, rmbEncKey)
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to create new account on registrar")
-	}
-
-	return account, err
-}
-
-func parseSeed(seed string) (ed25519.PublicKey, ed25519.PrivateKey, []byte, error) {
-	privateKeyBytes, err := hex.DecodeString(seed)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	privateKey := ed25519.NewKeyFromSeed(privateKeyBytes)
-	publicKey := privateKey.Public().(ed25519.PublicKey)
-
-	return publicKey, privateKey, privateKeyBytes, nil
 }

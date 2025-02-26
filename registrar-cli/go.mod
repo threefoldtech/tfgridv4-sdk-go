@@ -5,7 +5,7 @@ go 1.21.0
 require (
 	github.com/rs/zerolog v1.33.0
 	github.com/spf13/cobra v1.9.1
-	github.com/threefoldtech/tfgrid4-sdk-go/node-registrar v0.0.0-20250226140024-dc119126c93f
+	github.com/threefoldtech/tfgrid4-sdk-go/node-registrar v0.0.0-20250226194238-c27651fbdd6e
 )
 
 require (

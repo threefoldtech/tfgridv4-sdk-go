@@ -2,6 +2,7 @@
 package cmd
 
 import (
+	"crypto/ed25519"
 	"encoding/hex"
 	"fmt"
 
@@ -49,7 +50,8 @@ var createFarmCmd = &cobra.Command{
 			return err
 		}
 
-		cli, err := client.NewRegistrarClient(u, seedBytes)
+		privateKey := ed25519.NewKeyFromSeed(seedBytes)
+		cli, err := client.NewRegistrarClient(u, privateKey)
 		if err != nil {
 			return err
 		}

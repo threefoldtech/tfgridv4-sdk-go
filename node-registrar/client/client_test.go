@@ -1,6 +1,7 @@
 package client
 
 import (
+	"encoding/base64"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -14,9 +15,9 @@ func TestNewRegistrarClient(t *testing.T) {
 	var count int
 	require := require.New(t)
 
-	pk, seed, publicKeyBase64, err := aliceKeys()
+	publicKey, privateKey, err := aliceKeys()
 	require.NoError(err)
-	account.PublicKey = publicKeyBase64
+	account.PublicKey = base64.StdEncoding.EncodeToString(publicKey)
 
 	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		statusCode, body := serverHandler(r, request, count, require)
@@ -33,29 +34,29 @@ func TestNewRegistrarClient(t *testing.T) {
 	t.Run("test new registrar client with no account", func(t *testing.T) {
 		count = 0
 		request = newClientWithNoAccount
-		c, err := NewRegistrarClient(baseURL, seed)
+		c, err := NewRegistrarClient(baseURL, privateKey)
 		require.NoError(err)
 		require.Equal(uint64(0), c.twinID)
 		require.Equal(uint64(0), c.nodeID)
-		require.Equal([]byte(c.keyPair.publicKey), pk)
+		require.Equal(publicKey, c.keyPair.publicKey)
 	})
 
 	t.Run("test new registrar client with account and no node", func(t *testing.T) {
 		count = 0
 		request = newClientWithAccountNoNode
-		c, err := NewRegistrarClient(baseURL, seed)
+		c, err := NewRegistrarClient(baseURL, privateKey)
 		require.NoError(err)
 		require.Equal(account.TwinID, c.twinID)
 		require.Equal(uint64(0), c.nodeID)
-		require.Equal(pk, []byte(c.keyPair.publicKey))
+		require.Equal(publicKey, c.keyPair.publicKey)
 	})
 	t.Run("test new registrar client with account and node", func(t *testing.T) {
 		count = 0
 		request = newClientWithAccountAndNode
-		c, err := NewRegistrarClient(baseURL, seed)
+		c, err := NewRegistrarClient(baseURL, privateKey)
 		require.NoError(err)
 		require.Equal(account.TwinID, c.twinID)
 		require.Equal(nodeID, c.nodeID)
-		require.Equal(pk, []byte(c.keyPair.publicKey))
+		require.Equal(publicKey, c.keyPair.publicKey)
 	})
 }

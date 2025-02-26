@@ -1,6 +1,7 @@
 package client
 
 import (
+	"encoding/base64"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -15,9 +16,9 @@ func TestRegistarNode(t *testing.T) {
 	var count int
 	require := require.New(t)
 
-	_, seed, publicKeyBase64, err := aliceKeys()
+	publicKey, privateKey, err := aliceKeys()
 	require.NoError(err)
-	account.PublicKey = publicKeyBase64
+	account.PublicKey = base64.StdEncoding.EncodeToString(publicKey)
 
 	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		statusCode, body := serverHandler(r, request, count, require)
@@ -33,7 +34,7 @@ func TestRegistarNode(t *testing.T) {
 
 	t.Run("test registar node no account", func(t *testing.T) {
 		request = newClientWithNoAccount
-		c, err := NewRegistrarClient(baseURL, seed)
+		c, err := NewRegistrarClient(baseURL, privateKey)
 		require.NoError(err)
 
 		request = registerNodeWithNoAccount
@@ -44,7 +45,7 @@ func TestRegistarNode(t *testing.T) {
 	t.Run("test registar node, node already exist", func(t *testing.T) {
 		count = 0
 		request = newClientWithAccountAndNode
-		c, err := NewRegistrarClient(baseURL, seed)
+		c, err := NewRegistrarClient(baseURL, privateKey)
 		require.NoError(err)
 
 		count = 0
@@ -56,7 +57,7 @@ func TestRegistarNode(t *testing.T) {
 	t.Run("test registar node, created successfully", func(t *testing.T) {
 		count = 0
 		request = newClientWithAccountNoNode
-		c, err := NewRegistrarClient(baseURL, seed)
+		c, err := NewRegistrarClient(baseURL, privateKey)
 		require.NoError(err)
 
 		count = 0
@@ -72,9 +73,9 @@ func TestUpdateNode(t *testing.T) {
 	var count int
 	require := require.New(t)
 
-	_, seed, publicKeyBase64, err := aliceKeys()
+	publicKey, privateKey, err := aliceKeys()
 	require.NoError(err)
-	account.PublicKey = publicKeyBase64
+	account.PublicKey = base64.StdEncoding.EncodeToString(publicKey)
 
 	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		statusCode, body := serverHandler(r, request, count, require)
@@ -89,7 +90,7 @@ func TestUpdateNode(t *testing.T) {
 	require.NoError(err)
 
 	request = newClientWithAccountAndNode
-	c, err := NewRegistrarClient(baseURL, seed)
+	c, err := NewRegistrarClient(baseURL, privateKey)
 	require.NoError(err)
 
 	t.Run("test update node with status ok", func(t *testing.T) {
@@ -116,9 +117,9 @@ func TestGetNode(t *testing.T) {
 	var count int
 	require := require.New(t)
 
-	_, seed, publicKeyBase64, err := aliceKeys()
+	publicKey, privateKey, err := aliceKeys()
 	require.NoError(err)
-	account.PublicKey = publicKeyBase64
+	account.PublicKey = base64.StdEncoding.EncodeToString(publicKey)
 
 	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		statusCode, body := serverHandler(r, request, count, require)
@@ -133,7 +134,7 @@ func TestGetNode(t *testing.T) {
 	require.NoError(err)
 
 	request = newClientWithAccountAndNode
-	c, err := NewRegistrarClient(baseURL, seed)
+	c, err := NewRegistrarClient(baseURL, privateKey)
 	require.NoError(err)
 
 	t.Run("test get node status not found", func(t *testing.T) {

@@ -2,23 +2,27 @@ package main
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"time"
 
 	"log"
 
-	substrate "github.com/threefoldtech/tfchain/clients/tfchain-client-go"
 	"github.com/threefoldtech/tfgrid-sdk-go/rmb-sdk-go/peer"
 )
 
 func app() error {
-	mnemonics := "<mnemonics goes here>"
-	subManager := substrate.NewManager("wss://tfchain.dev.grid.tf/ws")
+	privateKey := "<private key goes here>"
+
+	privateKeyBytes, err := hex.DecodeString(privateKey)
+	if err != nil {
+		return fmt.Errorf("failed to decode private key: %w", err)
+	}
 
 	client, err := peer.NewRpcClient(
 		context.Background(),
-		mnemonics,
-		subManager,
+		privateKeyBytes,
+		peer.WithRegistrarUrl("https://registrar.dev4.grid.tf"),
 		peer.WithKeyType(peer.KeyTypeSr25519),
 		peer.WithRelay("wss://relay.dev.grid.tf"),
 		peer.WithSession("test-client"),

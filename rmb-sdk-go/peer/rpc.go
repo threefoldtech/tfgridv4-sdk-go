@@ -8,7 +8,6 @@ import (
 	"sync"
 
 	"github.com/google/uuid"
-	substrate "github.com/threefoldtech/tfchain/clients/tfchain-client-go"
 	"github.com/threefoldtech/tfgrid-sdk-go/rmb-sdk-go"
 	"github.com/threefoldtech/tfgrid-sdk-go/rmb-sdk-go/peer/types"
 )
@@ -34,8 +33,7 @@ type RpcClient struct {
 // it easy to make rpc calls
 func NewRpcClient(
 	ctx context.Context,
-	mnemonics string,
-	subManager substrate.Manager,
+	privateKey []byte,
 	opts ...PeerOpt) (*RpcClient, error) {
 
 	rpc := RpcClient{
@@ -44,8 +42,7 @@ func NewRpcClient(
 
 	base, err := NewPeer(
 		ctx,
-		mnemonics,
-		subManager,
+		privateKey,
 		rpc.router,
 		opts...,
 	)

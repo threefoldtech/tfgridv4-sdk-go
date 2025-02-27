@@ -2,12 +2,12 @@ package main
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"math/rand"
 
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
-	substrate "github.com/threefoldtech/tfchain/clients/tfchain-client-go"
 	"github.com/threefoldtech/tfgrid-sdk-go/rmb-sdk-go/peer"
 	"github.com/threefoldtech/tfgrid-sdk-go/rmb-sdk-go/peer/types"
 )
@@ -15,18 +15,23 @@ import (
 var resultsChan = make(chan bool)
 
 func app() error {
-	mnemonics := "<mnemonics goes here>"
-	subManager := substrate.NewManager("wss://tfchain.dev.grid.tf/ws")
+	privateKey := "<private key here>"
 	ctx := context.Background()
+
+	privateKeyBytes, err := hex.DecodeString(privateKey)
+	if err != nil {
+		return fmt.Errorf("failed to decode private key: %w", err)
+	}
 
 	peer, err := peer.NewPeer(
 		ctx,
-		mnemonics,
-		subManager,
+		privateKeyBytes,
 		relayCallback,
+		peer.WithRegistrarUrl("https://registrar.dev4.grid.tf"),
 		peer.WithRelay("wss://relay.dev.grid.tf"),
 		peer.WithSession("test-client"),
 		peer.WithInMemoryExpiration(6*60*60), // six hours
+		peer.WithKeyType(peer.KeyTypeEd25519),
 	)
 
 	if err != nil {

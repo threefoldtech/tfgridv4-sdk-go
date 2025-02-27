@@ -2,12 +2,12 @@ package main
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 
-	substrate "github.com/threefoldtech/tfchain/clients/tfchain-client-go"
 	"github.com/threefoldtech/tfgrid-sdk-go/rmb-sdk-go"
 	"github.com/threefoldtech/tfgrid-sdk-go/rmb-sdk-go/peer"
 )
@@ -59,20 +59,25 @@ func app() error {
 	})
 
 	// adding a peer for the router
-	mnemonics := "<mnemonics goes here>"
-	subManager := substrate.NewManager("wss://tfchain.dev.grid.tf/ws")
+	privateKey := "<private key here>"
 	ctx := context.Background()
+
+	privateKeyBytes, err := hex.DecodeString(privateKey)
+	if err != nil {
+		return fmt.Errorf("failed to decode private key: %w", err)
+	}
 
 	// this peer will be a 'calculator' session.
 	// means other peers on the network need to know that
 	// session id to use when they are making calls
-	_, err := peer.NewPeer(
+	_, err = peer.NewPeer(
 		ctx,
-		mnemonics,
-		subManager,
+		privateKeyBytes,
 		router.Serve,
+		peer.WithRegistrarUrl("https://registrar.dev4.grid.tf"),
 		peer.WithRelay("wss://relay.dev.grid.tf"),
 		peer.WithSession("calculator"),
+		peer.WithKeyType(peer.KeyTypeEd25519),
 	)
 
 	if err != nil {

@@ -10,11 +10,11 @@ This tool allows users to create a farm account on a specified network.
    ```
 2. Navigate to the project directory:
    ```sh
-   cd node-registrar
+   cd tfgrid4-sdk-go/node-registrar/tools/farm
    ```
 3. Build the application:
    ```sh
-   go build -o registrar-tool main.go
+   go build -o new-farm main.go
    ```
 
 ## Usage
@@ -31,3 +31,8 @@ This tool allows users to create a farm account on a specified network.
 ```sh
 ./new-farm -seed aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899 -network dev -farm_name MyFarm
 ```
+The `FarmID` (e.g., `11`) is returned upon successful farm creation.
+
+## Next Step
+
+Once this is done, you can create a V4 bootstrap image using the V4 Zero-OS Boot Generator: https://v4.bootstrap.grid.tf/.

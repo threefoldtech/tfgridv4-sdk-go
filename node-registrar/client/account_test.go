@@ -15,9 +15,9 @@ func TestCreateAccount(t *testing.T) {
 	var count int
 	require := require.New(t)
 
-	publicKey, privateKey, err := aliceKeys()
+	_, keyPair, err := parseKeysFromMnemonicOrSeed(testMnemonic)
 	require.NoError(err)
-	account.PublicKey = base64.StdEncoding.EncodeToString(publicKey)
+	account.PublicKey = base64.StdEncoding.EncodeToString(keyPair.Public())
 
 	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		statusCode, body := serverHandler(r, request, count, require)
@@ -32,12 +32,12 @@ func TestCreateAccount(t *testing.T) {
 	require.NoError(err)
 
 	request = newClientWithNoAccount
-	c, err := NewRegistrarClient(baseURL, privateKey)
+	c, err := NewRegistrarClient(baseURL, testMnemonic)
 	require.NoError(err)
 
 	t.Run("test create account created successfully", func(t *testing.T) {
 		request = createAccountStatusCreated
-		result, err := c.CreateAccount(account.Relays, account.RMBEncKey)
+		result, _, err := c.CreateAccount(account.Relays, account.RMBEncKey)
 		require.NoError(err)
 		require.Equal(account, result)
 	})
@@ -48,9 +48,9 @@ func TestUpdateAccount(t *testing.T) {
 	var count int
 	require := require.New(t)
 
-	publicKey, privateKey, err := aliceKeys()
+	_, keyPair, err := parseKeysFromMnemonicOrSeed(testMnemonic)
 	require.NoError(err)
-	account.PublicKey = base64.StdEncoding.EncodeToString(publicKey)
+	account.PublicKey = base64.StdEncoding.EncodeToString(keyPair.Public())
 
 	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		statusCode, body := serverHandler(r, request, count, require)
@@ -68,11 +68,11 @@ func TestUpdateAccount(t *testing.T) {
 	t.Run("test update account updated successfully", func(t *testing.T) {
 		count = 0
 		request = newClientWithAccountNoNode
-		c, err := NewRegistrarClient(baseURL, privateKey)
+		c, err := NewRegistrarClient(baseURL, testMnemonic)
 
 		require.NoError(err)
 		require.Equal(c.twinID, account.TwinID)
-		require.Equal(c.keyPair.publicKey, publicKey)
+		require.Equal(c.keyPair, keyPair)
 
 		request = updateAccountWithStatusOK
 		relays := []string{"relay1"}
@@ -82,10 +82,10 @@ func TestUpdateAccount(t *testing.T) {
 
 	t.Run("test update account account not found", func(t *testing.T) {
 		request = newClientWithNoAccount
-		c, err := NewRegistrarClient(baseURL, privateKey)
+		c, err := NewRegistrarClient(baseURL, testMnemonic)
 
 		require.NoError(err)
-		require.Equal(c.keyPair.publicKey, publicKey)
+		require.Equal(c.keyPair, keyPair)
 
 		request = updateAccountWithNoAccount
 		relays := []string{"relay1"}
@@ -99,9 +99,9 @@ func TestGetAccount(t *testing.T) {
 	var count int
 	require := require.New(t)
 
-	publicKey, privateKey, err := aliceKeys()
+	_, keyPair, err := parseKeysFromMnemonicOrSeed(testMnemonic)
 	require.NoError(err)
-	account.PublicKey = base64.StdEncoding.EncodeToString(publicKey)
+	account.PublicKey = base64.StdEncoding.EncodeToString(keyPair.Public())
 
 	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		statusCode, body := serverHandler(r, request, count, require)
@@ -117,10 +117,10 @@ func TestGetAccount(t *testing.T) {
 
 	count = 0
 	request = newClientWithAccountNoNode
-	c, err := NewRegistrarClient(baseURL, privateKey)
+	c, err := NewRegistrarClient(baseURL, testMnemonic)
 	require.NoError(err)
 	require.Equal(account.TwinID, c.twinID)
-	require.Equal(publicKey, c.keyPair.publicKey)
+	require.Equal(keyPair, c.keyPair)
 
 	t.Run("test get account with id account not found", func(t *testing.T) {
 		request = getAccountWithIDStatusNotFount

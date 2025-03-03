@@ -96,7 +96,11 @@ func (c RegistrarClient) setZosVersion(v string, safeToUpgrade bool) (err error)
 		return errors.Wrap(err, "failed to construct http request to the registrar")
 	}
 
-	req.Header.Set("X-Auth", c.signRequest(time.Now().Unix()))
+	authHeader, err := c.signRequest(time.Now().Unix())
+	if err != nil {
+		return errors.Wrap(err, "failed to sign request")
+	}
+	req.Header.Set("X-Auth", authHeader)
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.httpClient.Do(req)

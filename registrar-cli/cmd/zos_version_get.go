@@ -7,10 +7,10 @@ import (
 	"github.com/threefoldtech/tfgrid4-sdk-go/registrar-cli/internal/cmd"
 )
 
-// getZosVersionCmd represents the zos version command
-var getZosVersionCmd = &cobra.Command{
-	Use:   "version",
-	Short: "get zos version from Threefold grid4",
+// zosVersionGetCmd represents the zos version get command
+var zosVersionGetCmd = &cobra.Command{
+	Use:   "get",
+	Short: "get zos version from node registrar",
 	RunE: func(cobraCmd *cobra.Command, args []string) error {
 		network, err := cobraCmd.Flags().GetString("network")
 		if err != nil {
@@ -29,6 +29,6 @@ var getZosVersionCmd = &cobra.Command{
 }
 
 func init() {
-	getCmd.AddCommand(getZosVersionCmd)
-	getZosVersionCmd.Flags().StringP("network", "n", "", "network (dev, qa, test, main)")
+	zosVersionCmd.AddCommand(zosVersionGetCmd)
+	zosVersionGetCmd.Flags().StringP("network", "n", "", "network (dev, qa, test, main)")
 }

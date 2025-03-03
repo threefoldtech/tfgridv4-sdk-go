@@ -7,9 +7,9 @@ import (
 	"github.com/threefoldtech/tfgrid4-sdk-go/registrar-cli/internal/cmd"
 )
 
-// createFarmCmd represents the cancel command
-var createFarmCmd = &cobra.Command{
-	Use:   "farm",
+// farmCreateCmd represents the farm create command
+var farmCreateCmd = &cobra.Command{
+	Use:   "create",
 	Short: "create new farm in node registrar",
 	RunE: func(cobraCmd *cobra.Command, args []string) error {
 		seed, err := cobraCmd.Flags().GetString("seed")
@@ -44,9 +44,9 @@ var createFarmCmd = &cobra.Command{
 }
 
 func init() {
-	createCmd.AddCommand(createFarmCmd)
-	createFarmCmd.Flags().StringP("seed", "s", "", "account seed key")
-	createFarmCmd.Flags().StringP("network", "n", "", "network (dev, qa, test, main)")
-	createFarmCmd.Flags().StringP("farm-name", "f", "", "farm name")
-	createFarmCmd.Flags().BoolP("dedicated", "d", false, "is farm dedicated")
+	farmCmd.AddCommand(farmCreateCmd)
+	farmCreateCmd.Flags().StringP("seed", "s", "", "account seed key")
+	farmCreateCmd.Flags().StringP("network", "n", "", "network (dev, qa, test, main)")
+	farmCreateCmd.Flags().StringP("farm-name", "f", "", "farm name")
+	farmCreateCmd.Flags().BoolP("dedicated", "d", false, "is farm dedicated")
 }

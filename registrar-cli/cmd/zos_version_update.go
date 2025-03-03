@@ -7,9 +7,9 @@ import (
 	"github.com/threefoldtech/tfgrid4-sdk-go/registrar-cli/internal/cmd"
 )
 
-// UpdateZosVersionCmd represents the update farm command
+// UpdateZosVersionCmd represents the zos version update command
 var UpdateZosVersionCmd = &cobra.Command{
-	Use:   "version",
+	Use:   "update",
 	Short: "update zos version in node registrar",
 	RunE: func(cobraCmd *cobra.Command, args []string) error {
 		seed, err := cobraCmd.Flags().GetString("seed")
@@ -44,7 +44,7 @@ var UpdateZosVersionCmd = &cobra.Command{
 }
 
 func init() {
-	updateCmd.AddCommand(UpdateZosVersionCmd)
+	zosVersionCmd.AddCommand(UpdateZosVersionCmd)
 	UpdateZosVersionCmd.Flags().StringP("seed", "s", "", "account seed key")
 	UpdateZosVersionCmd.Flags().StringP("network", "n", "", "network (dev, qa, test, main)")
 	UpdateZosVersionCmd.Flags().StringP("version", "v", "v0.0.0", "new zos version")

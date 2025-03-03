@@ -7,9 +7,9 @@ import (
 	"github.com/threefoldtech/tfgrid4-sdk-go/registrar-cli/internal/cmd"
 )
 
-// getAccountCmd represents the cancel command
-var getAccountCmd = &cobra.Command{
-	Use:   "account",
+// accountGetCmd represents the account get command
+var accountGetCmd = &cobra.Command{
+	Use:   "get",
 	Short: "get account from node registrar",
 	RunE: func(cobraCmd *cobra.Command, args []string) error {
 		network, err := cobraCmd.Flags().GetString("network")
@@ -39,8 +39,8 @@ var getAccountCmd = &cobra.Command{
 }
 
 func init() {
-	getCmd.AddCommand(getAccountCmd)
-	getAccountCmd.Flags().StringP("network", "n", "", "network (dev, qa, test, main)")
-	getAccountCmd.Flags().Uint64P("twin-id", "i", 0, "twin id")
-	getAccountCmd.Flags().StringP("public-key", "k", "", "account public key")
+	accountCmd.AddCommand(accountGetCmd)
+	accountGetCmd.Flags().StringP("network", "n", "", "network (dev, qa, test, main)")
+	accountGetCmd.Flags().Uint64P("twin-id", "i", 0, "twin id")
+	accountGetCmd.Flags().StringP("public-key", "k", "", "account public key")
 }

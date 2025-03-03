@@ -7,9 +7,9 @@ import (
 	"github.com/threefoldtech/tfgrid4-sdk-go/registrar-cli/internal/cmd"
 )
 
-// UpdateFarmCmd represents the update farm command
-var UpdateFarmCmd = &cobra.Command{
-	Use:   "farm",
+// farmUpdateCmd represents the farm update command
+var farmUpdateCmd = &cobra.Command{
+	Use:   "update",
 	Short: "update farm in node registrar",
 	RunE: func(cobraCmd *cobra.Command, args []string) error {
 		seed, err := cobraCmd.Flags().GetString("seed")
@@ -49,10 +49,10 @@ var UpdateFarmCmd = &cobra.Command{
 }
 
 func init() {
-	updateCmd.AddCommand(UpdateFarmCmd)
-	UpdateFarmCmd.Flags().StringP("seed", "s", "", "account seed key")
-	UpdateFarmCmd.Flags().StringP("network", "n", "", "network (dev, qa, test, main)")
-	UpdateFarmCmd.Flags().Uint64P("farm-id", "i", 0, "farm id")
-	UpdateFarmCmd.Flags().String("farm-name", "", "new farm name")
-	UpdateFarmCmd.Flags().BoolP("dedicated", "d", false, "farm is dedicated")
+	farmCmd.AddCommand(farmUpdateCmd)
+	farmUpdateCmd.Flags().StringP("seed", "s", "", "account seed key")
+	farmUpdateCmd.Flags().StringP("network", "n", "", "network (dev, qa, test, main)")
+	farmUpdateCmd.Flags().Uint64P("farm-id", "i", 0, "farm id")
+	farmUpdateCmd.Flags().String("farm-name", "", "new farm name")
+	farmUpdateCmd.Flags().BoolP("dedicated", "d", false, "farm is dedicated")
 }

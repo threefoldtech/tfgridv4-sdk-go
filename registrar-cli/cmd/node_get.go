@@ -7,9 +7,9 @@ import (
 	"github.com/threefoldtech/tfgrid4-sdk-go/registrar-cli/internal/cmd"
 )
 
-// getNodeCmd represents the cancel command
-var getNodeCmd = &cobra.Command{
-	Use:   "node",
+// nodeGetCmd represents the node get command
+var nodeGetCmd = &cobra.Command{
+	Use:   "get",
 	Short: "get node from node registrar",
 	RunE: func(cobraCmd *cobra.Command, args []string) error {
 		network, err := cobraCmd.Flags().GetString("network")
@@ -39,8 +39,8 @@ var getNodeCmd = &cobra.Command{
 }
 
 func init() {
-	getCmd.AddCommand(getNodeCmd)
-	getNodeCmd.Flags().StringP("network", "n", "", "network (dev, qa, test, main)")
-	getNodeCmd.Flags().Uint64("node-id", 0, "node id")
-	getNodeCmd.Flags().Uint64("twin-id", 0, "twin id")
+	nodeCmd.AddCommand(nodeGetCmd)
+	nodeGetCmd.Flags().StringP("network", "n", "", "network (dev, qa, test, main)")
+	nodeGetCmd.Flags().Uint64("node-id", 0, "node id")
+	nodeGetCmd.Flags().Uint64("twin-id", 0, "twin id")
 }

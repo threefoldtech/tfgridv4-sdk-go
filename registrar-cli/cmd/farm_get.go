@@ -9,9 +9,9 @@ import (
 	"github.com/threefoldtech/tfgrid4-sdk-go/registrar-cli/internal/cmd"
 )
 
-// getFarmCmd represents the cancel command
-var getFarmCmd = &cobra.Command{
-	Use:   "farm",
+// farmGetCmd represents the farm get command
+var farmGetCmd = &cobra.Command{
+	Use:   "get",
 	Short: "get farm from node registrar",
 	RunE: func(cobraCmd *cobra.Command, args []string) error {
 		network, err := cobraCmd.Flags().GetString("network")
@@ -39,7 +39,7 @@ var getFarmCmd = &cobra.Command{
 }
 
 func init() {
-	getCmd.AddCommand(getFarmCmd)
-	getFarmCmd.Flags().StringP("network", "n", "", "network (dev, qa, test, main)")
-	getFarmCmd.Flags().Uint64P("farm-id", "i", 0, "farm id")
+	farmCmd.AddCommand(farmGetCmd)
+	farmGetCmd.Flags().StringP("network", "n", "", "network (dev, qa, test, main)")
+	farmGetCmd.Flags().Uint64P("farm-id", "i", 0, "farm id")
 }

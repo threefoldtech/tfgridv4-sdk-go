@@ -7,10 +7,10 @@ import (
 	"github.com/threefoldtech/tfgrid4-sdk-go/registrar-cli/internal/cmd"
 )
 
-// UpdateAccountCmd represents the cancel command
-var UpdateAccountCmd = &cobra.Command{
-	Use:   "account",
-	Short: "update account in node registrar",
+// accountCreateCmd represents the account create command
+var accountCreateCmd = &cobra.Command{
+	Use:   "create",
+	Short: "create new account in node registrar",
 	RunE: func(cobraCmd *cobra.Command, args []string) error {
 		seed, err := cobraCmd.Flags().GetString("seed")
 		if err != nil {
@@ -32,21 +32,21 @@ var UpdateAccountCmd = &cobra.Command{
 			return err
 		}
 
-		err = cmd.UpdateAccount(seed, network, relays, rmbEncKey)
+		account, err := cmd.CreaeteAccount(seed, network, relays, rmbEncKey)
 		if err != nil {
 			return err
 		}
 
-		log.Info().Msg("account is updated successfully")
+		log.Info().Uint64("twinID", account.TwinID).Msg("account is created successfully")
 
 		return nil
 	},
 }
 
 func init() {
-	updateCmd.AddCommand(UpdateAccountCmd)
-	UpdateAccountCmd.Flags().StringP("seed", "s", "", "account seed key")
-	UpdateAccountCmd.Flags().StringP("network", "n", "", "network (dev, qa, test, main)")
-	UpdateAccountCmd.Flags().StringArrayP("relays", "r", nil, "relays urls")
-	UpdateAccountCmd.Flags().StringP("rmb-enc-key", "k", "", "rmb encryption key")
+	accountCmd.AddCommand(accountCreateCmd)
+	accountCreateCmd.Flags().StringP("seed", "s", "", "account seed key")
+	accountCreateCmd.Flags().StringP("network", "n", "", "network (dev, qa, test, main)")
+	accountCreateCmd.Flags().StringArrayP("relays", "r", nil, "relays urls")
+	accountCreateCmd.Flags().StringP("rmb-enc-key", "k", "", "rmb encryption key")
 }

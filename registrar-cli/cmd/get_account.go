@@ -2,77 +2,37 @@
 package cmd
 
 import (
-	"crypto/ed25519"
-	"encoding/hex"
-	"fmt"
-
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-	"github.com/threefoldtech/tfgrid4-sdk-go/node-registrar/client"
+	"github.com/threefoldtech/tfgrid4-sdk-go/registrar-cli/internal/cmd"
 )
 
 // getAccountCmd represents the cancel command
 var getAccountCmd = &cobra.Command{
 	Use:   "account",
 	Short: "get account from node registrar",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		network, err := cmd.Flags().GetString("network")
+	RunE: func(cobraCmd *cobra.Command, args []string) error {
+		network, err := cobraCmd.Flags().GetString("network")
 		if err != nil {
 			return err
 		}
 
-		twinID, err := cmd.Flags().GetUint64("twin-id")
+		twinID, err := cobraCmd.Flags().GetUint64("twin-id")
 		if err != nil {
 			return err
 		}
 
-		pk, err := cmd.Flags().GetString("public-key")
+		pk, err := cobraCmd.Flags().GetString("public-key")
 		if err != nil {
 			return err
 		}
 
-		u, ok := urls[network]
-		if !ok {
-			return fmt.Errorf("invalid network %s", network)
-		}
-
-		seed, err := generateRandomSeed()
+		account, err := cmd.GetAccount(network, twinID, pk)
 		if err != nil {
 			return err
 		}
 
-		seedBytes, err := hex.DecodeString(seed)
-		if err != nil {
-			return err
-		}
-
-		publicKey, err := hex.DecodeString(pk)
-		if err != nil {
-			return err
-		}
-
-		privateKey := ed25519.NewKeyFromSeed(seedBytes)
-		cli, err := client.NewRegistrarClient(u, privateKey)
-		if err != nil {
-			return err
-		}
-
-		if twinID != 0 {
-			account, err := cli.GetAccount(twinID)
-			if err != nil {
-				return err
-			}
-			log.Info().Any("account", account).Send()
-
-		} else if len(publicKey) != 0 {
-			account, err := cli.GetAccountByPK(publicKey)
-			if err != nil {
-				return err
-			}
-			log.Info().Any("account", account).Send()
-		} else {
-			return fmt.Errorf("you need to provide either twin id or public key to load an account")
-		}
+		log.Info().Any("account", account).Send()
 
 		return nil
 	},

@@ -2,60 +2,38 @@
 package cmd
 
 import (
-	"encoding/hex"
 	"fmt"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-	"github.com/threefoldtech/tfgrid4-sdk-go/node-registrar/client"
+	"github.com/threefoldtech/tfgrid4-sdk-go/registrar-cli/internal/cmd"
 )
 
 // getFarmCmd represents the cancel command
 var getFarmCmd = &cobra.Command{
 	Use:   "farm",
 	Short: "get farm from node registrar",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		network, err := cmd.Flags().GetString("network")
+	RunE: func(cobraCmd *cobra.Command, args []string) error {
+		network, err := cobraCmd.Flags().GetString("network")
 		if err != nil {
 			return err
 		}
 
-		farmID, err := cmd.Flags().GetUint64("farm-id")
+		farmID, err := cobraCmd.Flags().GetUint64("farm-id")
 		if err != nil {
 			return err
 		}
 
-		u, ok := urls[network]
-		if !ok {
-			return fmt.Errorf("invalid network %s", network)
+		if farmID == 0 {
+			return fmt.Errorf("you need to provide farm id to load a farm")
 		}
 
-		seed, err := generateRandomSeed()
+		farm, err := cmd.GetFarm(network, farmID)
 		if err != nil {
 			return err
 		}
 
-		seedBytes, err := hex.DecodeString(seed)
-		if err != nil {
-			return err
-		}
-
-		cli, err := client.NewRegistrarClient(u, seedBytes)
-		if err != nil {
-			return err
-		}
-
-		if farmID != 0 {
-			farm, err := cli.GetFarm(farmID)
-			if err != nil {
-				return err
-			}
-			log.Info().Any("farm", farm).Send()
-
-		} else {
-			return fmt.Errorf("you need to provide either farm id to load a farm")
-		}
-
+		log.Info().Any("farm", farm).Send()
 		return nil
 	},
 }

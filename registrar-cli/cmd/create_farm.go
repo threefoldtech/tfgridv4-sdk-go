@@ -2,66 +2,42 @@
 package cmd
 
 import (
-	"crypto/ed25519"
-	"encoding/hex"
-	"fmt"
-
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-	"github.com/threefoldtech/tfgrid4-sdk-go/node-registrar/client"
+	"github.com/threefoldtech/tfgrid4-sdk-go/registrar-cli/internal/cmd"
 )
 
 // createFarmCmd represents the cancel command
 var createFarmCmd = &cobra.Command{
 	Use:   "farm",
 	Short: "create new farm in node registrar",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		seed, err := cmd.Flags().GetString("seed")
+	RunE: func(cobraCmd *cobra.Command, args []string) error {
+		seed, err := cobraCmd.Flags().GetString("seed")
 		if err != nil {
 			return err
 		}
 
-		network, err := cmd.Flags().GetString("network")
+		network, err := cobraCmd.Flags().GetString("network")
 		if err != nil {
 			return err
 		}
 
-		farmName, err := cmd.Flags().GetString("farm-name")
+		farmName, err := cobraCmd.Flags().GetString("farm-name")
 		if err != nil {
 			return err
 		}
 
-		dedicated, err := cmd.Flags().GetBool("dedicated")
+		dedicated, err := cobraCmd.Flags().GetBool("dedicated")
 		if err != nil {
 			return err
 		}
 
-		u, ok := urls[network]
-		if !ok {
-			return fmt.Errorf("invalid network %s", network)
-		}
-
-		if len(seed) == 0 {
-			return fmt.Errorf("can not initialize registrar client with no seed")
-		}
-
-		seedBytes, err := hex.DecodeString(seed)
+		farmID, err := cmd.CreaeteFarm(seed, network, farmName, dedicated)
 		if err != nil {
 			return err
 		}
 
-		privateKey := ed25519.NewKeyFromSeed(seedBytes)
-		cli, err := client.NewRegistrarClient(u, privateKey)
-		if err != nil {
-			return err
-		}
-
-		farm, err := cli.CreateFarm(farmName, dedicated)
-		if err != nil {
-			return err
-		}
-
-		log.Info().Uint64("farmID", farm).Msg("farm is created successfully")
+		log.Info().Uint64("farmID", farmID).Msg("farm is created successfully")
 
 		return nil
 	},

@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (c RegistrarClient) signRequest(timestamp int64) (authHeader string, err error) {
+func (c *RegistrarClient) signRequest(timestamp int64) (authHeader string, err error) {
 	challenge := []byte(fmt.Sprintf("%d:%v", timestamp, c.twinID))
 	signature, err := c.keyPair.Sign(challenge)
 	if err != nil {

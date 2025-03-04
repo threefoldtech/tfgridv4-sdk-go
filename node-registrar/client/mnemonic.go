@@ -1,8 +1,6 @@
 package client
 
 import (
-	"encoding/hex"
-
 	"github.com/cosmos/go-bip39"
 	"github.com/pkg/errors"
 	subkeyEd25519 "github.com/vedhavyas/go-subkey/v2/ed25519"
@@ -10,37 +8,18 @@ import (
 	"github.com/vedhavyas/go-subkey/v2"
 )
 
-func (c RegistrarClient) Mnemonic() string {
+func (c *RegistrarClient) Mnemonic() string {
 	return c.mnemonic
 }
 
-func parseKeysFromMnemonicOrSeed(mnemonicOrSeed string) (mnemonic string, keypair subkey.KeyPair, err error) {
-	if ok := bip39.IsMnemonicValid(mnemonicOrSeed); ok {
-		// If mnemonic is valid drive key pair from mnemonic
-		keypair, err = subkey.DeriveKeyPair(subkeyEd25519.Scheme{}, mnemonicOrSeed)
-		if err != nil {
-			return "", keypair, errors.Wrapf(err, "Failed to derive key pair from mnemonic phrase %s", mnemonicOrSeed)
-		}
-		return mnemonicOrSeed, keypair, nil
-	}
-
-	// otherwise parse it as seed
-	seed, err := hex.DecodeString(mnemonicOrSeed)
+func parseKeysFromMnemonicOrSeed(mnemonicOrSeed string) (keypair subkey.KeyPair, err error) {
+	// otherwise drive key pair from seed
+	keypair, err = subkey.DeriveKeyPair(subkeyEd25519.Scheme{}, mnemonicOrSeed)
 	if err != nil {
-		return "", keypair, errors.Wrap(err, "failed to decode seed")
+		return keypair, errors.Wrapf(err, "Failed to derive key pair from seed %s", mnemonicOrSeed)
 	}
 
-	mnemonic, err = bip39.NewMnemonic(seed)
-	if err != nil {
-		return "", keypair, errors.Wrapf(err, "Failed to generate mnemonic from %s", mnemonicOrSeed)
-	}
-
-	keypair, err = subkey.DeriveKeyPair(subkeyEd25519.Scheme{}, mnemonic)
-	if err != nil {
-		return "", keypair, errors.Wrapf(err, "Failed to derive key pair from seed %s", mnemonicOrSeed)
-	}
-
-	return
+	return keypair, nil
 }
 
 func generateNewMnemonic() (mnemonic string, keypair subkey.KeyPair, err error) {

@@ -15,7 +15,7 @@ func TestCreateAccount(t *testing.T) {
 	var count int
 	require := require.New(t)
 
-	_, keyPair, err := parseKeysFromMnemonicOrSeed(testMnemonic)
+	keyPair, err := parseKeysFromMnemonicOrSeed(testMnemonic)
 	require.NoError(err)
 	account.PublicKey = base64.StdEncoding.EncodeToString(keyPair.Public())
 
@@ -48,7 +48,7 @@ func TestUpdateAccount(t *testing.T) {
 	var count int
 	require := require.New(t)
 
-	_, keyPair, err := parseKeysFromMnemonicOrSeed(testMnemonic)
+	keyPair, err := parseKeysFromMnemonicOrSeed(testMnemonic)
 	require.NoError(err)
 	account.PublicKey = base64.StdEncoding.EncodeToString(keyPair.Public())
 
@@ -99,7 +99,7 @@ func TestGetAccount(t *testing.T) {
 	var count int
 	require := require.New(t)
 
-	_, keyPair, err := parseKeysFromMnemonicOrSeed(testMnemonic)
+	keyPair, err := parseKeysFromMnemonicOrSeed(testMnemonic)
 	require.NoError(err)
 	account.PublicKey = base64.StdEncoding.EncodeToString(keyPair.Public())
 

@@ -1,6 +1,7 @@
 package client
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/pkg/errors"
@@ -9,11 +10,11 @@ import (
 
 type RegistrarClient struct {
 	httpClient http.Client
+	baseURL    string
 	keyPair    subkey.KeyPair
 	mnemonic   string
 	nodeID     uint64
 	twinID     uint64
-	baseURL    string
 }
 
 func NewRegistrarClient(baseURL string, mnemonicOrSeed ...string) (cli RegistrarClient, err error) {
@@ -28,13 +29,16 @@ func NewRegistrarClient(baseURL string, mnemonicOrSeed ...string) (cli Registrar
 		return cli, nil
 	}
 
-	mnemonic, keyPair, err := parseKeysFromMnemonicOrSeed(mnemonicOrSeed[0])
+	keyPair, err := parseKeysFromMnemonicOrSeed(mnemonicOrSeed[0])
 	if err != nil {
 		return cli, errors.Wrapf(err, "Failed to derive key pair from mnemonic/seed phrase %s", mnemonicOrSeed[0])
 	}
 
 	cli.keyPair = keyPair
-	cli.mnemonic = mnemonic
+	cli.mnemonic = mnemonicOrSeed[0]
+
+	fmt.Println(cli.keyPair)
+	fmt.Println(cli.mnemonic)
 
 	account, err := cli.GetAccountByPK(keyPair.Public())
 	if errors.Is(err, ErrorAccountNotFround) {

@@ -15,7 +15,7 @@ func TestCreateFarm(t *testing.T) {
 	var count int
 	require := require.New(t)
 
-	_, keyPair, err := parseKeysFromMnemonicOrSeed(testMnemonic)
+	keyPair, err := parseKeysFromMnemonicOrSeed(testMnemonic)
 	require.NoError(err)
 	account.PublicKey = base64.StdEncoding.EncodeToString(keyPair.Public())
 
@@ -54,7 +54,7 @@ func TestUpdateFarm(t *testing.T) {
 	var count int
 	require := require.New(t)
 
-	_, keyPair, err := parseKeysFromMnemonicOrSeed(testMnemonic)
+	keyPair, err := parseKeysFromMnemonicOrSeed(testMnemonic)
 	require.NoError(err)
 	account.PublicKey = base64.StdEncoding.EncodeToString(keyPair.Public())
 
@@ -97,7 +97,7 @@ func TestGetFarm(t *testing.T) {
 	var count int
 	require := require.New(t)
 
-	_, keyPair, err := parseKeysFromMnemonicOrSeed(testMnemonic)
+	keyPair, err := parseKeysFromMnemonicOrSeed(testMnemonic)
 	require.NoError(err)
 	account.PublicKey = base64.StdEncoding.EncodeToString(keyPair.Public())
 

@@ -15,19 +15,19 @@ import (
 
 var ErrorAccountNotFround = fmt.Errorf("failed to get requested account from node regiatrar")
 
-func (c RegistrarClient) CreateAccount(relays []string, rmbEncKey string) (account Account, mnemonic string, err error) {
+func (c *RegistrarClient) CreateAccount(relays []string, rmbEncKey string) (account Account, mnemonic string, err error) {
 	return c.createAccount(relays, rmbEncKey)
 }
 
-func (c RegistrarClient) GetAccount(id uint64) (account Account, err error) {
+func (c *RegistrarClient) GetAccount(id uint64) (account Account, err error) {
 	return c.getAccount(id)
 }
 
-func (c RegistrarClient) GetAccountByPK(pk []byte) (account Account, err error) {
+func (c *RegistrarClient) GetAccountByPK(pk []byte) (account Account, err error) {
 	return c.getAccountByPK(pk)
 }
 
-func (c RegistrarClient) UpdateAccount(opts ...UpdateAccountOpts) (err error) {
+func (c *RegistrarClient) UpdateAccount(opts ...UpdateAccountOpts) (err error) {
 	return c.updateAccount(opts)
 }
 
@@ -52,7 +52,7 @@ func UpdateAccountWithRMBEncKey(rmbEncKey string) UpdateAccountOpts {
 	}
 }
 
-func (c RegistrarClient) EnsureAccount(relays []string, rmbEncKey string) (account Account, err error) {
+func (c *RegistrarClient) EnsureAccount(relays []string, rmbEncKey string) (account Account, err error) {
 	return c.ensureAccount(relays, rmbEncKey)
 }
 
@@ -64,7 +64,8 @@ func (c *RegistrarClient) createAccount(relays []string, rmbEncKey string) (acco
 
 	var keyPair subkey.KeyPair
 	if len(c.mnemonic) != 0 {
-		mnemonic, keyPair, err = parseKeysFromMnemonicOrSeed(c.mnemonic)
+		mnemonic = c.mnemonic
+		keyPair, err = parseKeysFromMnemonicOrSeed(c.mnemonic)
 	} else {
 		mnemonic, keyPair, err = generateNewMnemonic()
 	}
@@ -115,7 +116,7 @@ func (c *RegistrarClient) createAccount(relays []string, rmbEncKey string) (acco
 	return
 }
 
-func (c RegistrarClient) getAccount(id uint64) (account Account, err error) {
+func (c *RegistrarClient) getAccount(id uint64) (account Account, err error) {
 	url, err := url.JoinPath(c.baseURL, "accounts")
 	if err != nil {
 		return account, errors.Wrap(err, "failed to construct registrar url")
@@ -153,7 +154,7 @@ func (c RegistrarClient) getAccount(id uint64) (account Account, err error) {
 	return
 }
 
-func (c RegistrarClient) getAccountByPK(pk []byte) (account Account, err error) {
+func (c *RegistrarClient) getAccountByPK(pk []byte) (account Account, err error) {
 	url, err := url.JoinPath(c.baseURL, "accounts")
 	if err != nil {
 		return account, errors.Wrap(err, "failed to construct registrar url")
@@ -194,7 +195,7 @@ func (c RegistrarClient) getAccountByPK(pk []byte) (account Account, err error) 
 	return account, err
 }
 
-func (c RegistrarClient) updateAccount(opts []UpdateAccountOpts) (err error) {
+func (c *RegistrarClient) updateAccount(opts []UpdateAccountOpts) (err error) {
 	err = c.ensureTwinID()
 	if err != nil {
 		return errors.Wrap(err, "failed to ensure twin id")
@@ -241,7 +242,7 @@ func (c RegistrarClient) updateAccount(opts []UpdateAccountOpts) (err error) {
 	return
 }
 
-func (c RegistrarClient) ensureAccount(relays []string, rmbEncKey string) (account Account, err error) {
+func (c *RegistrarClient) ensureAccount(relays []string, rmbEncKey string) (account Account, err error) {
 	account, err = c.GetAccountByPK(c.keyPair.Public())
 	if errors.Is(err, ErrorAccountNotFround) {
 		account, _, err = c.CreateAccount(relays, rmbEncKey)

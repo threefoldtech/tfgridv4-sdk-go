@@ -96,7 +96,7 @@ func Run() error {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 
-	log.Info().Msg("server is running on port :8080")
+	log.Info().Msgf("server is running on port :%d", f.serverPort)
 
 	err = s.Run(quit, fmt.Sprintf("%s:%d", f.domain, f.serverPort))
 	if err != nil {

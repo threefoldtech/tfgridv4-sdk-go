@@ -1,7 +1,6 @@
 package client
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/pkg/errors"
@@ -36,9 +35,6 @@ func NewRegistrarClient(baseURL string, mnemonicOrSeed ...string) (cli Registrar
 
 	cli.keyPair = keyPair
 	cli.mnemonic = mnemonicOrSeed[0]
-
-	fmt.Println(cli.keyPair)
-	fmt.Println(cli.mnemonic)
 
 	account, err := cli.GetAccountByPK(keyPair.Public())
 	if errors.Is(err, ErrorAccountNotFround) {

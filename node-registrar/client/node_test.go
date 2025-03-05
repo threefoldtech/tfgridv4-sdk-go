@@ -15,10 +15,6 @@ func TestRegistarNode(t *testing.T) {
 	var count int
 	require := require.New(t)
 
-	// publicKey, privateKey, err := aliceKeys()
-	// require.NoError(err)
-	// account.PublicKey = base64.StdEncoding.EncodeToString(publicKey)
-	//
 	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		statusCode, body := serverHandler(r, request, count, require)
 		w.WriteHeader(statusCode)

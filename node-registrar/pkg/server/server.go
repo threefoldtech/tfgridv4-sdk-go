@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"sync"
+	"syscall"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
@@ -48,6 +49,9 @@ func (s Server) Run(quit chan os.Signal, addr string) error {
 	}()
 
 	err := server.ListenAndServe()
+	if err != nil {
+		quit <- syscall.SIGINT
+	}
 	wg.Wait()
 
 	return err

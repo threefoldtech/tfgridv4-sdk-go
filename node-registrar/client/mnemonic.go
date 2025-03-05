@@ -16,7 +16,7 @@ func parseKeysFromMnemonicOrSeed(mnemonicOrSeed string) (keypair subkey.KeyPair,
 	// otherwise drive key pair from seed
 	keypair, err = subkey.DeriveKeyPair(subkeyEd25519.Scheme{}, mnemonicOrSeed)
 	if err != nil {
-		return keypair, errors.Wrapf(err, "Failed to derive key pair from seed %s", mnemonicOrSeed)
+		return keypair, errors.Wrapf(err, "failed  to derive key pair from seed %s", mnemonicOrSeed)
 	}
 
 	return keypair, nil
@@ -26,19 +26,19 @@ func generateNewMnemonic() (mnemonic string, keypair subkey.KeyPair, err error) 
 	// Generate 128-bit entropy (12-word mnemonic)
 	entropy, err := bip39.NewEntropy(128)
 	if err != nil {
-		return mnemonic, keypair, errors.Wrap(err, "Failed to generate entropy")
+		return mnemonic, keypair, errors.Wrap(err, "failed to generate entropy")
 	}
 
 	// Generate mnemonic from entropy
 	mnemonic, err = bip39.NewMnemonic(entropy)
 	if err != nil {
-		return mnemonic, keypair, errors.Wrap(err, "Failed to generate mnemonic")
+		return mnemonic, keypair, errors.Wrap(err, "failed  to generate mnemonic")
 	}
 
 	// Drive key pair from mnemonic
 	keypair, err = subkey.DeriveKeyPair(subkeyEd25519.Scheme{}, mnemonic)
 	if err != nil {
-		return mnemonic, keypair, errors.Wrapf(err, "Failed to derive key pair from mnemonic phrase %s", mnemonic)
+		return mnemonic, keypair, errors.Wrapf(err, "failed  to derive key pair from mnemonic phrase %s", mnemonic)
 	}
 	return
 }

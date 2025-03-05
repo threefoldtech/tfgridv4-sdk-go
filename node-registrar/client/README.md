@@ -22,7 +22,7 @@ The Node Registrar Client enables communication with the ThreeFold Grid's node r
 
 * **Create Account**: Create new account on the registrar with uniqe key.
 * **Update Account**: Update the account configuration (relays & rmbEncKey).
-* **Ensure Account**: Ensures that an account is created with specific seed.
+* **Ensure Account**: Ensures that an account is created with specific seed/mnemonic.
 * **Get Account**: Get an account using either its twin\_id or its public\_key.
 
 ### Farms
@@ -42,10 +42,10 @@ The Node Registrar Client enables communication with the ThreeFold Grid's node r
 
 #### Version Operations
 
-| Method          | Description                      | Parameters                 | Returns             |
-|-----------------|----------------------------------|----------------------------|---------------------|
-| GetZosVersion   | Get current zos version          | None                       | (ZosVersion, error) |
-| SetZosVersion   | Update zos version (admin-only)  | version string, force bool | error               |
+| Method          | Description                      | Parameters                         | Returns             |
+|-----------------|----------------------------------|------------------------------------|---------------------|
+| GetZosVersion   | Get current zos version          | None                               | (ZosVersion, error) |
+| SetZosVersion   | Update zos version (admin-only)  | version string, safeToUpgrade bool | error               |
 
 #### Account Management
 
@@ -95,15 +95,20 @@ import (
 func main() {
   registrarURL := "https://registrar.dev4.grid.tf/v1"
 
-  s := make([]byte, 32)
-  _, err := rand.Read(s)
-  if err != nil {
-    log.Fatal().Err(err).Send()
-  }
-  seed = hex.EncodeToString(s)
-  fmt.Println("New Seed (Hex):", seed)
+ // Generate 128-bit entropy (12-word mnemonic)
+ entropy, err := bip39.NewEntropy(128)
+ if err != nil {
+   panic(err)
+ }
+
+ // Generate mnemonic from entropy
+ mnemonic, err = bip39.NewMnemonic(entropy)
+ if err != nil {
+   panic(err)
+ }
+  fmt.Println("New Mnemonic:", mnemonic)
   
-  cli, err := client.NewRegistrarClient(registrarURL, s)
+  cli, err := client.NewRegistrarClient(registrarURL, mnemonic)
   if err != nil {
     panic(err)
   }

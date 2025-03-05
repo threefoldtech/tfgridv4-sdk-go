@@ -1,7 +1,6 @@
 package client
 
 import (
-	"crypto/ed25519"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -10,9 +9,12 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (c RegistrarClient) signRequest(timestamp int64) (authHeader string) {
+func (c *RegistrarClient) signRequest(timestamp int64) (authHeader string, err error) {
 	challenge := []byte(fmt.Sprintf("%d:%v", timestamp, c.twinID))
-	signature := ed25519.Sign(c.keyPair.privateKey, challenge)
+	signature, err := c.keyPair.Sign(challenge)
+	if err != nil {
+		return "", err
+	}
 
 	authHeader = fmt.Sprintf(
 		"%s:%s",

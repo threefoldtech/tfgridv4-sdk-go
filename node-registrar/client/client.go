@@ -1,40 +1,42 @@
 package client
 
 import (
-	"crypto/ed25519"
 	"net/http"
 
 	"github.com/pkg/errors"
+	"github.com/vedhavyas/go-subkey"
 )
-
-type keyPair struct {
-	privateKey ed25519.PrivateKey
-	publicKey  ed25519.PublicKey
-}
 
 type RegistrarClient struct {
 	httpClient http.Client
-	keyPair    keyPair
+	baseURL    string
+	keyPair    subkey.KeyPair
+	mnemonic   string
 	nodeID     uint64
 	twinID     uint64
-	baseURL    string
 }
 
-func NewRegistrarClient(baseURL string, privateKey ed25519.PrivateKey) (cli RegistrarClient, err error) {
+func NewRegistrarClient(baseURL string, mnemonicOrSeed ...string) (cli RegistrarClient, err error) {
 	client := http.DefaultClient
-
-	publicKey, ok := privateKey.Public().(ed25519.PublicKey)
-	if !ok {
-		return cli, errors.Wrap(err, "failed to get public key of provided private key")
-	}
 
 	cli = RegistrarClient{
 		httpClient: *client,
-		keyPair:    keyPair{privateKey, publicKey},
 		baseURL:    baseURL,
 	}
 
-	account, err := cli.GetAccountByPK(publicKey)
+	if len(mnemonicOrSeed) == 0 {
+		return cli, nil
+	}
+
+	keyPair, err := parseKeysFromMnemonicOrSeed(mnemonicOrSeed[0])
+	if err != nil {
+		return cli, errors.Wrapf(err, "Failed to derive key pair from mnemonic/seed phrase %s", mnemonicOrSeed[0])
+	}
+
+	cli.keyPair = keyPair
+	cli.mnemonic = mnemonicOrSeed[0]
+
+	account, err := cli.GetAccountByPK(keyPair.Public())
 	if errors.Is(err, ErrorAccountNotFround) {
 		return cli, nil
 	} else if err != nil {

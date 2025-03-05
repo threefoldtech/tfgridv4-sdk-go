@@ -12,15 +12,15 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (c RegistrarClient) GetZosVersion() (version ZosVersion, err error) {
+func (c *RegistrarClient) GetZosVersion() (version ZosVersion, err error) {
 	return c.getZosVersion()
 }
 
-func (c RegistrarClient) SetZosVersion(v string, safeToUpgrade bool) (err error) {
+func (c *RegistrarClient) SetZosVersion(v string, safeToUpgrade bool) (err error) {
 	return c.setZosVersion(v, safeToUpgrade)
 }
 
-func (c RegistrarClient) getZosVersion() (version ZosVersion, err error) {
+func (c *RegistrarClient) getZosVersion() (version ZosVersion, err error) {
 	url, err := url.JoinPath(c.baseURL, "zos", "version")
 	if err != nil {
 		return version, errors.Wrap(err, "failed to construct registrar url")
@@ -59,7 +59,7 @@ func (c RegistrarClient) getZosVersion() (version ZosVersion, err error) {
 	return
 }
 
-func (c RegistrarClient) setZosVersion(v string, safeToUpgrade bool) (err error) {
+func (c *RegistrarClient) setZosVersion(v string, safeToUpgrade bool) (err error) {
 	err = c.ensureTwinID()
 	if err != nil {
 		return errors.Wrap(err, "failed to ensure twin id")
@@ -96,7 +96,11 @@ func (c RegistrarClient) setZosVersion(v string, safeToUpgrade bool) (err error)
 		return errors.Wrap(err, "failed to construct http request to the registrar")
 	}
 
-	req.Header.Set("X-Auth", c.signRequest(time.Now().Unix()))
+	authHeader, err := c.signRequest(time.Now().Unix())
+	if err != nil {
+		return errors.Wrap(err, "failed to sign request")
+	}
+	req.Header.Set("X-Auth", authHeader)
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.httpClient.Do(req)

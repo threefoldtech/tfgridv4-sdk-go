@@ -1,8 +1,6 @@
 package client
 
 import (
-	"crypto/ed25519"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -11,10 +9,9 @@ import (
 )
 
 var (
-	aliceSeed = "e5be9a5092b81bca64be81d212e7f2f9eba183bb7a90954f7b76361f6edb5c0a"
-	account   = Account{TwinID: 1, Relays: []string{}, RMBEncKey: ""}
-	farm      = Farm{FarmID: 1, FarmName: "freeFarm", TwinID: 1}
-	node      = Node{NodeID: 1, FarmID: farmID, TwinID: twinID}
+	account = Account{TwinID: 1, Relays: []string{}, RMBEncKey: ""}
+	farm    = Farm{FarmID: 1, FarmName: "freeFarm", TwinID: 1}
+	node    = Node{NodeID: 1, FarmID: farmID, TwinID: twinID}
 )
 
 const (
@@ -46,6 +43,8 @@ const (
 	getNodeWithIDStatusNotFound
 	getNodeWithTwinID
 	listNodesInFarm
+
+	testMnemonic = "bottom drive obey lake curtain smoke basket hold race lonely fit walk"
 
 	farmID uint64 = 1
 	nodeID uint64 = 1
@@ -235,19 +234,4 @@ func serverHandler(r *http.Request, request, count int, require *require.Asserti
 	}
 
 	return http.StatusNotAcceptable, nil
-}
-
-func aliceKeys() (publicKey ed25519.PublicKey, privateKey ed25519.PrivateKey, err error) {
-	seed, err := hex.DecodeString(aliceSeed)
-	if err != nil {
-		return
-	}
-
-	privateKey = ed25519.NewKeyFromSeed(seed)
-	publicKey, ok := privateKey.Public().(ed25519.PublicKey)
-	if !ok {
-		return publicKey, privateKey, fmt.Errorf("failed to get public key of provided private key")
-	}
-
-	return
 }

@@ -13,19 +13,19 @@ import (
 
 var ErrorFarmNotFround = fmt.Errorf("failed to get requested farm from node regiatrar")
 
-func (c RegistrarClient) CreateFarm(farmName string, dedicated bool) (farmID uint64, err error) {
+func (c *RegistrarClient) CreateFarm(farmName string, dedicated bool) (farmID uint64, err error) {
 	return c.createFarm(farmName, dedicated)
 }
 
-func (c RegistrarClient) UpdateFarm(farmID uint64, opts ...UpdateFarmOpts) (err error) {
+func (c *RegistrarClient) UpdateFarm(farmID uint64, opts ...UpdateFarmOpts) (err error) {
 	return c.updateFarm(farmID, opts)
 }
 
-func (c RegistrarClient) GetFarm(id uint64) (farm Farm, err error) {
+func (c *RegistrarClient) GetFarm(id uint64) (farm Farm, err error) {
 	return c.getFarm(id)
 }
 
-func (c RegistrarClient) ListFarms(opts ...ListFarmOpts) (farms []Farm, err error) {
+func (c *RegistrarClient) ListFarms(opts ...ListFarmOpts) (farms []Farm, err error) {
 	return c.listFarms(opts...)
 }
 
@@ -91,7 +91,7 @@ func UpdateFarmWithDedicated() UpdateFarmOpts {
 	}
 }
 
-func (c RegistrarClient) createFarm(farmName string, dedicated bool) (farmID uint64, err error) {
+func (c *RegistrarClient) createFarm(farmName string, dedicated bool) (farmID uint64, err error) {
 	err = c.ensureTwinID()
 	if err != nil {
 		return farmID, errors.Wrap(err, "failed to ensure twin id")
@@ -119,7 +119,11 @@ func (c RegistrarClient) createFarm(farmName string, dedicated bool) (farmID uin
 		return farmID, errors.Wrap(err, "failed to construct http request to the registrar")
 	}
 
-	req.Header.Set("X-Auth", c.signRequest(time.Now().Unix()))
+	authHeader, err := c.signRequest(time.Now().Unix())
+	if err != nil {
+		return farmID, errors.Wrap(err, "failed to sign request")
+	}
+	req.Header.Set("X-Auth", authHeader)
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.httpClient.Do(req)
@@ -145,7 +149,7 @@ func (c RegistrarClient) createFarm(farmName string, dedicated bool) (farmID uin
 	return result.FarmID, nil
 }
 
-func (c RegistrarClient) updateFarm(farmID uint64, opts []UpdateFarmOpts) (err error) {
+func (c *RegistrarClient) updateFarm(farmID uint64, opts []UpdateFarmOpts) (err error) {
 	err = c.ensureTwinID()
 	if err != nil {
 		return errors.Wrap(err, "failed to ensure twin id")
@@ -169,7 +173,11 @@ func (c RegistrarClient) updateFarm(farmID uint64, opts []UpdateFarmOpts) (err e
 		return errors.Wrap(err, "failed to construct http request to the registrar")
 	}
 
-	req.Header.Set("X-Auth", c.signRequest(time.Now().Unix()))
+	authHeader, err := c.signRequest(time.Now().Unix())
+	if err != nil {
+		return errors.Wrap(err, "failed to sign request")
+	}
+	req.Header.Set("X-Auth", authHeader)
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.httpClient.Do(req)
@@ -187,7 +195,7 @@ func (c RegistrarClient) updateFarm(farmID uint64, opts []UpdateFarmOpts) (err e
 	return
 }
 
-func (c RegistrarClient) getFarm(id uint64) (farm Farm, err error) {
+func (c *RegistrarClient) getFarm(id uint64) (farm Farm, err error) {
 	url, err := url.JoinPath(c.baseURL, "farms", fmt.Sprint(id))
 	if err != nil {
 		return farm, errors.Wrap(err, "failed to construct registrar url")
@@ -215,7 +223,7 @@ func (c RegistrarClient) getFarm(id uint64) (farm Farm, err error) {
 	return
 }
 
-func (c RegistrarClient) listFarms(opts ...ListFarmOpts) (farms []Farm, err error) {
+func (c *RegistrarClient) listFarms(opts ...ListFarmOpts) (farms []Farm, err error) {
 	url, err := url.JoinPath(c.baseURL, "farms")
 	if err != nil {
 		return farms, errors.Wrap(err, "failed to construct registrar url")

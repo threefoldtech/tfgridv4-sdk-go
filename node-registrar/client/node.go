@@ -14,7 +14,7 @@ import (
 
 var ErrorNodeNotFround = fmt.Errorf("failed to get requested node from node regiatrar")
 
-func (c RegistrarClient) RegisterNode(
+func (c *RegistrarClient) RegisterNode(
 	farmID uint64,
 	twinID uint64,
 	interfaces []Interface,
@@ -27,23 +27,23 @@ func (c RegistrarClient) RegisterNode(
 	return c.registerNode(farmID, twinID, interfaces, location, resources, serialNumber, secureBoot, virtualized)
 }
 
-func (c RegistrarClient) UpdateNode(opts ...UpdateNodeOpts) (err error) {
+func (c *RegistrarClient) UpdateNode(opts ...UpdateNodeOpts) (err error) {
 	return c.updateNode(opts)
 }
 
-func (c RegistrarClient) ReportUptime(report UptimeReport) (err error) {
+func (c *RegistrarClient) ReportUptime(report UptimeReport) (err error) {
 	return c.reportUptime(report)
 }
 
-func (c RegistrarClient) GetNode(id uint64) (node Node, err error) {
+func (c *RegistrarClient) GetNode(id uint64) (node Node, err error) {
 	return c.getNode(id)
 }
 
-func (c RegistrarClient) GetNodeByTwinID(id uint64) (node Node, err error) {
+func (c *RegistrarClient) GetNodeByTwinID(id uint64) (node Node, err error) {
 	return c.getNodeByTwinID(id)
 }
 
-func (c RegistrarClient) ListNodes(opts ...ListNodeOpts) (nodes []Node, err error) {
+func (c *RegistrarClient) ListNodes(opts ...ListNodeOpts) (nodes []Node, err error) {
 	return c.listNodes(opts)
 }
 
@@ -166,7 +166,7 @@ func UpdateNodeWithHealthy() UpdateNodeOpts {
 	}
 }
 
-func (c RegistrarClient) registerNode(
+func (c *RegistrarClient) registerNode(
 	farmID uint64,
 	twinID uint64,
 	interfaces []Interface,
@@ -207,7 +207,11 @@ func (c RegistrarClient) registerNode(
 		return nodeID, errors.Wrap(err, "failed to construct http request to the registrar")
 	}
 
-	req.Header.Set("X-Auth", c.signRequest(time.Now().Unix()))
+	authHeader, err := c.signRequest(time.Now().Unix())
+	if err != nil {
+		return nodeID, errors.Wrap(err, "failed to sign request")
+	}
+	req.Header.Set("X-Auth", authHeader)
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.httpClient.Do(req)
@@ -231,7 +235,7 @@ func (c RegistrarClient) registerNode(
 	return result.NodeID, err
 }
 
-func (c RegistrarClient) updateNode(opts []UpdateNodeOpts) (err error) {
+func (c *RegistrarClient) updateNode(opts []UpdateNodeOpts) (err error) {
 	err = c.ensureNodeID()
 	if err != nil {
 		return err
@@ -260,7 +264,11 @@ func (c RegistrarClient) updateNode(opts []UpdateNodeOpts) (err error) {
 		return errors.Wrap(err, "failed to construct http request to the registrar")
 	}
 
-	req.Header.Set("X-Auth", c.signRequest(time.Now().Unix()))
+	authHeader, err := c.signRequest(time.Now().Unix())
+	if err != nil {
+		return errors.Wrap(err, "failed to sign request")
+	}
+	req.Header.Set("X-Auth", authHeader)
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.httpClient.Do(req)
@@ -277,7 +285,7 @@ func (c RegistrarClient) updateNode(opts []UpdateNodeOpts) (err error) {
 	return
 }
 
-func (c RegistrarClient) reportUptime(report UptimeReport) (err error) {
+func (c *RegistrarClient) reportUptime(report UptimeReport) (err error) {
 	err = c.ensureNodeID()
 	if err != nil {
 		return err
@@ -300,7 +308,11 @@ func (c RegistrarClient) reportUptime(report UptimeReport) (err error) {
 		return errors.Wrap(err, "failed to construct http request to the registrar")
 	}
 
-	req.Header.Set("X-Auth", c.signRequest(time.Now().Unix()))
+	authHeader, err := c.signRequest(time.Now().Unix())
+	if err != nil {
+		return errors.Wrap(err, "failed to sign request")
+	}
+	req.Header.Set("X-Auth", authHeader)
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.httpClient.Do(req)
@@ -317,7 +329,7 @@ func (c RegistrarClient) reportUptime(report UptimeReport) (err error) {
 	return
 }
 
-func (c RegistrarClient) getNode(id uint64) (node Node, err error) {
+func (c *RegistrarClient) getNode(id uint64) (node Node, err error) {
 	url, err := url.JoinPath(c.baseURL, "nodes", fmt.Sprint(id))
 	if err != nil {
 		return node, errors.Wrap(err, "failed to construct registrar url")
@@ -346,7 +358,7 @@ func (c RegistrarClient) getNode(id uint64) (node Node, err error) {
 	return
 }
 
-func (c RegistrarClient) getNodeByTwinID(id uint64) (node Node, err error) {
+func (c *RegistrarClient) getNodeByTwinID(id uint64) (node Node, err error) {
 	nodes, err := c.ListNodes(ListNodesWithTwinID(id))
 	if err != nil {
 		return
@@ -359,7 +371,7 @@ func (c RegistrarClient) getNodeByTwinID(id uint64) (node Node, err error) {
 	return nodes[0], nil
 }
 
-func (c RegistrarClient) listNodes(opts []ListNodeOpts) (nodes []Node, err error) {
+func (c *RegistrarClient) listNodes(opts []ListNodeOpts) (nodes []Node, err error) {
 	url, err := url.JoinPath(c.baseURL, "nodes")
 	if err != nil {
 		return nodes, errors.Wrap(err, "failed to construct registrar url")
@@ -425,7 +437,7 @@ func (c *RegistrarClient) ensureNodeID() error {
 	return nil
 }
 
-func (c RegistrarClient) parseUpdateNodeOpts(node Node, opts []UpdateNodeOpts) Node {
+func (c *RegistrarClient) parseUpdateNodeOpts(node Node, opts []UpdateNodeOpts) Node {
 	cfg := nodeCfg{
 		farmID:      0,
 		Location:    Location{},

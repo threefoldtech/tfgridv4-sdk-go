@@ -2,7 +2,6 @@ package client
 
 import (
 	"bytes"
-	"crypto/ed25519"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -11,44 +10,83 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/vedhavyas/go-subkey/v2"
 )
 
 var ErrorAccountNotFround = fmt.Errorf("failed to get requested account from node regiatrar")
 
-func (c RegistrarClient) CreateAccount(relays []string, rmbEncKey string) (account Account, err error) {
+func (c *RegistrarClient) CreateAccount(relays []string, rmbEncKey string) (account Account, mnemonic string, err error) {
 	return c.createAccount(relays, rmbEncKey)
 }
 
-func (c RegistrarClient) GetAccount(id uint64) (account Account, err error) {
+func (c *RegistrarClient) GetAccount(id uint64) (account Account, err error) {
 	return c.getAccount(id)
 }
 
-func (c RegistrarClient) GetAccountByPK(pk []byte) (account Account, err error) {
+func (c *RegistrarClient) GetAccountByPK(pk []byte) (account Account, err error) {
 	return c.getAccountByPK(pk)
 }
 
-func (c RegistrarClient) UpdateAccount(opts ...UpdateAccountOpts) (err error) {
+func (c *RegistrarClient) UpdateAccount(opts ...UpdateAccountOpts) (err error) {
 	return c.updateAccount(opts)
 }
 
-func (c RegistrarClient) EnsureAccount(relays []string, rmbEncKey string) (account Account, err error) {
+type accountCfg struct {
+	relays    []string
+	rmbEncKey string
+}
+
+type (
+	UpdateAccountOpts func(*accountCfg)
+)
+
+func UpdateAccountWithRelays(relays []string) UpdateAccountOpts {
+	return func(n *accountCfg) {
+		n.relays = relays
+	}
+}
+
+func UpdateAccountWithRMBEncKey(rmbEncKey string) UpdateAccountOpts {
+	return func(n *accountCfg) {
+		n.rmbEncKey = rmbEncKey
+	}
+}
+
+func (c *RegistrarClient) EnsureAccount(relays []string, rmbEncKey string) (account Account, err error) {
 	return c.ensureAccount(relays, rmbEncKey)
 }
 
-func (c *RegistrarClient) createAccount(relays []string, rmbEncKey string) (account Account, err error) {
+func (c *RegistrarClient) createAccount(relays []string, rmbEncKey string) (account Account, mnemonic string, err error) {
 	url, err := url.JoinPath(c.baseURL, "accounts")
 	if err != nil {
-		return account, errors.Wrap(err, "failed to construct registrar url")
+		return account, mnemonic, errors.Wrap(err, "failed to construct registrar url")
 	}
 
-	timestamp := time.Now().Unix()
-	publicKeyBase64 := base64.StdEncoding.EncodeToString(c.keyPair.publicKey)
+	var keyPair subkey.KeyPair
+	if len(c.mnemonic) != 0 {
+		mnemonic = c.mnemonic
+		keyPair, err = parseKeysFromMnemonicOrSeed(c.mnemonic)
+	} else {
+		mnemonic, keyPair, err = generateNewMnemonic()
+	}
+	if err != nil {
+		return account, mnemonic, err
+	}
 
+	c.keyPair = keyPair
+	c.mnemonic = mnemonic
+
+	publicKeyBase64 := base64.StdEncoding.EncodeToString(c.keyPair.Public())
+
+	timestamp := time.Now().Unix()
 	challenge := []byte(fmt.Sprintf("%d:%v", timestamp, publicKeyBase64))
-	signature := ed25519.Sign(c.keyPair.privateKey, challenge)
+	signature, err := keyPair.Sign(challenge)
+	if err != nil {
+		return account, mnemonic, errors.Wrap(err, "failed to sign account creation request")
+	}
 
 	data := map[string]any{
-		"public_key":  c.keyPair.publicKey,
+		"public_key":  c.keyPair.Public(),
 		"signature":   signature,
 		"timestamp":   timestamp,
 		"rmb_enc_key": rmbEncKey,
@@ -58,17 +96,17 @@ func (c *RegistrarClient) createAccount(relays []string, rmbEncKey string) (acco
 	var body bytes.Buffer
 	err = json.NewEncoder(&body).Encode(data)
 	if err != nil {
-		return account, errors.Wrap(err, "failed to parse request body")
+		return account, mnemonic, errors.Wrap(err, "failed to parse request body")
 	}
 
 	resp, err := c.httpClient.Post(url, "application/json", &body)
 	if err != nil {
-		return account, errors.Wrap(err, "failed to send request to the registrar")
+		return account, mnemonic, errors.Wrap(err, "failed to send request to the registrar")
 	}
 
 	if resp.StatusCode != http.StatusCreated {
 		err = parseResponseError(resp.Body)
-		return account, errors.Wrapf(err, "failed to create account with status %s", resp.Status)
+		return account, mnemonic, errors.Wrapf(err, "failed to create account with status %s", resp.Status)
 	}
 	defer resp.Body.Close()
 
@@ -78,7 +116,7 @@ func (c *RegistrarClient) createAccount(relays []string, rmbEncKey string) (acco
 	return
 }
 
-func (c RegistrarClient) getAccount(id uint64) (account Account, err error) {
+func (c *RegistrarClient) getAccount(id uint64) (account Account, err error) {
 	url, err := url.JoinPath(c.baseURL, "accounts")
 	if err != nil {
 		return account, errors.Wrap(err, "failed to construct registrar url")
@@ -116,7 +154,7 @@ func (c RegistrarClient) getAccount(id uint64) (account Account, err error) {
 	return
 }
 
-func (c RegistrarClient) getAccountByPK(pk []byte) (account Account, err error) {
+func (c *RegistrarClient) getAccountByPK(pk []byte) (account Account, err error) {
 	url, err := url.JoinPath(c.baseURL, "accounts")
 	if err != nil {
 		return account, errors.Wrap(err, "failed to construct registrar url")
@@ -157,7 +195,7 @@ func (c RegistrarClient) getAccountByPK(pk []byte) (account Account, err error) 
 	return account, err
 }
 
-func (c RegistrarClient) updateAccount(opts []UpdateAccountOpts) (err error) {
+func (c *RegistrarClient) updateAccount(opts []UpdateAccountOpts) (err error) {
 	err = c.ensureTwinID()
 	if err != nil {
 		return errors.Wrap(err, "failed to ensure twin id")
@@ -180,7 +218,11 @@ func (c RegistrarClient) updateAccount(opts []UpdateAccountOpts) (err error) {
 		return
 	}
 
-	req.Header.Set("X-Auth", c.signRequest(time.Now().Unix()))
+	authHeader, err := c.signRequest(time.Now().Unix())
+	if err != nil {
+		return errors.Wrap(err, "failed to sign request")
+	}
+	req.Header.Set("X-Auth", authHeader)
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.httpClient.Do(req)
@@ -200,36 +242,12 @@ func (c RegistrarClient) updateAccount(opts []UpdateAccountOpts) (err error) {
 	return
 }
 
-type accountCfg struct {
-	relays    []string
-	rmbEncKey string
-}
-
-type (
-	UpdateAccountOpts func(*accountCfg)
-)
-
-func UpdateAccountWithRelays(relays []string) UpdateAccountOpts {
-	return func(n *accountCfg) {
-		n.relays = relays
-	}
-}
-
-func UpdateAccountWithRMBEncKey(rmbEncKey string) UpdateAccountOpts {
-	return func(n *accountCfg) {
-		n.rmbEncKey = rmbEncKey
-	}
-}
-
-func (c RegistrarClient) ensureAccount(relays []string, rmbEncKey string) (account Account, err error) {
-	account, err = c.GetAccountByPK(c.keyPair.publicKey)
+func (c *RegistrarClient) ensureAccount(relays []string, rmbEncKey string) (account Account, err error) {
+	account, err = c.GetAccountByPK(c.keyPair.Public())
 	if errors.Is(err, ErrorAccountNotFround) {
-		return c.CreateAccount(relays, rmbEncKey)
-	} else if err != nil {
-		return account, errors.Wrap(err, "failed to get account from the registrar")
+		account, _, err = c.CreateAccount(relays, rmbEncKey)
 	}
-
-	return
+	return account, err
 }
 
 func (c *RegistrarClient) ensureTwinID() error {
@@ -237,7 +255,7 @@ func (c *RegistrarClient) ensureTwinID() error {
 		return nil
 	}
 
-	twin, err := c.getAccountByPK(c.keyPair.publicKey)
+	twin, err := c.getAccountByPK(c.keyPair.Public())
 	if err != nil {
 		return errors.Wrap(err, "failed to get the account of the node, registrar client was not set up properly")
 	}

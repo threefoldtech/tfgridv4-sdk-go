@@ -35,15 +35,16 @@ func TestCreateFarm(t *testing.T) {
 	c, err := NewRegistrarClient(baseURL, testMnemonic)
 	require.NoError(err)
 
+	stellarAddr := "GBB3H4F7N3R26I6XU2V2P5WYJZQ5N7E4FQH6E5D2X3OGJ2KLTGZXQW34"
 	t.Run("test create farm with status conflict", func(t *testing.T) {
 		request = createFarmStatusConflict
-		_, err = c.CreateFarm(farm.FarmName, farm.Dedicated)
+		_, err = c.CreateFarm(farm.FarmName, stellarAddr, farm.Dedicated)
 		require.Error(err)
 	})
 
 	t.Run("test create farm with status ok", func(t *testing.T) {
 		request = createFarmStatusCreated
-		result, err := c.CreateFarm(farm.FarmName, farm.Dedicated)
+		result, err := c.CreateFarm(farm.FarmName, stellarAddr, farm.Dedicated)
 		require.NoError(err)
 		require.Equal(farm.FarmID, result)
 	})

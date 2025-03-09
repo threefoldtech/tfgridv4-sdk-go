@@ -163,7 +163,7 @@ func (c *RegistrarClient) createFarm(farmName, stellarAddr string, dedicated boo
 }
 
 func (c *RegistrarClient) updateFarm(farmID uint64, opts []UpdateFarmOpts) (err error) {
-	if c.ensureTwinID(); err != nil {
+	if err = c.ensureTwinID(); err != nil {
 		return errors.Wrap(err, "failed to ensure twin id")
 	}
 
@@ -315,10 +315,7 @@ func parseListFarmOpts(opts []ListFarmOpts) map[string]any {
 }
 
 func parseUpdateFarmOpts(opts []UpdateFarmOpts) map[string]any {
-	cfg := farmCfg{
-		farmName:  "",
-		dedicated: false,
-	}
+	cfg := farmCfg{}
 
 	for _, opt := range opts {
 		opt(&cfg)
@@ -333,6 +330,7 @@ func parseUpdateFarmOpts(opts []UpdateFarmOpts) map[string]any {
 	if cfg.dedicated {
 		data["dedicated"] = true
 	}
+
 	if len(cfg.stellarAddress) != 0 {
 		data["stellar_address"] = cfg.stellarAddress
 	}

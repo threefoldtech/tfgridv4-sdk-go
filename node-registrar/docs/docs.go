@@ -914,6 +914,9 @@ const docTemplate = `{
                         "$ref": "#/definitions/db.Node"
                     }
                 },
+                "stellar_address": {
+                    "type": "string"
+                },
                 "twin_id": {
                     "description": "Farmer account reference",
                     "type": "integer"
@@ -1130,14 +1133,14 @@ const docTemplate = `{
         },
         "server.UpdateFarmRequest": {
             "type": "object",
-            "required": [
-                "farm_name"
-            ],
             "properties": {
                 "farm_name": {
                     "type": "string",
-                    "maxLength": 40,
-                    "minLength": 1
+                    "maxLength": 40
+                },
+                "stellar_address": {
+                    "type": "string",
+                    "maxLength": 56
                 }
             }
         },

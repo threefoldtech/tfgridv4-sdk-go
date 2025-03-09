@@ -43,6 +43,8 @@ definitions:
         items:
           $ref: '#/definitions/db.Node'
         type: array
+      stellar_address:
+        type: string
       twin_id:
         description: Farmer account reference
         type: integer
@@ -194,10 +196,10 @@ definitions:
     properties:
       farm_name:
         maxLength: 40
-        minLength: 1
         type: string
-    required:
-    - farm_name
+      stellar_address:
+        maxLength: 56
+        type: string
     type: object
   server.UpdateNodeRequest:
     properties:

@@ -6,15 +6,17 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
+	"unicode"
 
 	"github.com/pkg/errors"
 )
 
 var ErrorFarmNotFround = fmt.Errorf("failed to get requested farm from node regiatrar")
 
-func (c *RegistrarClient) CreateFarm(farmName string, dedicated bool) (farmID uint64, err error) {
-	return c.createFarm(farmName, dedicated)
+func (c *RegistrarClient) CreateFarm(farmName, stellarAddr string, dedicated bool) (farmID uint64, err error) {
+	return c.createFarm(farmName, stellarAddr, dedicated)
 }
 
 func (c *RegistrarClient) UpdateFarm(farmID uint64, opts ...UpdateFarmOpts) (err error) {
@@ -30,12 +32,13 @@ func (c *RegistrarClient) ListFarms(opts ...ListFarmOpts) (farms []Farm, err err
 }
 
 type farmCfg struct {
-	farmName  string
-	farmID    uint64
-	twinID    uint64
-	dedicated bool
-	page      uint32
-	size      uint32
+	farmName       string
+	farmID         uint64
+	twinID         uint64
+	dedicated      bool
+	stellarAddress string
+	page           uint32
+	size           uint32
 }
 
 type (
@@ -91,10 +94,20 @@ func UpdateFarmWithDedicated() UpdateFarmOpts {
 	}
 }
 
-func (c *RegistrarClient) createFarm(farmName string, dedicated bool) (farmID uint64, err error) {
-	err = c.ensureTwinID()
-	if err != nil {
+// UpdateFarmWithName set farm status to dedicated
+func UpdateFarmWithStellarAddress(address string) UpdateFarmOpts {
+	return func(n *farmCfg) {
+		n.stellarAddress = address
+	}
+}
+
+func (c *RegistrarClient) createFarm(farmName, stellarAddr string, dedicated bool) (farmID uint64, err error) {
+	if err := c.ensureTwinID(); err != nil {
 		return farmID, errors.Wrap(err, "failed to ensure twin id")
+	}
+
+	if err = validateStellarAddress(stellarAddr); err != nil {
+		return
 	}
 
 	url, err := url.JoinPath(c.baseURL, "farms")
@@ -103,14 +116,14 @@ func (c *RegistrarClient) createFarm(farmName string, dedicated bool) (farmID ui
 	}
 
 	data := Farm{
-		FarmName:  farmName,
-		TwinID:    c.twinID,
-		Dedicated: dedicated,
+		FarmName:       farmName,
+		TwinID:         c.twinID,
+		Dedicated:      dedicated,
+		StellarAddress: stellarAddr,
 	}
 
 	var body bytes.Buffer
-	err = json.NewEncoder(&body).Encode(data)
-	if err != nil {
+	if err = json.NewEncoder(&body).Encode(data); err != nil {
 		return farmID, errors.Wrap(err, "failed to encode request body")
 	}
 
@@ -150,8 +163,7 @@ func (c *RegistrarClient) createFarm(farmName string, dedicated bool) (farmID ui
 }
 
 func (c *RegistrarClient) updateFarm(farmID uint64, opts []UpdateFarmOpts) (err error) {
-	err = c.ensureTwinID()
-	if err != nil {
+	if c.ensureTwinID(); err != nil {
 		return errors.Wrap(err, "failed to ensure twin id")
 	}
 
@@ -163,8 +175,13 @@ func (c *RegistrarClient) updateFarm(farmID uint64, opts []UpdateFarmOpts) (err 
 	var body bytes.Buffer
 	data := parseUpdateFarmOpts(opts)
 
-	err = json.NewEncoder(&body).Encode(data)
-	if err != nil {
+	if stellarAddr, ok := data["stellar_address"]; ok {
+		if err = validateStellarAddress(stellarAddr.(string)); err != nil {
+			return
+		}
+	}
+
+	if err = json.NewEncoder(&body).Encode(data); err != nil {
 		return errors.Wrap(err, "failed to encode request body")
 	}
 
@@ -215,8 +232,7 @@ func (c *RegistrarClient) getFarm(id uint64) (farm Farm, err error) {
 	}
 	defer resp.Body.Close()
 
-	err = json.NewDecoder(resp.Body).Decode(&farm)
-	if err != nil {
+	if err = json.NewDecoder(resp.Body).Decode(&farm); err != nil {
 		return farm, err
 	}
 
@@ -253,8 +269,7 @@ func (c *RegistrarClient) listFarms(opts ...ListFarmOpts) (farms []Farm, err err
 		return farms, errors.Wrapf(err, "failed to get list farms with status code %s", resp.Status)
 	}
 	defer resp.Body.Close()
-	err = json.NewDecoder(resp.Body).Decode(&farms)
-	if err != nil {
+	if err = json.NewDecoder(resp.Body).Decode(&farms); err != nil {
 		return farms, errors.Wrap(err, "failed to decode response body")
 	}
 
@@ -318,6 +333,31 @@ func parseUpdateFarmOpts(opts []UpdateFarmOpts) map[string]any {
 	if cfg.dedicated {
 		data["dedicated"] = true
 	}
+	if len(cfg.stellarAddress) != 0 {
+		data["stellar_address"] = cfg.stellarAddress
+	}
 
 	return data
+}
+
+func validateStellarAddress(stellarAddr string) error {
+	stellarAddr = strings.TrimSpace(stellarAddr)
+	if len(stellarAddr) != 56 {
+		return fmt.Errorf("invalid stellar address %s, address length should be 56 characters", stellarAddr)
+	}
+	if stellarAddr[0] != 'G' {
+		return fmt.Errorf("invalid stellar address %s, address should should start with 'G'", stellarAddr)
+	}
+
+	if strings.Compare(stellarAddr, strings.ToUpper(stellarAddr)) != 0 {
+		return fmt.Errorf("invalid stellar address %s, address should be all uppercase", stellarAddr)
+	}
+
+	// check if not alphanumeric
+	for _, c := range stellarAddr {
+		if !unicode.IsLetter(c) && !unicode.IsNumber(c) {
+			return fmt.Errorf("invalid stellar address %s, address character should be alphanumeric only", stellarAddr)
+		}
+	}
+	return nil
 }

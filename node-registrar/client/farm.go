@@ -189,7 +189,7 @@ func (c *RegistrarClient) updateFarm(farmID uint64, opts []UpdateFarmOpts) (err 
 
 	if resp.StatusCode != http.StatusOK {
 		err = parseResponseError(resp.Body)
-		return fmt.Errorf("failed to create farm with status code %s", resp.Status)
+		return errors.Wrapf(err, "failed to create farm with status code %s", resp.Status)
 	}
 
 	return

@@ -131,7 +131,7 @@ func (s Server) createFarmHandler(c *gin.Context) {
 
 type UpdateFarmRequest struct {
 	FarmName       string `json:"farm_name" binding:"max=40"`
-	StellarAddress string `json:"stellar_address" binding:"max=56"`
+	StellarAddress string `json:"stellar_address" binding:"max=56,startswith=G,len=56,alphanum,uppercase"`
 }
 
 // @Summary Update farm

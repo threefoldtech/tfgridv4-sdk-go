@@ -49,10 +49,17 @@ func (db *Database) CreateFarm(farm Farm) (uint64, error) {
 	return farm.FarmID, nil
 }
 
-func (db *Database) UpdateFarm(farmID uint64, name string) (err error) {
-	result := db.gormDB.Model(&Farm{}).Where("farm_id = ?", farmID).Updates(map[string]interface{}{
-		"farm_name": name,
-	})
+func (db *Database) UpdateFarm(farmID uint64, name string, stellarAddr string) (err error) {
+	update := map[string]interface{}{}
+
+	if len(name) != 0 {
+		update["farm_name"] = name
+	}
+	if len(stellarAddr) != 0 {
+		update["stellar_address"] = stellarAddr
+	}
+
+	result := db.gormDB.Model(&Farm{}).Where("farm_id = ?", farmID).Updates(update)
 	if result.Error != nil {
 		return result.Error
 	}

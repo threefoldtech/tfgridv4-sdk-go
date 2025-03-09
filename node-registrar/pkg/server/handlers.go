@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -130,7 +131,8 @@ func (s Server) createFarmHandler(c *gin.Context) {
 }
 
 type UpdateFarmRequest struct {
-	FarmName string `json:"farm_name" binding:"required,min=1,max=40"`
+	FarmName       string `json:"farm_name" binding:"max=40"`
+	StellarAddress string `json:"stellar_address" binding:"max=56,startswith=G,len=56,alphanum,uppercase"`
 }
 
 // @Summary Update farm
@@ -176,9 +178,13 @@ func (s Server) updateFarmsHandler(c *gin.Context) {
 		return
 	}
 
+	req.FarmName = strings.TrimSpace(req.FarmName)
+	req.StellarAddress = strings.TrimSpace(req.StellarAddress)
+
 	// No need to hit DB if new farm name is same as the old one
-	if existingFarm.FarmName != req.FarmName {
-		err = s.db.UpdateFarm(id, req.FarmName)
+	if (len(req.FarmName) != 0 && existingFarm.FarmName != req.FarmName) ||
+		(len(req.StellarAddress) != 0 && existingFarm.StellarAddress != req.StellarAddress) {
+		err = s.db.UpdateFarm(id, req.FarmName, req.StellarAddress)
 		if err != nil {
 			status := http.StatusBadRequest
 

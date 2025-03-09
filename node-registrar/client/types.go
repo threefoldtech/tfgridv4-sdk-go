@@ -12,10 +12,11 @@ type Account struct {
 }
 
 type Farm struct {
-	FarmID    uint64 `json:"farm_id"`
-	FarmName  string `json:"farm_name"`
-	TwinID    uint64 `json:"twin_id"`
-	Dedicated bool   `json:"dedicated"`
+	FarmID         uint64 `json:"farm_id"`
+	FarmName       string `json:"farm_name"`
+	TwinID         uint64 `json:"twin_id"`
+	Dedicated      bool   `json:"dedicated"`
+	StellarAddress string `json:"stellar_address"`
 }
 
 type Node struct {

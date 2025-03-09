@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -176,6 +177,9 @@ func (s Server) updateFarmsHandler(c *gin.Context) {
 	if c.IsAborted() {
 		return
 	}
+
+	req.FarmName = strings.TrimSpace(req.FarmName)
+	req.StellarAddress = strings.TrimSpace(req.StellarAddress)
 
 	// No need to hit DB if new farm name is same as the old one
 	if (len(req.FarmName) != 0 && existingFarm.FarmName != req.FarmName) ||

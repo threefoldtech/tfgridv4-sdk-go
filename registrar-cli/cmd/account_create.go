@@ -12,7 +12,7 @@ var accountCreateCmd = &cobra.Command{
 	Use:   "create",
 	Short: "create new account in node registrar",
 	RunE: func(cobraCmd *cobra.Command, args []string) error {
-		seed, err := cobraCmd.Flags().GetString("seed")
+		mnemonic, err := cobraCmd.Flags().GetString("menmonic")
 		if err != nil {
 			return err
 		}
@@ -32,10 +32,11 @@ var accountCreateCmd = &cobra.Command{
 			return err
 		}
 
-		account, err := cmd.CreaeteAccount(seed, network, relays, rmbEncKey)
+		account, mnemonic, err := cmd.CreaeteAccount(network, relays, rmbEncKey, mnemonic)
 		if err != nil {
 			return err
 		}
+		log.Info().Str("mnemonic", mnemonic).Msg("new account is created with mnemonic")
 
 		log.Info().Uint64("twinID", account.TwinID).Msg("account is created successfully")
 
@@ -45,7 +46,7 @@ var accountCreateCmd = &cobra.Command{
 
 func init() {
 	accountCmd.AddCommand(accountCreateCmd)
-	accountCreateCmd.Flags().StringP("seed", "s", "", "account seed key")
+	accountCreateCmd.Flags().StringP("menmonic", "m", "", "account menmonic")
 	accountCreateCmd.Flags().StringP("network", "n", "", "network (dev, qa, test, main)")
 	accountCreateCmd.Flags().StringArrayP("relays", "r", nil, "relays urls")
 	accountCreateCmd.Flags().StringP("rmb-enc-key", "k", "", "rmb encryption key")

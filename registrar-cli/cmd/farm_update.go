@@ -12,7 +12,7 @@ var farmUpdateCmd = &cobra.Command{
 	Use:   "update",
 	Short: "update farm in node registrar",
 	RunE: func(cobraCmd *cobra.Command, args []string) error {
-		seed, err := cobraCmd.Flags().GetString("seed")
+		mnemonic, err := cobraCmd.Flags().GetString("menmonic")
 		if err != nil {
 			return err
 		}
@@ -32,12 +32,17 @@ var farmUpdateCmd = &cobra.Command{
 			return err
 		}
 
+		stellarAddrss, err := cobraCmd.Flags().GetString("stellar-address")
+		if err != nil {
+			return err
+		}
+
 		dedicated, err := cobraCmd.Flags().GetBool("dedicated")
 		if err != nil {
 			return err
 		}
 
-		err = cmd.UpdateFarm(seed, network, farmID, farmName, dedicated)
+		err = cmd.UpdateFarm(farmID, mnemonic, network, farmName, stellarAddrss, dedicated)
 		if err != nil {
 			return err
 		}
@@ -50,9 +55,10 @@ var farmUpdateCmd = &cobra.Command{
 
 func init() {
 	farmCmd.AddCommand(farmUpdateCmd)
-	farmUpdateCmd.Flags().StringP("seed", "s", "", "account seed key")
+	farmUpdateCmd.Flags().StringP("menmonic", "m", "", "account menmonic")
 	farmUpdateCmd.Flags().StringP("network", "n", "", "network (dev, qa, test, main)")
 	farmUpdateCmd.Flags().Uint64P("farm-id", "i", 0, "farm id")
 	farmUpdateCmd.Flags().String("farm-name", "", "new farm name")
+	farmUpdateCmd.Flags().StringP("stellar-address", "s", "", "stellar address")
 	farmUpdateCmd.Flags().BoolP("dedicated", "d", false, "farm is dedicated")
 }

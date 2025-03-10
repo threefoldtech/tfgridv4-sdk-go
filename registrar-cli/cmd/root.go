@@ -11,13 +11,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var urls = map[string]string{
-	"dev":  "https://registrar.dev4.grid.tf/v1",
-	"qa":   "https://registrar.qa4.grid.tf/v1",
-	"test": "https://registrar.test4.grid.tf/v1",
-	"main": "https://registrar.prod4.grid.tf/v1",
-}
-
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "registrar-cli",

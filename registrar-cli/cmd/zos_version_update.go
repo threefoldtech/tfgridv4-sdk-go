@@ -12,7 +12,7 @@ var UpdateZosVersionCmd = &cobra.Command{
 	Use:   "update",
 	Short: "update zos version in node registrar",
 	RunE: func(cobraCmd *cobra.Command, args []string) error {
-		seed, err := cobraCmd.Flags().GetString("seed")
+		seed, err := cobraCmd.Flags().GetString("menmonic")
 		if err != nil {
 			return err
 		}
@@ -45,7 +45,7 @@ var UpdateZosVersionCmd = &cobra.Command{
 
 func init() {
 	zosVersionCmd.AddCommand(UpdateZosVersionCmd)
-	UpdateZosVersionCmd.Flags().StringP("seed", "s", "", "account seed key")
+	UpdateZosVersionCmd.Flags().StringP("menmonic", "m", "", "account menmonic")
 	UpdateZosVersionCmd.Flags().StringP("network", "n", "", "network (dev, qa, test, main)")
 	UpdateZosVersionCmd.Flags().StringP("version", "v", "v0.0.0", "new zos version")
 	UpdateZosVersionCmd.Flags().BoolP("safe-to-upgrade", "u", false, "safe to upgrade")

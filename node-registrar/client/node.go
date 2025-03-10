@@ -12,7 +12,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var ErrorNodeNotFround = fmt.Errorf("failed to get requested node from node regiatrar")
+var ErrorNodeNotFound = fmt.Errorf("failed to get requested node from node registrar")
 
 func (c *RegistrarClient) RegisterNode(
 	farmID uint64,
@@ -219,11 +219,15 @@ func (c *RegistrarClient) registerNode(
 		return nodeID, errors.Wrap(err, "failed to send request to registrer the node")
 	}
 
-	if resp == nil || resp.StatusCode != http.StatusCreated {
+	if resp == nil {
+		return 0, errors.New("no response received")
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated {
 		err = parseResponseError(resp.Body)
 		return 0, errors.Wrapf(err, "failed to create node on the registrar with status code %s", resp.Status)
 	}
-	defer resp.Body.Close()
 
 	result := struct {
 		NodeID uint64 `json:"node_id"`
@@ -341,7 +345,7 @@ func (c *RegistrarClient) getNode(id uint64) (node Node, err error) {
 	}
 
 	if resp.StatusCode == http.StatusNotFound {
-		return node, ErrorNodeNotFround
+		return node, ErrorNodeNotFound
 	}
 
 	if resp.StatusCode != http.StatusOK {
@@ -365,7 +369,7 @@ func (c *RegistrarClient) getNodeByTwinID(id uint64) (node Node, err error) {
 	}
 
 	if len(nodes) == 0 {
-		return node, ErrorNodeNotFround
+		return node, ErrorNodeNotFound
 	}
 
 	return nodes[0], nil
@@ -401,7 +405,7 @@ func (c *RegistrarClient) listNodes(opts []ListNodeOpts) (nodes []Node, err erro
 	}
 
 	if resp.StatusCode == http.StatusNotFound {
-		return nodes, ErrorNodeNotFround
+		return nodes, ErrorNodeNotFound
 	}
 
 	if resp.StatusCode != http.StatusOK {

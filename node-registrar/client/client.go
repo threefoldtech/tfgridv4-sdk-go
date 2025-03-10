@@ -37,7 +37,7 @@ func NewRegistrarClient(baseURL string, mnemonicOrSeed ...string) (cli Registrar
 	cli.mnemonic = mnemonicOrSeed[0]
 
 	account, err := cli.GetAccountByPK(keyPair.Public())
-	if errors.Is(err, ErrorAccountNotFround) {
+	if errors.Is(err, ErrorAccountNotFound) {
 		return cli, nil
 	} else if err != nil {
 		return cli, errors.Wrap(err, "failed to get account with public key")
@@ -45,7 +45,7 @@ func NewRegistrarClient(baseURL string, mnemonicOrSeed ...string) (cli Registrar
 
 	cli.twinID = account.TwinID
 	node, err := cli.GetNodeByTwinID(account.TwinID)
-	if errors.Is(err, ErrorNodeNotFround) {
+	if errors.Is(err, ErrorNodeNotFound) {
 		return cli, nil
 	} else if err != nil {
 		return cli, errors.Wrapf(err, "failed to get node with twin id %d", account.TwinID)

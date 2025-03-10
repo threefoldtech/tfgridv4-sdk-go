@@ -13,7 +13,7 @@ import (
 	"github.com/vedhavyas/go-subkey/v2"
 )
 
-var ErrorAccountNotFround = fmt.Errorf("failed to get requested account from node regiatrar")
+var ErrorAccountNotFound = fmt.Errorf("failed to get requested account from node registrar")
 
 func (c *RegistrarClient) CreateAccount(relays []string, rmbEncKey string) (account Account, mnemonic string, err error) {
 	return c.createAccount(relays, rmbEncKey)
@@ -141,7 +141,7 @@ func (c *RegistrarClient) getAccount(id uint64) (account Account, err error) {
 	}
 
 	if resp.StatusCode == http.StatusNotFound {
-		return account, ErrorAccountNotFround
+		return account, ErrorAccountNotFound
 	}
 
 	if resp.StatusCode != http.StatusOK {
@@ -182,7 +182,7 @@ func (c *RegistrarClient) getAccountByPK(pk []byte) (account Account, err error)
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusNotFound {
-		return account, ErrorAccountNotFround
+		return account, ErrorAccountNotFound
 	}
 
 	if resp.StatusCode != http.StatusOK {
@@ -244,7 +244,7 @@ func (c *RegistrarClient) updateAccount(opts []UpdateAccountOpts) (err error) {
 
 func (c *RegistrarClient) ensureAccount(relays []string, rmbEncKey string) (account Account, err error) {
 	account, err = c.GetAccountByPK(c.keyPair.Public())
-	if errors.Is(err, ErrorAccountNotFround) {
+	if errors.Is(err, ErrorAccountNotFound) {
 		account, _, err = c.CreateAccount(relays, rmbEncKey)
 	}
 	return account, err

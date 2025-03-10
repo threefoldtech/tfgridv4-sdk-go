@@ -13,7 +13,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var ErrorFarmNotFround = fmt.Errorf("failed to get requested farm from node regiatrar")
+var ErrorFarmNotFound = fmt.Errorf("failed to get requested farm from node registrar")
 
 func (c *RegistrarClient) CreateFarm(farmName, stellarAddr string, dedicated bool) (farmID uint64, err error) {
 	return c.createFarm(farmName, stellarAddr, dedicated)
@@ -223,7 +223,7 @@ func (c *RegistrarClient) getFarm(id uint64) (farm Farm, err error) {
 	}
 
 	if resp.StatusCode == http.StatusNotFound {
-		return farm, ErrorFarmNotFround
+		return farm, ErrorFarmNotFound
 	}
 
 	if resp.StatusCode != http.StatusOK {

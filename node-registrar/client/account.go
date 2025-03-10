@@ -15,18 +15,22 @@ import (
 
 var ErrorAccountNotFound = fmt.Errorf("failed to get requested account from node registrar")
 
+// CreateAccount create new account on the registrar with uniqe mnemonic.
 func (c *RegistrarClient) CreateAccount(relays []string, rmbEncKey string) (account Account, mnemonic string, err error) {
 	return c.createAccount(relays, rmbEncKey)
 }
 
-func (c *RegistrarClient) GetAccount(id uint64) (account Account, err error) {
-	return c.getAccount(id)
+// GetAccount get an account using either its twinID
+func (c *RegistrarClient) GetAccount(twinID uint64) (account Account, err error) {
+	return c.getAccount(twinID)
 }
 
-func (c *RegistrarClient) GetAccountByPK(pk []byte) (account Account, err error) {
-	return c.getAccountByPK(pk)
+// GetAccountByPK get an account using either its its publicKey.
+func (c *RegistrarClient) GetAccountByPK(publicKey []byte) (account Account, err error) {
+	return c.getAccountByPK(publicKey)
 }
 
+// UpdateAccount update the account configuration (relays or rmbEncKey).
 func (c *RegistrarClient) UpdateAccount(opts ...UpdateAccountOpts) (err error) {
 	return c.updateAccount(opts)
 }
@@ -40,18 +44,21 @@ type (
 	UpdateAccountOpts func(*accountCfg)
 )
 
+// UpdateAccountWithRelays update the account relays
 func UpdateAccountWithRelays(relays []string) UpdateAccountOpts {
 	return func(n *accountCfg) {
 		n.relays = relays
 	}
 }
 
+// UpdateAccountWithRMBEncKey update the account rmb encryption key
 func UpdateAccountWithRMBEncKey(rmbEncKey string) UpdateAccountOpts {
 	return func(n *accountCfg) {
 		n.rmbEncKey = rmbEncKey
 	}
 }
 
+// EnsureAccount ensures that an account is created with specific seed/mnemonic.
 func (c *RegistrarClient) EnsureAccount(relays []string, rmbEncKey string) (account Account, err error) {
 	return c.ensureAccount(relays, rmbEncKey)
 }
@@ -250,6 +257,7 @@ func (c *RegistrarClient) ensureAccount(relays []string, rmbEncKey string) (acco
 	return account, err
 }
 
+// ensureTwinID ensures that the RegistrarClient is set up properly with a valid public key representing an account on the registrar
 func (c *RegistrarClient) ensureTwinID() error {
 	if c.twinID != 0 {
 		return nil

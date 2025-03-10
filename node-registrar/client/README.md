@@ -28,12 +28,12 @@ The Node Registrar Client enables communication with the ThreeFold Grid's node r
 ### Farms
 
 * **Create Farm**: Create new farm on the registrar with uniqe name.
-* **update Farm**: update farm configuration (farm\_id, dedicated).
-* **Get Farm**: Get a farm using either its farm\_id.
+* **update Farm**: Update farm configuration (farm\_id, dedicated).
+* **Get Farm**: Get a farm using its farm\_id.
 
 ### Node
 
-* **Register Node**: Register physical/virtual nodes with the TFGrid.
+* **Register Node**: Register physical/virtual nodes with on TFGrid.
 * **Update Node**: Update node configuration (farm\_id, interfaces, resources, location, secure\_boot, virtualized).
 * **Get Node**: Fetch registered node details using (node\_id, twin\_id, farm\_id).
 * **Update Node Uptime**: Update node Uptime.

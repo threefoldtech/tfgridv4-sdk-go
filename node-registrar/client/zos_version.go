@@ -12,10 +12,12 @@ import (
 	"github.com/pkg/errors"
 )
 
+// GetZosVersion gets zos version for specific network
 func (c *RegistrarClient) GetZosVersion() (version ZosVersion, err error) {
 	return c.getZosVersion()
 }
 
+// SetZosVersion sets zos version for specific network only valid for network admin
 func (c *RegistrarClient) SetZosVersion(v string, safeToUpgrade bool) (err error) {
 	return c.setZosVersion(v, safeToUpgrade)
 }

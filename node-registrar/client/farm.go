@@ -15,18 +15,22 @@ import (
 
 var ErrorFarmNotFound = fmt.Errorf("failed to get requested farm from node registrar")
 
+// CreateFarm create new farm on the registrar with uniqe name.
 func (c *RegistrarClient) CreateFarm(farmName, stellarAddr string, dedicated bool) (farmID uint64, err error) {
 	return c.createFarm(farmName, stellarAddr, dedicated)
 }
 
+// UpdateFarm update farm configuration (farmName, stellarAddress, dedicated).
 func (c *RegistrarClient) UpdateFarm(farmID uint64, opts ...UpdateFarmOpts) (err error) {
 	return c.updateFarm(farmID, opts)
 }
 
-func (c *RegistrarClient) GetFarm(id uint64) (farm Farm, err error) {
-	return c.getFarm(id)
+// GetFarm get a farm using its farmID
+func (c *RegistrarClient) GetFarm(farmID uint64) (farm Farm, err error) {
+	return c.getFarm(farmID)
 }
 
+// ListFarms get a list of farm using ListFarmOpts
 func (c *RegistrarClient) ListFarms(opts ...ListFarmOpts) (farms []Farm, err error) {
 	return c.listFarms(opts...)
 }
@@ -46,48 +50,56 @@ type (
 	UpdateFarmOpts func(*farmCfg)
 )
 
+// ListFarmWithName lists farms with farm name
 func ListFarmWithName(name string) ListFarmOpts {
 	return func(n *farmCfg) {
 		n.farmName = name
 	}
 }
 
+// ListFarmWithFarmID lists farms with farmID
 func ListFarmWithFarmID(id uint64) ListFarmOpts {
 	return func(n *farmCfg) {
 		n.farmID = id
 	}
 }
 
+// ListFarmWithTwinID lists farms with twinID
 func ListFarmWithTwinID(id uint64) ListFarmOpts {
 	return func(n *farmCfg) {
 		n.twinID = id
 	}
 }
 
+// ListFarmWithDedicated lists dedicated farms
 func ListFarmWithDedicated() ListFarmOpts {
 	return func(n *farmCfg) {
 		n.dedicated = true
 	}
 }
 
+// ListFarmWithPage lists farms in a certain page
 func ListFarmWithPage(page uint32) ListFarmOpts {
 	return func(n *farmCfg) {
 		n.page = page
 	}
 }
 
+// ListFarmWithPage lists size number of farms
 func ListFarmWithSize(size uint32) ListFarmOpts {
 	return func(n *farmCfg) {
 		n.size = size
 	}
 }
 
+// UpdateFarmWithName update farm name
 func UpdateFarmWithName(name string) UpdateFarmOpts {
 	return func(n *farmCfg) {
 		n.farmName = name
 	}
 }
 
+// UpdateFarmWithName set farm status to dedicated
 func UpdateFarmWithDedicated() UpdateFarmOpts {
 	return func(n *farmCfg) {
 		n.dedicated = true
@@ -338,6 +350,7 @@ func parseUpdateFarmOpts(opts []UpdateFarmOpts) map[string]any {
 	return data
 }
 
+// validateStellarAddress ensures that the address is valid stellar address
 func validateStellarAddress(stellarAddr string) error {
 	stellarAddr = strings.TrimSpace(stellarAddr)
 	if len(stellarAddr) != 56 {

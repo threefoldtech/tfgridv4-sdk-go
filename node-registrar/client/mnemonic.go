@@ -12,16 +12,18 @@ func (c *RegistrarClient) Mnemonic() string {
 	return c.mnemonic
 }
 
+// parseKeysFromMnemonicOrSeed drives keypair from mnemonic or seed
 func parseKeysFromMnemonicOrSeed(mnemonicOrSeed string) (keypair subkey.KeyPair, err error) {
 	// otherwise drive key pair from seed
 	keypair, err = subkey.DeriveKeyPair(subkeyEd25519.Scheme{}, mnemonicOrSeed)
 	if err != nil {
-		return keypair, errors.Wrapf(err, "failed  to derive key pair from seed %s", mnemonicOrSeed)
+		return keypair, errors.Wrapf(err, "failed  to drive key pair from seed %s", mnemonicOrSeed)
 	}
 
 	return keypair, nil
 }
 
+// generateNewMnemonic generates new mnemonic and keypair
 func generateNewMnemonic() (mnemonic string, keypair subkey.KeyPair, err error) {
 	// Generate 128-bit entropy (12-word mnemonic)
 	entropy, err := bip39.NewEntropy(128)

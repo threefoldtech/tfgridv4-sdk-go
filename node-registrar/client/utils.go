@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// signRequest signs request with challenge with format timestamp:twinID
 func (c *RegistrarClient) signRequest(timestamp int64) (authHeader string, err error) {
 	challenge := []byte(fmt.Sprintf("%d:%v", timestamp, c.twinID))
 	signature, err := c.keyPair.Sign(challenge)
@@ -24,6 +25,7 @@ func (c *RegistrarClient) signRequest(timestamp int64) (authHeader string, err e
 	return
 }
 
+// parseResponseError parse json response error
 func parseResponseError(body io.Reader) (err error) {
 	errResp := struct {
 		Error string `json:"error"`

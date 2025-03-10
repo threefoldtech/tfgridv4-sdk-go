@@ -16,6 +16,7 @@ type RegistrarClient struct {
 	twinID     uint64
 }
 
+// NewRegistrarClient creates a new client with optional seed or mnemonic
 func NewRegistrarClient(baseURL string, mnemonicOrSeed ...string) (cli RegistrarClient, err error) {
 	client := http.DefaultClient
 

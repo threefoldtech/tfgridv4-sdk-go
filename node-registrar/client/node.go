@@ -14,6 +14,7 @@ import (
 
 var ErrorNodeNotFound = fmt.Errorf("failed to get requested node from node registrar")
 
+// RegisterNode register physical/virtual nodes with on TFGrid.
 func (c *RegistrarClient) RegisterNode(
 	farmID uint64,
 	twinID uint64,
@@ -27,22 +28,27 @@ func (c *RegistrarClient) RegisterNode(
 	return c.registerNode(farmID, twinID, interfaces, location, resources, serialNumber, secureBoot, virtualized)
 }
 
+// UpdateNode update node configuration (farmID, interfaces, resources, location, secureBoot, virtualized).
 func (c *RegistrarClient) UpdateNode(opts ...UpdateNodeOpts) (err error) {
 	return c.updateNode(opts)
 }
 
+// ReportUptime update node Uptime.
 func (c *RegistrarClient) ReportUptime(report UptimeReport) (err error) {
 	return c.reportUptime(report)
 }
 
+// GetNode gets registered node details using nodeID
 func (c *RegistrarClient) GetNode(id uint64) (node Node, err error) {
 	return c.getNode(id)
 }
 
+// GetNodeByTwinID gets registered node details using twinID
 func (c *RegistrarClient) GetNodeByTwinID(id uint64) (node Node, err error) {
 	return c.getNodeByTwinID(id)
 }
 
+// ListNodes lists registered nodes details using (nodeID, twinID, farmID).
 func (c *RegistrarClient) ListNodes(opts ...ListNodeOpts) (nodes []Node, err error) {
 	return c.listNodes(opts)
 }

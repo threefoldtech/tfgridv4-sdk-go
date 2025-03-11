@@ -21,7 +21,7 @@ This connection could be established using a `direct-client`, or an `rmb-peer`.
 A process could connect to an `rmb-relay` using a direct client.\
 To create a new direct client instance, a process needs to have:
 
-- A valid private key, with an activated account on the Registrar.
+- A valid mnemonic, with an activated account on the Registrar.
 - The key type of these mnemonics.
 - A relay URL that the direct client will connect to.
 - A session id. This could be anything, but a twin must only have a unique session id per connection.

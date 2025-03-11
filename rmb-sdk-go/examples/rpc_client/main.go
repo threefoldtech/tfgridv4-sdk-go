@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"log"
 	"time"
@@ -16,16 +15,11 @@ type version struct {
 }
 
 func app() error {
-	privateKey := "<private key goes here>"
-
-	privateKeyBytes, err := hex.DecodeString(privateKey)
-	if err != nil {
-		return fmt.Errorf("failed to decode private key: %w", err)
-	}
+	mnemonic := "<mnemonics goes here>"
 
 	client, err := peer.NewRpcClient(
 		context.Background(),
-		privateKeyBytes,
+		mnemonic,
 		peer.WithRegistrarUrl("https://registrar.dev4.grid.tf"),
 		peer.WithRelay("wss://relay.dev.grid.tf"),
 		peer.WithSession("test-client"),

@@ -33,7 +33,7 @@ type RpcClient struct {
 // it easy to make rpc calls
 func NewRpcClient(
 	ctx context.Context,
-	privateKey []byte,
+	mnemonic string,
 	opts ...PeerOpt) (*RpcClient, error) {
 
 	rpc := RpcClient{
@@ -42,7 +42,7 @@ func NewRpcClient(
 
 	base, err := NewPeer(
 		ctx,
-		privateKey,
+		mnemonic,
 		rpc.router,
 		opts...,
 	)

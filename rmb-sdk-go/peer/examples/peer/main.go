@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"math/rand"
 
@@ -15,17 +14,12 @@ import (
 var resultsChan = make(chan bool)
 
 func app() error {
-	privateKey := "<private key here>"
+	mnemonic := "<mnemonics goes here>"
 	ctx := context.Background()
-
-	privateKeyBytes, err := hex.DecodeString(privateKey)
-	if err != nil {
-		return fmt.Errorf("failed to decode private key: %w", err)
-	}
 
 	peer, err := peer.NewPeer(
 		ctx,
-		privateKeyBytes,
+		mnemonic,
 		relayCallback,
 		peer.WithRegistrarUrl("https://registrar.dev4.grid.tf"),
 		peer.WithRelay("wss://relay.dev.grid.tf"),

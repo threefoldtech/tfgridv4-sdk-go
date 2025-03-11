@@ -1,7 +1,6 @@
 package peer
 
 import (
-	"crypto/ed25519"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -14,6 +13,8 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
+	"github.com/vedhavyas/go-subkey"
+	subkeyEd25519 "github.com/vedhavyas/go-subkey/ed25519"
 )
 
 var (
@@ -130,14 +131,21 @@ func (t *twinDB) GetByPk(pk []byte) (uint32, error) {
 	return uint32(registrarTwin.TwinID), nil
 }
 
-func UpdateTwin(twinID uint32, privateKey, rmbEncKey []byte, relays []string, registrarUrl string) error {
+func UpdateTwin(twinID uint32, registrarUrl, mnemonic string, rmbEncKey []byte, relays []string) error {
 	client := &http.Client{}
+
+	keypair, err := subkey.DeriveKeyPair(subkeyEd25519.Scheme{}, mnemonic)
+	if err != nil {
+		return err
+	}
 
 	timestamp := time.Now().Unix()
 	challenge := []byte(fmt.Sprintf("%d:%v", timestamp, twinID))
-	signature := ed25519.Sign(privateKey, challenge)
+	signature, err := keypair.Sign(challenge)
+	if err != nil {
+		return err
+	}
 
-	fmt.Printf("rmbEncKey: %v\n", rmbEncKey)
 	updates := updateTwin{
 		Relays:    relays,
 		RMBEncKey: base64.StdEncoding.EncodeToString(rmbEncKey),

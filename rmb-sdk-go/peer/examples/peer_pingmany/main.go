@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -17,8 +16,8 @@ import (
 )
 
 const (
-	relayUrl   = "ws://localhost:"
-	privateKey = "<private key>"
+	relayUrl = "ws://localhost:"
+	mnemonic = "<mnemonics goes here>"
 )
 
 type Node struct {
@@ -55,14 +54,8 @@ func main() {
 		log.Info().Uint32("twin", env.Source.Twin).Str("version", version).Msg("received response")
 	}
 
-	privateKeyBytes, err := hex.DecodeString(privateKey)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to decode private key")
-		return
-	}
-
 	bus, err := peer.NewPeer(context.Background(),
-		privateKeyBytes,
+		mnemonic,
 		handler,
 		peer.WithRegistrarUrl("https://registrar.dev4.grid.tf"),
 		peer.WithKeyType(peer.KeyTypeSr25519),

@@ -137,15 +137,15 @@ func generateSecureKey(identity substrate.Identity) (*secp256k1.PrivateKey, erro
 	return priv, nil
 }
 
-func getIdentity(keyType string, privateKey []byte) (substrate.Identity, error) {
+func getIdentity(keyType string, mnemonics string) (substrate.Identity, error) { //TODO:
 	var identity substrate.Identity
 	var err error
 
 	switch keyType {
 	case KeyTypeEd25519:
-		identity, err = substrate.NewIdentityFromEd25519Key(privateKey)
+		identity, err = substrate.NewIdentityFromEd25519Phrase(mnemonics)
 	case KeyTypeSr25519:
-		// identity, err = substrate.NewIdentityFromSr25519Phrase(privateKeyBytes) //TODO:
+		identity, err = substrate.NewIdentityFromSr25519Phrase(mnemonics)
 	default:
 		return nil, fmt.Errorf("invalid key type %s, should be one of %s or %s ", keyType, KeyTypeEd25519, KeyTypeSr25519)
 	}
@@ -164,7 +164,7 @@ func getIdentity(keyType string, privateKey []byte) (substrate.Identity, error) 
 // Call() will panic if called while the directClient's context is canceled.
 func NewPeer(
 	ctx context.Context,
-	privateKey []byte,
+	mnemonic string,
 	handler Handler,
 	opts ...PeerOpt,
 ) (*Peer, error) {
@@ -186,7 +186,8 @@ func NewPeer(
 	if cfg.encoder == nil {
 		cfg.encoder = encoder.NewJSONEncoder()
 	}
-	identity, err := getIdentity(cfg.keyType, privateKey)
+
+	identity, err := getIdentity(cfg.keyType, mnemonic)
 	if err != nil {
 		return nil, err
 	}
@@ -233,7 +234,7 @@ func NewPeer(
 
 	if !bytes.Equal(twin.E2EKey, publicKey) || twin.Relay == nil || relayURLs[0] != *twin.Relay { // TODO: multiple relays (slice?)
 		log.Info().Strs("Relay url/s", relayURLs).Msg("twin relay/public key didn't match, updating on registrar ...")
-		if err = UpdateTwin(twin.ID, privateKey, publicKey, relayURLs, cfg.registrarUrl); err != nil {
+		if err = UpdateTwin(twin.ID, cfg.registrarUrl, mnemonic, publicKey, relayURLs); err != nil {
 			return nil, errors.Wrap(err, "could not update twin relay information")
 		}
 	}

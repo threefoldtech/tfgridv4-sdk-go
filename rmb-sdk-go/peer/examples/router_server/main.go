@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -59,20 +58,15 @@ func app() error {
 	})
 
 	// adding a peer for the router
-	privateKey := "<private key here>"
+	mnemonic := "<mnemonics goes here>"
 	ctx := context.Background()
-
-	privateKeyBytes, err := hex.DecodeString(privateKey)
-	if err != nil {
-		return fmt.Errorf("failed to decode private key: %w", err)
-	}
 
 	// this peer will be a 'calculator' session.
 	// means other peers on the network need to know that
 	// session id to use when they are making calls
-	_, err = peer.NewPeer(
+	_, err := peer.NewPeer(
 		ctx,
-		privateKeyBytes,
+		mnemonic,
 		router.Serve,
 		peer.WithRegistrarUrl("https://registrar.dev4.grid.tf"),
 		peer.WithRelay("wss://relay.dev.grid.tf"),

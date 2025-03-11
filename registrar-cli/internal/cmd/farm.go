@@ -13,7 +13,7 @@ func CreaeteFarm(mnemonic, network, farmName, stellarAddress string, dedicated b
 	}
 
 	if len(mnemonic) == 0 {
-		return farmID, fmt.Errorf("can not initialize registrar client with no seed")
+		return farmID, fmt.Errorf("can not initialize registrar client with no mnemonic")
 	}
 
 	cli, err := client.NewRegistrarClient(u, mnemonic)

@@ -12,7 +12,7 @@ var accountUpdateCmd = &cobra.Command{
 	Use:   "update",
 	Short: "update account in node registrar",
 	RunE: func(cobraCmd *cobra.Command, args []string) error {
-		seed, err := cobraCmd.Flags().GetString("menmonic")
+		mnemonic, err := cobraCmd.Flags().GetString("mnemonic")
 		if err != nil {
 			return err
 		}
@@ -32,7 +32,7 @@ var accountUpdateCmd = &cobra.Command{
 			return err
 		}
 
-		err = cmd.UpdateAccount(seed, network, relays, rmbEncKey)
+		err = cmd.UpdateAccount(mnemonic, network, relays, rmbEncKey)
 		if err != nil {
 			return err
 		}
@@ -45,7 +45,7 @@ var accountUpdateCmd = &cobra.Command{
 
 func init() {
 	accountCmd.AddCommand(accountUpdateCmd)
-	accountUpdateCmd.Flags().StringP("menmonic", "m", "", "account menmonic")
+	accountUpdateCmd.Flags().StringP("mnemonic", "m", "", "account mnemonic")
 	accountUpdateCmd.Flags().StringP("network", "n", "", "network (dev, qa, test, main)")
 	accountUpdateCmd.Flags().StringArrayP("relays", "r", nil, "relays urls")
 	accountUpdateCmd.Flags().StringP("rmb-enc-key", "k", "", "rmb encryption key")

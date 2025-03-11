@@ -12,7 +12,7 @@ var farmUpdateCmd = &cobra.Command{
 	Use:   "update",
 	Short: "update farm in node registrar",
 	RunE: func(cobraCmd *cobra.Command, args []string) error {
-		mnemonic, err := cobraCmd.Flags().GetString("menmonic")
+		mnemonic, err := cobraCmd.Flags().GetString("mnemonic")
 		if err != nil {
 			return err
 		}
@@ -55,7 +55,7 @@ var farmUpdateCmd = &cobra.Command{
 
 func init() {
 	farmCmd.AddCommand(farmUpdateCmd)
-	farmUpdateCmd.Flags().StringP("menmonic", "m", "", "account menmonic")
+	farmUpdateCmd.Flags().StringP("mnemonic", "m", "", "account mnemonic")
 	farmUpdateCmd.Flags().StringP("network", "n", "", "network (dev, qa, test, main)")
 	farmUpdateCmd.Flags().Uint64P("farm-id", "i", 0, "farm id")
 	farmUpdateCmd.Flags().String("farm-name", "", "new farm name")

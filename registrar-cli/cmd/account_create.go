@@ -12,7 +12,7 @@ var accountCreateCmd = &cobra.Command{
 	Use:   "create",
 	Short: "create new account in node registrar",
 	RunE: func(cobraCmd *cobra.Command, args []string) error {
-		mnemonic, err := cobraCmd.Flags().GetString("menmonic")
+		mnemonic, err := cobraCmd.Flags().GetString("mnemonic")
 		if err != nil {
 			return err
 		}
@@ -46,7 +46,7 @@ var accountCreateCmd = &cobra.Command{
 
 func init() {
 	accountCmd.AddCommand(accountCreateCmd)
-	accountCreateCmd.Flags().StringP("menmonic", "m", "", "account menmonic")
+	accountCreateCmd.Flags().StringP("mnemonic", "m", "", "account mnemonic")
 	accountCreateCmd.Flags().StringP("network", "n", "", "network (dev, qa, test, main)")
 	accountCreateCmd.Flags().StringArrayP("relays", "r", nil, "relays urls")
 	accountCreateCmd.Flags().StringP("rmb-enc-key", "k", "", "rmb encryption key")

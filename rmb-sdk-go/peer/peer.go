@@ -19,10 +19,12 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
-	substrate "github.com/threefoldtech/tfchain/clients/tfchain-client-go"
-	"github.com/threefoldtech/tfgrid-sdk-go/rmb-sdk-go"
-	"github.com/threefoldtech/tfgrid-sdk-go/rmb-sdk-go/peer/encoder"
-	"github.com/threefoldtech/tfgrid-sdk-go/rmb-sdk-go/peer/types"
+	"github.com/threefoldtech/tfgridv4-sdk-go/rmb-sdk-go"
+	"github.com/threefoldtech/tfgridv4-sdk-go/rmb-sdk-go/peer/encoder"
+	"github.com/threefoldtech/tfgridv4-sdk-go/rmb-sdk-go/peer/types"
+	"github.com/vedhavyas/go-subkey/v2"
+	"github.com/vedhavyas/go-subkey/v2/ed25519"
+	"github.com/vedhavyas/go-subkey/v2/sr25519"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -117,7 +119,7 @@ func WithInMemoryExpiration(ttl uint64) PeerOpt {
 // Peer exposes the functionality to talk directly to an rmb relay
 type Peer struct {
 	source  *types.Address
-	signer  substrate.Identity
+	signer  subkey.KeyPair
 	twinDB  TwinDB
 	privKey *secp256k1.PrivateKey
 	reader  Reader
@@ -127,25 +129,20 @@ type Peer struct {
 	relays  []string
 }
 
-func generateSecureKey(identity substrate.Identity) (*secp256k1.PrivateKey, error) {
-	keyPair, err := identity.KeyPair()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to generate identity key pair")
-	}
-
+func generateSecureKey(keyPair subkey.KeyPair) (*secp256k1.PrivateKey, error) {
 	priv := secp256k1.PrivKeyFromBytes(keyPair.Seed())
 	return priv, nil
 }
 
-func getIdentity(keyType string, mnemonics string) (substrate.Identity, error) { //TODO:
-	var identity substrate.Identity
+func getIdentity(keyType string, mnemonic string) (subkey.KeyPair, error) {
+	var identity subkey.KeyPair
 	var err error
 
 	switch keyType {
 	case KeyTypeEd25519:
-		identity, err = substrate.NewIdentityFromEd25519Phrase(mnemonics)
+		identity, err = subkey.DeriveKeyPair(ed25519.Scheme{}, mnemonic)
 	case KeyTypeSr25519:
-		identity, err = substrate.NewIdentityFromSr25519Phrase(mnemonics)
+		identity, err = subkey.DeriveKeyPair(sr25519.Scheme{}, mnemonic)
 	default:
 		return nil, fmt.Errorf("invalid key type %s, should be one of %s or %s ", keyType, KeyTypeEd25519, KeyTypeSr25519)
 	}
@@ -197,7 +194,7 @@ func NewPeer(
 		return nil, err
 	}
 
-	id, err := twinDB.GetByPk(identity.PublicKey())
+	id, err := twinDB.GetByPk(identity.Public())
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get twin by public key")
 	}
@@ -234,7 +231,7 @@ func NewPeer(
 
 	if !bytes.Equal(twin.E2EKey, publicKey) || twin.Relay == nil || relayURLs[0] != *twin.Relay { // TODO: multiple relays (slice?)
 		log.Info().Strs("Relay url/s", relayURLs).Msg("twin relay/public key didn't match, updating on registrar ...")
-		if err = UpdateTwin(twin.ID, cfg.registrarUrl, mnemonic, publicKey, relayURLs); err != nil {
+		if err = UpdateTwin(twin.ID, cfg.registrarUrl, identity, publicKey, relayURLs); err != nil {
 			return nil, errors.Wrap(err, "could not update twin relay information")
 		}
 	}

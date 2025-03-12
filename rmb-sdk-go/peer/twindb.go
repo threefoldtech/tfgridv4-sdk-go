@@ -13,8 +13,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
-	"github.com/vedhavyas/go-subkey"
-	subkeyEd25519 "github.com/vedhavyas/go-subkey/ed25519"
+	"github.com/vedhavyas/go-subkey/v2"
 )
 
 var (
@@ -63,11 +62,14 @@ type updateTwin struct {
 
 // GetTwin gets Twin from cache if present. if not, gets it from substrate client and caches it.
 func (t *twinDB) Get(id uint32) (Twin, error) {
-	req, _ := http.NewRequest(
+	req, err := http.NewRequest(
 		"GET",
 		fmt.Sprintf("%s/v1/accounts?twin_id=%v", t.registrarUrl, id),
 		nil,
 	)
+	if err != nil {
+		return Twin{}, errors.Wrap(err, "could not create new request")
+	}
 
 	resp, err := t.httpClient.Do(req)
 	if err != nil {
@@ -111,11 +113,18 @@ func (t *twinDB) Get(id uint32) (Twin, error) {
 }
 
 func (t *twinDB) GetByPk(pk []byte) (uint32, error) {
-	req, _ := http.NewRequest(
+	req, err := http.NewRequest(
 		"GET",
-		fmt.Sprintf("%s/v1/accounts?public_key=%v", t.registrarUrl, base64.StdEncoding.EncodeToString(pk)),
+		fmt.Sprintf("%s/v1/accounts", t.registrarUrl),
 		nil,
 	)
+	if err != nil {
+		return 0, errors.Wrap(err, "could not create new request")
+	}
+
+	q := req.URL.Query()
+	q.Add("public_key", base64.StdEncoding.EncodeToString(pk))
+	req.URL.RawQuery = q.Encode()
 
 	resp, err := t.httpClient.Do(req)
 	if err != nil {
@@ -131,17 +140,12 @@ func (t *twinDB) GetByPk(pk []byte) (uint32, error) {
 	return uint32(registrarTwin.TwinID), nil
 }
 
-func UpdateTwin(twinID uint32, registrarUrl, mnemonic string, rmbEncKey []byte, relays []string) error {
+func UpdateTwin(twinID uint32, registrarUrl string, kp subkey.KeyPair, rmbEncKey []byte, relays []string) error {
 	client := &http.Client{}
-
-	keypair, err := subkey.DeriveKeyPair(subkeyEd25519.Scheme{}, mnemonic)
-	if err != nil {
-		return err
-	}
 
 	timestamp := time.Now().Unix()
 	challenge := []byte(fmt.Sprintf("%d:%v", timestamp, twinID))
-	signature, err := keypair.Sign(challenge)
+	signature, err := kp.Sign(challenge)
 	if err != nil {
 		return err
 	}
@@ -156,11 +160,14 @@ func UpdateTwin(twinID uint32, registrarUrl, mnemonic string, rmbEncKey []byte, 
 		return err
 	}
 
-	req, _ := http.NewRequest(
+	req, err := http.NewRequest(
 		"PATCH",
 		fmt.Sprintf("%s/v1/accounts/%v", registrarUrl, twinID),
 		strings.NewReader(string(jsonData)),
 	)
+	if err != nil {
+		return errors.Wrap(err, "could not create new request")
+	}
 
 	authHeader := fmt.Sprintf(
 		"%s:%s",

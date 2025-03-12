@@ -8,6 +8,7 @@ This repo contains the go clients for Threefold grid.
 ## Packages
 
 -   [node-registrar](./node-registrar/README.md)
+-   [rmb-sdk-go](./rmb-sdk-go/README.md)
 
 ## Release
 

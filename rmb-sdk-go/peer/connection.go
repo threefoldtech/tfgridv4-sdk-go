@@ -10,7 +10,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
-	substrate "github.com/threefoldtech/tfchain/clients/tfchain-client-go"
+	"github.com/vedhavyas/go-subkey/v2"
 )
 
 const (
@@ -24,7 +24,7 @@ var errTimeout = fmt.Errorf("connection timeout")
 type InnerConnection struct {
 	twinID   uint32
 	session  string
-	identity substrate.Identity
+	identity subkey.KeyPair
 	url      string
 	writer   chan send
 }
@@ -57,10 +57,10 @@ func (r Reader) Read() []byte {
 }
 
 // NewConnection creates a new InnerConnection instance
-func NewConnection(identity substrate.Identity, url string, session string, twinID uint32) InnerConnection {
+func NewConnection(keyPair subkey.KeyPair, url string, session string, twinID uint32) InnerConnection {
 	return InnerConnection{
 		twinID:   twinID,
-		identity: identity,
+		identity: keyPair,
 		url:      url,
 		session:  session,
 		writer:   make(chan send),

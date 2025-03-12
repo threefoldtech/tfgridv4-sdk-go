@@ -7,7 +7,7 @@ import (
 
 	"log"
 
-	"github.com/threefoldtech/tfgrid-sdk-go/rmb-sdk-go/peer"
+	"github.com/threefoldtech/tfgridv4-sdk-go/rmb-sdk-go/peer"
 )
 
 func app() error {

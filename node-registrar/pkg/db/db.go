@@ -71,19 +71,6 @@ func openDatabase(c Config) (db Database, err error) {
 	return Database{gormDB, dsn}, nil
 }
 
-func (db Database) autoMigrate() error {
-	if err := db.gormDB.AutoMigrate(
-		&Account{},
-		&Farm{},
-		&Node{},
-		&UptimeReport{},
-		&ZosVersion{},
-	); err != nil {
-		return errors.Wrap(err, "failed to migrate tables")
-	}
-	return nil
-}
-
 func (c Config) Validate() error {
 	if strings.TrimSpace(c.PostgresHost) == "" {
 		return errors.New("invalid postgres host, postgres host should not be empty")

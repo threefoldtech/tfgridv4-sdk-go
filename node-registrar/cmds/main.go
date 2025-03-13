@@ -27,6 +27,7 @@ type flags struct {
 	adminTwinID uint64
 }
 
+// These variables are set during build time using ldflags
 var (
 	commit  string
 	version string

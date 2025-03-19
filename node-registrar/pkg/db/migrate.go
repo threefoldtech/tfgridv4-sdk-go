@@ -7,10 +7,6 @@ import (
 )
 
 func (db Database) autoMigrate() error {
-	if err := db.migrateNodes(); err != nil {
-		return err
-	}
-
 	if err := db.gormDB.AutoMigrate(
 		&Account{},
 		&Farm{},
@@ -20,6 +16,11 @@ func (db Database) autoMigrate() error {
 	); err != nil {
 		return errors.Wrap(err, "failed to migrate tables")
 	}
+
+	if err := db.migrateNodes(); err != nil {
+		return err
+	}
+
 	return nil
 }
 

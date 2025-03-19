@@ -21,39 +21,39 @@ func (s *Server) SetupRoutes() {
 	}))
 
 	s.router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-	v1 := s.router.Group("v1")
+	v1 := s.router.Group("/api/v1")
 
 	// farms routes
-	farmRoutes := v1.Group("farms")
-	farmRoutes.GET("/", s.listFarmsHandler)
-	farmRoutes.GET("/:farm_id", s.getFarmHandler)
+	publicFarmRoutes := v1.Group("farms")
+	publicFarmRoutes.GET("/", s.listFarmsHandler)
+	publicFarmRoutes.GET("/:farm_id", s.getFarmHandler)
 	// protected by farmer key
-	farmRoutes.Use(s.AuthMiddleware())
-	farmRoutes.POST("/", s.createFarmHandler)
-	farmRoutes.PATCH("/:farm_id", s.updateFarmsHandler)
+	protectedFarmRoutes := v1.Group("farms", s.AuthMiddleware())
+	protectedFarmRoutes.POST("/", s.createFarmHandler)
+	protectedFarmRoutes.PATCH("/:farm_id", s.updateFarmHandler)
 
 	// nodes routes
-	nodeRoutes := v1.Group("nodes")
-	nodeRoutes.GET("/", s.listNodesHandler)
-	nodeRoutes.GET("/:node_id", s.getNodeHandler)
+	publicNodeRoutes := v1.Group("nodes")
+	publicNodeRoutes.GET("/", s.listNodesHandler)
+	publicNodeRoutes.GET("/:node_id", s.getNodeHandler)
 	// protected by node key
-	nodeRoutes.Use(s.AuthMiddleware())
-	nodeRoutes.POST("/", s.registerNodeHandler)
-	nodeRoutes.PATCH("/:node_id", s.updateNodeHandler)
-	nodeRoutes.POST("/:node_id/uptime", s.uptimeReportHandler)
+	protectedNodeRoutes := v1.Group("nodes", s.AuthMiddleware())
+	protectedNodeRoutes.POST("/", s.registerNodeHandler)
+	protectedNodeRoutes.PATCH("/:node_id", s.updateNodeHandler)
+	protectedNodeRoutes.POST("/:node_id/uptime", s.uptimeReportHandler)
 
 	// Account routes
-	accountRoutes := v1.Group("accounts")
-	accountRoutes.POST("/", s.createAccountHandler)
-	accountRoutes.GET("/", s.getAccountHandler)
+	publicAccountRoutes := v1.Group("accounts")
+	publicAccountRoutes.POST("/", s.createAccountHandler)
+	publicAccountRoutes.GET("/", s.getAccountHandler)
 	// protected by farmer key
-	accountRoutes.Use(s.AuthMiddleware())
-	accountRoutes.PATCH("/:twin_id", s.updateAccountHandler)
+	protectedAccountRoutes := v1.Group("accounts", s.AuthMiddleware())
+	protectedAccountRoutes.PATCH("/:twin_id", s.updateAccountHandler)
 
 	// zOS Version endpoints
-	zosRoutes := v1.Group("/zos")
-	zosRoutes.GET("/version", s.getZOSVersionHandler)
+	publicZosRoutes := v1.Group("/zos")
+	publicZosRoutes.GET("/version", s.getZOSVersionHandler)
 	// protected by admin key
-	zosRoutes.Use(s.AuthMiddleware())
-	zosRoutes.PUT("/version", s.setZOSVersionHandler)
+	protectedZosRoutes := v1.Group("/zos", s.AuthMiddleware())
+	protectedZosRoutes.PUT("/version", s.setZOSVersionHandler)
 }

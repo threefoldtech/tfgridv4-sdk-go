@@ -132,7 +132,7 @@ func (s Server) createFarmHandler(c *gin.Context) {
 
 type UpdateFarmRequest struct {
 	FarmName       string `json:"farm_name" binding:"max=40"`
-	StellarAddress string `json:"stellar_address" binding:"max=56,startswith=G,len=56,alphanum,uppercase"`
+	StellarAddress string `json:"stellar_address" binding:"startswith=G,len=56,alphanum,uppercase"`
 }
 
 // @Summary Update farm
@@ -377,7 +377,6 @@ func (s *Server) updateNodeHandler(c *gin.Context) {
 		return
 	}
 
-	log.Info().Any("req is", c.Request.Body)
 	var req UpdateNodeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
@@ -557,6 +556,8 @@ func (s *Server) createAccountHandler(c *gin.Context) {
 	// Now we can create new account
 	account := &db.Account{
 		PublicKey: req.PublicKey,
+		Relays:    req.Relays,
+		RMBEncKey: req.RMBEncKey,
 	}
 
 	if err := s.db.CreateAccount(account); err != nil {
@@ -690,7 +691,6 @@ func (s *Server) getAccountHandler(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get account"})
 			return
 		}
-		log.Info().Any("account", account).Send()
 		c.JSON(http.StatusOK, account)
 		return
 	}

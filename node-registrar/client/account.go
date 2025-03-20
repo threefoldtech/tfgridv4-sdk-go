@@ -93,8 +93,8 @@ func (c *RegistrarClient) createAccount(relays []string, rmbEncKey string) (acco
 	}
 
 	data := map[string]any{
-		"public_key":  c.keyPair.Public(),
-		"signature":   signature,
+		"public_key":  base64.StdEncoding.EncodeToString(c.keyPair.Public()),
+		"signature":   base64.StdEncoding.EncodeToString(signature),
 		"timestamp":   timestamp,
 		"rmb_enc_key": rmbEncKey,
 		"relays":      relays,

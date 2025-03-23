@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/pkg/errors"
-	"github.com/vedhavyas/go-subkey"
+	"github.com/vedhavyas/go-subkey/v2"
 )
 
 type RegistrarClient struct {

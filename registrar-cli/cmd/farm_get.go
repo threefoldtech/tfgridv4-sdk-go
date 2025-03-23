@@ -40,6 +40,5 @@ var farmGetCmd = &cobra.Command{
 
 func init() {
 	farmCmd.AddCommand(farmGetCmd)
-	farmGetCmd.Flags().StringP("network", "n", "", "network (dev, qa, test, main)")
 	farmGetCmd.Flags().Uint64P("farm-id", "i", 0, "farm id")
 }

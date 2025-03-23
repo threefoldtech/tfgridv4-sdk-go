@@ -56,7 +56,9 @@ var farmUpdateCmd = &cobra.Command{
 func init() {
 	farmCmd.AddCommand(farmUpdateCmd)
 	farmUpdateCmd.Flags().StringP("mnemonic", "m", "", "account mnemonic")
-	farmUpdateCmd.Flags().StringP("network", "n", "", "network (dev, qa, test, main)")
+	if err := farmUpdateCmd.MarkFlagRequired("mnemonic"); err != nil {
+		log.Fatal().Err(err).Send()
+	}
 	farmUpdateCmd.Flags().Uint64P("farm-id", "i", 0, "farm id")
 	farmUpdateCmd.Flags().String("farm-name", "", "new farm name")
 	farmUpdateCmd.Flags().StringP("stellar-address", "s", "", "stellar address")

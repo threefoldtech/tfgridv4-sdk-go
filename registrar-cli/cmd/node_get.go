@@ -40,7 +40,6 @@ var nodeGetCmd = &cobra.Command{
 
 func init() {
 	nodeCmd.AddCommand(nodeGetCmd)
-	nodeGetCmd.Flags().StringP("network", "n", "", "network (dev, qa, test, main)")
 	nodeGetCmd.Flags().Uint64("node-id", 0, "node id")
 	nodeGetCmd.Flags().Uint64("twin-id", 0, "twin id")
 }

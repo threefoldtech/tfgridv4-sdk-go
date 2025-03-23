@@ -7,8 +7,8 @@ import (
 	"github.com/threefoldtech/tfgrid4-sdk-go/registrar-cli/internal/cmd"
 )
 
-// UpdateZosVersionCmd represents the zos version update command
-var UpdateZosVersionCmd = &cobra.Command{
+// zosVersionUpdateCmd represents the zos version update command
+var zosVersionUpdateCmd = &cobra.Command{
 	Use:   "update",
 	Short: "update zos version in node registrar",
 	RunE: func(cobraCmd *cobra.Command, args []string) error {
@@ -44,9 +44,11 @@ var UpdateZosVersionCmd = &cobra.Command{
 }
 
 func init() {
-	zosVersionCmd.AddCommand(UpdateZosVersionCmd)
-	UpdateZosVersionCmd.Flags().StringP("mnemonic", "m", "", "account mnemonic")
-	UpdateZosVersionCmd.Flags().StringP("network", "n", "", "network (dev, qa, test, main)")
-	UpdateZosVersionCmd.Flags().StringP("version", "v", "v0.0.0", "new zos version")
-	UpdateZosVersionCmd.Flags().BoolP("safe-to-upgrade", "u", false, "safe to upgrade")
+	zosVersionCmd.AddCommand(zosVersionUpdateCmd)
+	zosVersionUpdateCmd.Flags().StringP("mnemonic", "m", "", "account mnemonic")
+	if err := zosVersionUpdateCmd.MarkFlagRequired("mnemonic"); err != nil {
+		log.Fatal().Err(err).Send()
+	}
+	zosVersionUpdateCmd.Flags().StringP("version", "v", "v0.0.0", "new zos version")
+	zosVersionUpdateCmd.Flags().BoolP("safe-to-upgrade", "u", false, "safe to upgrade")
 }

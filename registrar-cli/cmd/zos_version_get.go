@@ -30,5 +30,4 @@ var zosVersionGetCmd = &cobra.Command{
 
 func init() {
 	zosVersionCmd.AddCommand(zosVersionGetCmd)
-	zosVersionGetCmd.Flags().StringP("network", "n", "", "network (dev, qa, test, main)")
 }

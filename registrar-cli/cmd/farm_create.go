@@ -37,7 +37,7 @@ var farmCreateCmd = &cobra.Command{
 			return err
 		}
 
-		farmID, err := cmd.CreaeteFarm(mnemonic, network, farmName, stellarAddrss, dedicated)
+		farmID, err := cmd.CreateFarm(mnemonic, network, farmName, stellarAddrss, dedicated)
 		if err != nil {
 			return err
 		}

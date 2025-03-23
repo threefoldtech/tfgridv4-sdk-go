@@ -32,7 +32,7 @@ var accountCreateCmd = &cobra.Command{
 			return err
 		}
 
-		account, mnemonic, err := cmd.CreaeteAccount(network, relays, rmbEncKey, mnemonic)
+		account, mnemonic, err := cmd.CreateAccount(network, relays, rmbEncKey, mnemonic)
 		if err != nil {
 			return err
 		}

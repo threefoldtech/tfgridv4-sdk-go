@@ -6,7 +6,7 @@ import (
 	"github.com/threefoldtech/tfgrid4-sdk-go/node-registrar/client"
 )
 
-func CreaeteFarm(mnemonic, network, farmName, stellarAddress string, dedicated bool) (farmID uint64, err error) {
+func CreateFarm(mnemonic, network, farmName, stellarAddress string, dedicated bool) (farmID uint64, err error) {
 	u, ok := urls[network]
 	if !ok {
 		return farmID, fmt.Errorf("invalid network %s", network)

@@ -14,7 +14,7 @@ var urls = map[string]string{
 	"main": "https://registrar.prod4.grid.tf/v1",
 }
 
-func CreaeteAccount(network string, relays []string, rmbEncKey string, mnemonicOrSeed ...string) (account client.Account, mnemonic string, err error) {
+func CreateAccount(network string, relays []string, rmbEncKey string, mnemonicOrSeed ...string) (account client.Account, mnemonic string, err error) {
 	u, ok := urls[network]
 	if !ok {
 		return account, "", fmt.Errorf("invalid network %s", network)

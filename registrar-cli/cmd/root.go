@@ -30,7 +30,4 @@ func init() {
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 	rootCmd.PersistentFlags().StringP("network", "n", "", "network (dev, qa, test, main)")
-	if err := rootCmd.MarkFlagRequired("network"); err != nil {
-		log.Fatal().Err(err).Send()
-	}
 }

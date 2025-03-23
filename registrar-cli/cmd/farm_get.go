@@ -41,4 +41,7 @@ var farmGetCmd = &cobra.Command{
 func init() {
 	farmCmd.AddCommand(farmGetCmd)
 	farmGetCmd.Flags().Uint64P("farm-id", "i", 0, "farm id")
+	if err := farmGetCmd.MarkFlagRequired("farm-id"); err != nil {
+		log.Fatal().Err(err).Send()
+	}
 }

@@ -46,9 +46,7 @@ var zosVersionUpdateCmd = &cobra.Command{
 func init() {
 	zosVersionCmd.AddCommand(zosVersionUpdateCmd)
 	zosVersionUpdateCmd.Flags().StringP("mnemonic", "m", "", "account mnemonic")
-	if err := zosVersionUpdateCmd.MarkFlagRequired("mnemonic"); err != nil {
-		log.Fatal().Err(err).Send()
-	}
 	zosVersionUpdateCmd.Flags().StringP("version", "v", "v0.0.0", "new zos version")
 	zosVersionUpdateCmd.Flags().BoolP("safe-to-upgrade", "u", false, "safe to upgrade")
+	zosVersionUpdateCmd.MarkFlagsRequiredTogether("mnemonic", "version", "safe-to-upgrade")
 }

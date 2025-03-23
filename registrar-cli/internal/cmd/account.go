@@ -35,11 +35,6 @@ func GetAccount(network string, twinID uint64, pk string) (account client.Accoun
 		return account, fmt.Errorf("invalid network %s", network)
 	}
 
-	publicKey, err := hex.DecodeString(pk)
-	if err != nil {
-		return
-	}
-
 	cli, err := client.NewRegistrarClient(u)
 	if err != nil {
 		return
@@ -47,7 +42,13 @@ func GetAccount(network string, twinID uint64, pk string) (account client.Accoun
 
 	if twinID != 0 {
 		return cli.GetAccount(twinID)
-	} else if len(publicKey) != 0 {
+	} else if len(pk) != 0 {
+
+		publicKey, err := hex.DecodeString(pk)
+		if err != nil {
+			return account, err
+		}
+
 		return cli.GetAccountByPK(publicKey)
 	}
 

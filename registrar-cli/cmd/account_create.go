@@ -47,9 +47,6 @@ var accountCreateCmd = &cobra.Command{
 func init() {
 	accountCmd.AddCommand(accountCreateCmd)
 	accountCreateCmd.Flags().StringP("mnemonic", "m", "", "account mnemonic")
-	if err := accountCreateCmd.MarkFlagRequired("mnemonic"); err != nil {
-		log.Fatal().Err(err).Send()
-	}
 	accountCreateCmd.Flags().StringArrayP("relays", "r", nil, "relays urls")
 	accountCreateCmd.Flags().StringP("rmb-enc-key", "k", "", "rmb encryption key")
 }

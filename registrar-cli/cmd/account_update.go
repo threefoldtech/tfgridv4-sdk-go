@@ -51,4 +51,5 @@ func init() {
 	}
 	accountUpdateCmd.Flags().StringArrayP("relays", "r", nil, "relays urls")
 	accountUpdateCmd.Flags().StringP("rmb-enc-key", "k", "", "rmb encryption key")
+	accountUpdateCmd.MarkFlagsOneRequired("relays", "rmb-enc-key")
 }

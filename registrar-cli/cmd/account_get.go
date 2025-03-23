@@ -42,4 +42,5 @@ func init() {
 	accountCmd.AddCommand(accountGetCmd)
 	accountGetCmd.Flags().Uint64P("twin-id", "i", 0, "twin id")
 	accountGetCmd.Flags().StringP("public-key", "k", "", "account public key")
+	accountGetCmd.MarkFlagsOneRequired("twin-id", "public-key")
 }

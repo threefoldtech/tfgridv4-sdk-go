@@ -617,33 +617,19 @@ func (s *Server) updateAccountHandler(c *gin.Context) {
 		return
 	}
 
-	if req.PubKey != "" && isValidPublicKey(req.PubKey) {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid Public Key format"})
+	// if req.PubKey != "" && isValidPublicKey(req.PubKey) {
+	// 	c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid Public Key format"})
+	// 	return
+	// }
+
+	err = s.db.UpdateAccount(twinID, req.Relays, req.RMBEncKey, req.PubKey)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "account not found"})
+			return
+		}
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "failed to update account"})
 		return
-	}
-
-	if req.PubKey != "" {
-		err = s.db.UpdateAccountPK(twinID, req.PubKey)
-		if err != nil {
-			if errors.Is(err, db.ErrRecordNotFound) {
-				c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "account not found"})
-				return
-			}
-			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "failed to update account"})
-			return
-		}
-	}
-
-	if len(req.Relays) != 0 && req.RMBEncKey != "" {
-		err = s.db.UpdateAccount(twinID, req.Relays, req.RMBEncKey)
-		if err != nil {
-			if errors.Is(err, db.ErrRecordNotFound) {
-				c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "account not found"})
-				return
-			}
-			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "failed to update account"})
-			return
-		}
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "account updated successfully"})
 }

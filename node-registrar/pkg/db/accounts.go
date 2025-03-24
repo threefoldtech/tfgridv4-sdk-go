@@ -17,24 +17,16 @@ func (db *Database) CreateAccount(account *Account) error {
 }
 
 // UpdateAccount updates an account's relays and RMB encryption key
-func (db *Database) UpdateAccount(twinID uint64, relays pq.StringArray, rmbEncKey string) error {
-	result := db.gormDB.Model(&Account{}).Where("twin_id = ?", twinID).Updates(map[string]interface{}{
+func (db *Database) UpdateAccount(twinID uint64, relays pq.StringArray, rmbEncKey string, publicKey string) error {
+	update := map[string]interface{}{
 		"relays":      relays,
 		"rmb_enc_key": rmbEncKey,
-	})
-	if result.Error != nil {
-		return result.Error
 	}
-	if result.RowsAffected == 0 {
-		return ErrRecordNotFound
+	if publicKey != "" {
+		update["public_key"] = publicKey
 	}
-	return nil
-}
 
-func (db *Database) UpdateAccountPK(twinID uint64, publicKey string) error {
-	result := db.gormDB.Model(&Account{}).Where("twin_id = ?", twinID).Updates(map[string]interface{}{
-		"public_key": publicKey,
-	})
+	result := db.gormDB.Model(&Account{}).Where("twin_id = ?", twinID).Updates(update)
 	if result.Error != nil {
 		return result.Error
 	}

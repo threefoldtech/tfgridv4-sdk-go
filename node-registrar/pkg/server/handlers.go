@@ -617,10 +617,10 @@ func (s *Server) updateAccountHandler(c *gin.Context) {
 		return
 	}
 
-	// if req.PubKey != "" && isValidPublicKey(req.PubKey) {
-	// 	c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid Public Key format"})
-	// 	return
-	// }
+	if req.PubKey != "" && isValidPublicKey(req.PubKey) {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid Public Key format"})
+		return
+	}
 
 	err = s.db.UpdateAccount(twinID, req.Relays, req.RMBEncKey, req.PubKey)
 	if err != nil {

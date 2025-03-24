@@ -18,9 +18,12 @@ func (db *Database) CreateAccount(account *Account) error {
 
 // UpdateAccount updates an account's relays and RMB encryption key
 func (db *Database) UpdateAccount(twinID uint64, relays pq.StringArray, rmbEncKey string, publicKey string) error {
-	update := map[string]interface{}{
-		"relays":      relays,
-		"rmb_enc_key": rmbEncKey,
+	update := map[string]interface{}{}
+	if len(relays) != 0 {
+		update["relays"] = relays
+	}
+	if rmbEncKey != "" {
+		update["rmb_enc_key"] = rmbEncKey
 	}
 	if publicKey != "" {
 		update["public_key"] = publicKey

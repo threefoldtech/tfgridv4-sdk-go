@@ -31,6 +31,19 @@ func (db *Database) UpdateAccount(twinID uint64, relays pq.StringArray, rmbEncKe
 	return nil
 }
 
+func (db *Database) UpdateAccountPK(twinID uint64, publicKey string) error {
+	result := db.gormDB.Model(&Account{}).Where("twin_id = ?", twinID).Updates(map[string]interface{}{
+		"public_key":      publicKey,
+	})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return ErrRecordNotFound
+	}
+	return nil
+}
+
 // GetAccountByTwinID retrieves an account by its twin ID
 func (db *Database) GetAccount(twinID uint64) (Account, error) {
 	var account Account

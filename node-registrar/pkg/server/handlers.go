@@ -582,6 +582,7 @@ func verifySignature(publicKey, chalange, signature []byte) (bool, error) {
 type UpdateAccountRequest struct {
 	Relays    pq.StringArray `json:"relays"`
 	RMBEncKey string         `json:"rmb_enc_key"`
+	PubKey    string         `json:"public_key,omitempty"`
 }
 
 // updateAccountHandler updates an account's relays and RMB encryption key
@@ -616,16 +617,34 @@ func (s *Server) updateAccountHandler(c *gin.Context) {
 		return
 	}
 
-	err = s.db.UpdateAccount(twinID, req.Relays, req.RMBEncKey)
-	if err != nil {
-		if errors.Is(err, db.ErrRecordNotFound) {
-			c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "account not found"})
-			return
-		}
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "failed to update account"})
+	if req.PubKey != "" && isValidPublicKey(req.PubKey) {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid Public Key format"})
 		return
 	}
 
+	if req.PubKey != "" {
+		err = s.db.UpdateAccountPK(twinID, req.PubKey)
+		if err != nil {
+			if errors.Is(err, db.ErrRecordNotFound) {
+				c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "account not found"})
+				return
+			}
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "failed to update account"})
+			return
+		}
+	}
+
+	if len(req.Relays) != 0 && req.RMBEncKey != "" {
+		err = s.db.UpdateAccount(twinID, req.Relays, req.RMBEncKey)
+		if err != nil {
+			if errors.Is(err, db.ErrRecordNotFound) {
+				c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "account not found"})
+				return
+			}
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "failed to update account"})
+			return
+		}
+	}
 	c.JSON(http.StatusOK, gin.H{"message": "account updated successfully"})
 }
 

@@ -38,6 +38,7 @@ func (c *RegistrarClient) UpdateAccount(opts ...UpdateAccountOpts) (err error) {
 type accountCfg struct {
 	relays    []string
 	rmbEncKey string
+	publicKey string
 }
 
 type (
@@ -55,6 +56,12 @@ func UpdateAccountWithRelays(relays []string) UpdateAccountOpts {
 func UpdateAccountWithRMBEncKey(rmbEncKey string) UpdateAccountOpts {
 	return func(n *accountCfg) {
 		n.rmbEncKey = rmbEncKey
+	}
+}
+
+func UpdateAccountWithPublicKey(publicKey string) UpdateAccountOpts {
+	return func(n *accountCfg) {
+		n.publicKey = publicKey
 	}
 }
 
@@ -276,6 +283,7 @@ func parseUpdateAccountOpts(opts []UpdateAccountOpts) map[string]any {
 	cfg := accountCfg{
 		rmbEncKey: "",
 		relays:    []string{},
+		publicKey: "",
 	}
 
 	for _, opt := range opts {
@@ -290,6 +298,10 @@ func parseUpdateAccountOpts(opts []UpdateAccountOpts) map[string]any {
 
 	if len(cfg.rmbEncKey) != 0 {
 		data["rmb_enc_key"] = cfg.rmbEncKey
+	}
+
+	if len(cfg.publicKey) != 0 {
+		data["public_key"] = cfg.publicKey
 	}
 
 	return data

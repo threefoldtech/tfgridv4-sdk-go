@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
 	_ "github.com/threefoldtech/tfgrid4-sdk-go/node-registrar/docs"
 
 	swaggerFiles "github.com/swaggo/files"
@@ -21,39 +22,43 @@ func (s *Server) SetupRoutes() {
 	}))
 
 	s.router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-	v1 := s.router.Group("/api/v1")
 
+	s.registerRoutes(s.router.Group("/api/v1"))
+	s.registerRoutes(s.router.Group("/v1"))
+}
+
+func (s *Server) registerRoutes(r *gin.RouterGroup) {
 	// farms routes
-	publicFarmRoutes := v1.Group("farms")
+	publicFarmRoutes := r.Group("farms")
 	publicFarmRoutes.GET("/", s.listFarmsHandler)
 	publicFarmRoutes.GET("/:farm_id", s.getFarmHandler)
 	// protected by farmer key
-	protectedFarmRoutes := v1.Group("farms", s.AuthMiddleware())
+	protectedFarmRoutes := r.Group("farms", s.AuthMiddleware())
 	protectedFarmRoutes.POST("/", s.createFarmHandler)
 	protectedFarmRoutes.PATCH("/:farm_id", s.updateFarmHandler)
 
 	// nodes routes
-	publicNodeRoutes := v1.Group("nodes")
+	publicNodeRoutes := r.Group("nodes")
 	publicNodeRoutes.GET("/", s.listNodesHandler)
 	publicNodeRoutes.GET("/:node_id", s.getNodeHandler)
 	// protected by node key
-	protectedNodeRoutes := v1.Group("nodes", s.AuthMiddleware())
+	protectedNodeRoutes := r.Group("nodes", s.AuthMiddleware())
 	protectedNodeRoutes.POST("/", s.registerNodeHandler)
 	protectedNodeRoutes.PATCH("/:node_id", s.updateNodeHandler)
 	protectedNodeRoutes.POST("/:node_id/uptime", s.uptimeReportHandler)
 
 	// Account routes
-	publicAccountRoutes := v1.Group("accounts")
+	publicAccountRoutes := r.Group("accounts")
 	publicAccountRoutes.POST("/", s.createAccountHandler)
 	publicAccountRoutes.GET("/", s.getAccountHandler)
 	// protected by farmer key
-	protectedAccountRoutes := v1.Group("accounts", s.AuthMiddleware())
+	protectedAccountRoutes := r.Group("accounts", s.AuthMiddleware())
 	protectedAccountRoutes.PATCH("/:twin_id", s.updateAccountHandler)
 
 	// zOS Version endpoints
-	publicZosRoutes := v1.Group("/zos")
+	publicZosRoutes := r.Group("/zos")
 	publicZosRoutes.GET("/version", s.getZOSVersionHandler)
 	// protected by admin key
-	protectedZosRoutes := v1.Group("/zos", s.AuthMiddleware())
+	protectedZosRoutes := r.Group("/zos", s.AuthMiddleware())
 	protectedZosRoutes.PUT("/version", s.setZOSVersionHandler)
 }

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -10,12 +11,16 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog/log"
 	"github.com/threefoldtech/tfgrid4-sdk-go/node-registrar/pkg/db"
 )
 
+// twinKeyID is where the twin key is stored
+type twinIDKey struct{}
+
 const (
 	AuthHeader        = "X-Auth"
-	ChallengeValidity = 5 * time.Minute
+	ChallengeValidity = 1 * time.Minute
 )
 
 // AuthMiddleware is a middleware function that authenticates incoming requests based on the X-Auth header.
@@ -26,7 +31,6 @@ const (
 // header format `Challenge:Signature`
 // - chalange format: base64(message) where the message is `timestampStr:twinIDStr`
 // - signature format: base64(ed25519_or_sr22519_signature)
-// TODO: do we need to support both? Maybe if only ed25519 needed we can rely on crypto pkg instead of using go-subkey
 func (s *Server) AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Extract and validate headers
@@ -47,6 +51,7 @@ func (s *Server) AuthMiddleware() gin.HandlerFunc {
 		// Decode and validate challenge
 		challenge, err := base64.StdEncoding.DecodeString(challengeB64)
 		if err != nil {
+			log.Debug().Err(err).Msg("failed to deconde challenge")
 			abortWithError(c, http.StatusBadRequest, "Invalid challenge encoding")
 			return
 		}
@@ -62,6 +67,7 @@ func (s *Server) AuthMiddleware() gin.HandlerFunc {
 		// Validate timestamp
 		timestamp, err := strconv.ParseInt(timestampStr, 10, 64)
 		if err != nil {
+			log.Debug().Err(err).Msg("invalid timestamp")
 			abortWithError(c, http.StatusBadRequest, "Invalid timestamp")
 			return
 		}
@@ -73,36 +79,41 @@ func (s *Server) AuthMiddleware() gin.HandlerFunc {
 
 		twinID, err := strconv.ParseUint(twinIDStr, 10, 64)
 		if err != nil {
+			log.Debug().Err(err).Msg("invalid twin id format")
 			abortWithError(c, http.StatusBadRequest, "Invalid twin ID format")
 			return
 		}
 
 		account, err := s.db.GetAccount(twinID)
 		if err != nil {
+			log.Debug().Err(err).Uint64("twinID", twinID).Msg("failed to get account")
 			handleDatabaseError(c, err)
 			return
 		}
 
 		storedPK, err := base64.StdEncoding.DecodeString(account.PublicKey)
 		if err != nil {
+			log.Debug().Err(err).Msg("failed to get invalid stored public key")
 			abortWithError(c, http.StatusBadRequest, fmt.Sprintf("invalid stored public key: %v", err))
 			return
 		}
 
 		sig, err := base64.StdEncoding.DecodeString(signatureB64)
 		if err != nil {
+			log.Debug().Err(err).Msg("invalid signature encoding")
 			abortWithError(c, http.StatusBadRequest, "Invalid signature encoding")
 			return
 		}
 
 		// Verify signature (supports both ED25519 and SR25519)
 		if err := verifySignature(storedPK, challenge, sig); err != nil {
+			log.Debug().Err(err).Msg("signature verification failed")
 			abortWithError(c, http.StatusUnauthorized, fmt.Sprintf("Signature verification failed: %v", err))
 			return
 		}
 
 		// Store verified twin ID in context, must be checked form the handlers to ensure altred resources belongs to same user
-		c.Set("twinID", twinID)
+		c.Request = c.Request.WithContext(context.WithValue(c.Request.Context(), twinIDKey{}, twinID))
 		c.Next()
 	}
 }

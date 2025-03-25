@@ -11,12 +11,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/lib/pq"
-	"github.com/rs/zerolog/log"
 	"github.com/threefoldtech/tfgrid4-sdk-go/node-registrar/pkg/db"
 )
 
 const (
-	PubKeySize        = 32
 	MaxTimestampDelta = 2 * time.Second
 )
 
@@ -78,13 +76,14 @@ func (s Server) getFarmHandler(c *gin.Context) {
 
 	farm, err := s.db.GetFarm(id)
 	if err != nil {
-		status := http.StatusBadRequest
+		status := http.StatusInternalServerError
 
 		if errors.Is(err, db.ErrRecordNotFound) {
 			status = http.StatusNotFound
 		}
 
 		c.JSON(status, gin.H{"error": err.Error()})
+		return
 	}
 
 	c.JSON(http.StatusOK, farm)
@@ -117,7 +116,7 @@ func (s Server) createFarmHandler(c *gin.Context) {
 
 	farmID, err := s.db.CreateFarm(farm)
 	if err != nil {
-		status := http.StatusBadRequest
+		status := http.StatusInternalServerError
 
 		if errors.Is(err, db.ErrRecordAlreadyExists) {
 			status = http.StatusConflict
@@ -148,7 +147,7 @@ type UpdateFarmRequest struct {
 // @Failure 401 {object} map[string]any "Unauthorized"
 // @Failure 404 {object} map[string]any "Farm not found"
 // @Router /farms/{farm_id} [patch]
-func (s Server) updateFarmsHandler(c *gin.Context) {
+func (s Server) updateFarmHandler(c *gin.Context) {
 	var req UpdateFarmRequest
 	farmID := c.Param("farm_id")
 
@@ -186,7 +185,7 @@ func (s Server) updateFarmsHandler(c *gin.Context) {
 		(len(req.StellarAddress) != 0 && existingFarm.StellarAddress != req.StellarAddress) {
 		err = s.db.UpdateFarm(id, req.FarmName, req.StellarAddress)
 		if err != nil {
-			status := http.StatusBadRequest
+			status := http.StatusInternalServerError
 
 			if errors.Is(err, db.ErrRecordNotFound) {
 				status = http.StatusNotFound
@@ -229,7 +228,7 @@ func (s Server) listNodesHandler(c *gin.Context) {
 
 	nodes, err := s.db.ListNodes(filter, limit)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -262,7 +261,7 @@ func (s Server) getNodeHandler(c *gin.Context) {
 			return
 		}
 
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -319,7 +318,7 @@ func (s Server) registerNodeHandler(c *gin.Context) {
 
 	nodeID, err := s.db.RegisterNode(node)
 	if err != nil {
-		status := http.StatusBadRequest
+		status := http.StatusInternalServerError
 
 		if errors.Is(err, db.ErrRecordAlreadyExists) {
 			status = http.StatusConflict
@@ -382,7 +381,6 @@ func (s *Server) updateNodeHandler(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 		return
 	}
-	log.Debug().Any("req", req).Send()
 
 	updatedNode := db.Node{
 		FarmID:       req.FarmID,
@@ -540,11 +538,13 @@ func (s *Server) createAccountHandler(c *gin.Context) {
 	publicKeyBytes, err := base64.StdEncoding.DecodeString(req.PublicKey)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid public key format"})
+		return
 	}
 	// Decode signature from base64
 	signatureBytes, err := base64.StdEncoding.DecodeString(req.Signature)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("invalid signature format: %v", err)})
+		return
 	}
 	// Verify signature of the challenge
 	err = verifySignature(publicKeyBytes, challenge, signatureBytes)
@@ -571,13 +571,6 @@ func (s *Server) createAccountHandler(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, account)
 }
-
-/* // verifySignature verifies an ED25519 signature
-func verifySignature(publicKey, chalange, signature []byte) (bool, error) {
-
-	// Verify the signature
-	return ed25519.Verify(publicKey, chalange, signature), nil
-} */
 
 type UpdateAccountRequest struct {
 	Relays    pq.StringArray `json:"relays"`
@@ -669,7 +662,7 @@ func (s *Server) getAccountHandler(c *gin.Context) {
 
 		account, err := s.db.GetAccount(twinID)
 		if err != nil {
-			if err == db.ErrRecordNotFound {
+			if errors.Is(err, db.ErrRecordNotFound) {
 				c.JSON(http.StatusNotFound, gin.H{"error": "account not found"})
 				return
 			}
@@ -684,7 +677,7 @@ func (s *Server) getAccountHandler(c *gin.Context) {
 	if publicKeyParam != "" {
 		account, err := s.db.GetAccountByPublicKey(publicKeyParam)
 		if err != nil {
-			if err == db.ErrRecordNotFound {
+			if errors.Is(err, db.ErrRecordNotFound) {
 				c.JSON(http.StatusNotFound, gin.H{"error": "account not found"})
 				return
 			}
@@ -759,7 +752,7 @@ func (s *Server) getZOSVersionHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, version)
 }
 
-// Helper function to validate public key format
+// Helper function to validate public key length
 func isValidPublicKey(publicKeyBase64 string) bool {
 	publicKeyBytes, err := base64.StdEncoding.DecodeString(publicKeyBase64)
 	if err != nil {
@@ -771,8 +764,8 @@ func isValidPublicKey(publicKeyBase64 string) bool {
 // Helper function to ensure the request is from the owner
 func ensureOwner(c *gin.Context, twinID uint64) {
 	// Retrieve twinID set by the authMiddleware
-	authTwinID, exists := c.Get("twinID")
-	if !exists {
+	authTwinID := c.Request.Context().Value(twinIDKey{})
+	if authTwinID == nil {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "not authorized"})
 		return
 	}

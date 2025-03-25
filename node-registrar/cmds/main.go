@@ -5,9 +5,7 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"os/signal"
 	"strings"
-	"syscall"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
@@ -57,7 +55,7 @@ func Run() error {
 	flag.UintVar(&f.serverPort, "server-port", 8080, "server port")
 	flag.StringVar(&f.domain, "domain", "", "domain on which the server will be served")
 	flag.StringVar(&f.network, "network", "dev", "the registrar network")
-	flag.Uint64Var(&f.adminTwinID, "admin-twin-id", 0, "admin twin ID")
+	flag.Uint64Var(&f.adminTwinID, "admin-twin-id", 1, "admin twin ID")
 
 	flag.Parse()
 	f.SqlLogLevel = logger.LogLevel(sqlLogLevel)
@@ -71,11 +69,11 @@ func Run() error {
 		return err
 	}
 
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
-	zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	logLevel := zerolog.InfoLevel
 	if f.debug {
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+		logLevel = zerolog.DebugLevel
 	}
+	log.Logger = zerolog.New(zerolog.ConsoleWriter{Out: os.Stderr}).Level(logLevel).With().Timestamp().Logger()
 
 	db, err := db.NewDB(f.Config)
 	if err != nil {
@@ -89,17 +87,11 @@ func Run() error {
 		}
 	}()
 
-	s, err := server.NewServer(db, f.network, f.adminTwinID)
-	if err != nil {
-		return errors.Wrap(err, "failed to start gin server")
-	}
-
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+	s := server.NewServer(db, f.network, f.adminTwinID)
 
 	log.Info().Msgf("server is running on port :%d", f.serverPort)
 
-	err = s.Run(quit, fmt.Sprintf("%s:%d", f.domain, f.serverPort))
+	err = s.Run(fmt.Sprintf("%s:%d", f.domain, f.serverPort))
 	if err != nil {
 		return errors.Wrap(err, "failed to run gin server")
 	}
@@ -115,6 +107,14 @@ func (f flags) validate() error {
 	if strings.TrimSpace(f.domain) == "" {
 		return errors.New("invalid domain name, domain name should not be empty")
 	}
+
+	if f.SqlLogLevel < 1 || f.SqlLogLevel > 4 {
+		return errors.Errorf("invalid sql log level %d, sql log level should be in the range 1-4", f.SqlLogLevel)
+	}
+	if f.adminTwinID == 0 {
+		return errors.Errorf("invalid admin twin id %d, admin twin id should not be 0", f.adminTwinID)
+	}
+
 	if _, err := net.LookupHost(f.domain); err != nil {
 		return errors.Wrapf(err, "invalid domain %s", f.domain)
 	}

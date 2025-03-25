@@ -90,24 +90,24 @@ func (c Config) Validate() error {
 	}
 
 	if net.ParseIP(c.PostgresHost) == nil {
-		if _, err := net.LookupHost(c.PostgresHost); err == nil {
+		if _, err := net.LookupHost(c.PostgresHost); err != nil {
 			return errors.Wrapf(err, "invalid postgres host %s, failed to parse or lookup host", c.PostgresHost)
 		}
 	}
 
-	if c.PostgresPort < 1 && c.PostgresPort > 65535 {
+	if c.PostgresPort < 1 || c.PostgresPort > 65535 {
 		return errors.Errorf("invalid postgres port %d, postgres port should be in the valid port range 1–65535", c.PostgresPort)
 	}
 
-	if strings.TrimSpace(c.DBName) == "" {
+	if len(strings.TrimSpace(c.DBName)) == 0 {
 		return errors.New("invalid database name, database name should not be empty")
 	}
 
-	if strings.TrimSpace(c.PostgresUser) == "" {
+	if len(strings.TrimSpace(c.PostgresUser)) == 0 {
 		return errors.New("invalid postgres user, postgres user should not be empty")
 	}
 
-	if strings.TrimSpace(c.PostgresPassword) == "" {
+	if len(strings.TrimSpace(c.PostgresPassword)) == 0 {
 		return errors.New("invalid postgres password, postgres password should not be empty")
 	}
 

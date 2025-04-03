@@ -1,8 +1,12 @@
 {
     "swagger": "2.0",
     "info": {
-        "contact": {}
+        "description": "API for managing TFGrid node registration",
+        "title": "Node Registrar API",
+        "contact": {},
+        "version": "1.0"
     },
+    "basePath": "/v1",
     "paths": {
         "/accounts": {
             "get": {
@@ -35,7 +39,7 @@
                     "200": {
                         "description": "Account details",
                         "schema": {
-                            "$ref": "#/definitions/db.Account"
+                            "$ref": "#/definitions/github_com_threefoldtech_tfgrid4-sdk-go_node-registrar_pkg_db.Account"
                         }
                     },
                     "400": {
@@ -73,7 +77,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/server.AccountCreationRequest"
+                            "$ref": "#/definitions/pkg_server.AccountCreationRequest"
                         }
                     }
                 ],
@@ -81,7 +85,7 @@
                     "201": {
                         "description": "Created account details",
                         "schema": {
-                            "$ref": "#/definitions/db.Account"
+                            "$ref": "#/definitions/github_com_threefoldtech_tfgrid4-sdk-go_node-registrar_pkg_db.Account"
                         }
                     },
                     "400": {
@@ -135,7 +139,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/server.UpdateAccountRequest"
+                            "$ref": "#/definitions/pkg_server.UpdateAccountRequest"
                         }
                     }
                 ],
@@ -224,7 +228,7 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/db.Farm"
+                                "$ref": "#/definitions/github_com_threefoldtech_tfgrid4-sdk-go_node-registrar_pkg_db.Farm"
                             }
                         }
                     },
@@ -263,7 +267,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/db.Farm"
+                            "$ref": "#/definitions/github_com_threefoldtech_tfgrid4-sdk-go_node-registrar_pkg_db.Farm"
                         }
                     }
                 ],
@@ -327,7 +331,7 @@
                     "200": {
                         "description": "Farm details",
                         "schema": {
-                            "$ref": "#/definitions/db.Farm"
+                            "$ref": "#/definitions/github_com_threefoldtech_tfgrid4-sdk-go_node-registrar_pkg_db.Farm"
                         }
                     },
                     "400": {
@@ -379,7 +383,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/server.UpdateFarmRequest"
+                            "$ref": "#/definitions/pkg_server.UpdateFarmRequest"
                         }
                     }
                 ],
@@ -480,7 +484,7 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/db.Node"
+                                "$ref": "#/definitions/github_com_threefoldtech_tfgrid4-sdk-go_node-registrar_pkg_db.Node"
                             }
                         }
                     },
@@ -519,7 +523,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/server.NodeRegistrationRequest"
+                            "$ref": "#/definitions/pkg_server.NodeRegistrationRequest"
                         }
                     }
                 ],
@@ -583,7 +587,7 @@
                     "200": {
                         "description": "Node details",
                         "schema": {
-                            "$ref": "#/definitions/db.Node"
+                            "$ref": "#/definitions/github_com_threefoldtech_tfgrid4-sdk-go_node-registrar_pkg_db.Node"
                         }
                     },
                     "400": {
@@ -635,7 +639,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/server.UpdateNodeRequest"
+                            "$ref": "#/definitions/pkg_server.UpdateNodeRequest"
                         }
                     }
                 ],
@@ -705,7 +709,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/server.UptimeReportRequest"
+                            "$ref": "#/definitions/pkg_server.UptimeReportRequest"
                         }
                     }
                 ],
@@ -800,7 +804,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/server.ZOSVersionRequest"
+                            "$ref": "#/definitions/pkg_server.ZOSVersionRequest"
                         }
                     }
                 ],
@@ -845,7 +849,7 @@
         }
     },
     "definitions": {
-        "db.Account": {
+        "github_com_threefoldtech_tfgrid4-sdk-go_node-registrar_pkg_db.Account": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -855,7 +859,7 @@
                     "description": "Relations | likely we need to use OnDelete:RESTRICT (Prevent Twin deletion if farms exist)\n@swagger:ignore",
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/db.Farm"
+                        "$ref": "#/definitions/github_com_threefoldtech_tfgrid4-sdk-go_node-registrar_pkg_db.Farm"
                     }
                 },
                 "public_key": {
@@ -881,8 +885,13 @@
                 }
             }
         },
-        "db.Farm": {
+        "github_com_threefoldtech_tfgrid4-sdk-go_node-registrar_pkg_db.Farm": {
             "type": "object",
+            "required": [
+                "farm_name",
+                "stellar_address",
+                "twin_id"
+            ],
             "properties": {
                 "created_at": {
                     "type": "string"
@@ -900,7 +909,7 @@
                     "description": "@swagger:ignore",
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/db.Node"
+                        "$ref": "#/definitions/github_com_threefoldtech_tfgrid4-sdk-go_node-registrar_pkg_db.Node"
                     }
                 },
                 "stellar_address": {
@@ -915,7 +924,7 @@
                 }
             }
         },
-        "db.Interface": {
+        "github_com_threefoldtech_tfgrid4-sdk-go_node-registrar_pkg_db.Interface": {
             "type": "object",
             "properties": {
                 "ips": {
@@ -929,7 +938,7 @@
                 }
             }
         },
-        "db.Location": {
+        "github_com_threefoldtech_tfgrid4-sdk-go_node-registrar_pkg_db.Location": {
             "type": "object",
             "properties": {
                 "city": {
@@ -946,7 +955,7 @@
                 }
             }
         },
-        "db.Node": {
+        "github_com_threefoldtech_tfgrid4-sdk-go_node-registrar_pkg_db.Node": {
             "type": "object",
             "properties": {
                 "approved": {
@@ -962,11 +971,15 @@
                 "interfaces": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/db.Interface"
+                        "$ref": "#/definitions/github_com_threefoldtech_tfgrid4-sdk-go_node-registrar_pkg_db.Interface"
                     }
                 },
+                "last_seen": {
+                    "description": "Last time the node sent Uptime report",
+                    "type": "string"
+                },
                 "location": {
-                    "$ref": "#/definitions/db.Location"
+                    "$ref": "#/definitions/github_com_threefoldtech_tfgrid4-sdk-go_node-registrar_pkg_db.Location"
                 },
                 "node_id": {
                     "type": "integer"
@@ -975,7 +988,7 @@
                     "description": "PublicConfig PublicConfig `json:\"public_config\" gorm:\"type:json\"`",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/db.Resources"
+                            "$ref": "#/definitions/github_com_threefoldtech_tfgrid4-sdk-go_node-registrar_pkg_db.Resources"
                         }
                     ]
                 },
@@ -995,7 +1008,7 @@
                 "uptime": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/db.UptimeReport"
+                        "$ref": "#/definitions/github_com_threefoldtech_tfgrid4-sdk-go_node-registrar_pkg_db.UptimeReport"
                     }
                 },
                 "virtualized": {
@@ -1003,7 +1016,7 @@
                 }
             }
         },
-        "db.Resources": {
+        "github_com_threefoldtech_tfgrid4-sdk-go_node-registrar_pkg_db.Resources": {
             "type": "object",
             "properties": {
                 "cru": {
@@ -1020,7 +1033,7 @@
                 }
             }
         },
-        "db.UptimeReport": {
+        "github_com_threefoldtech_tfgrid4-sdk-go_node-registrar_pkg_db.UptimeReport": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -1045,7 +1058,7 @@
                 }
             }
         },
-        "server.AccountCreationRequest": {
+        "pkg_server.AccountCreationRequest": {
             "type": "object",
             "required": [
                 "public_key",
@@ -1075,7 +1088,7 @@
                 }
             }
         },
-        "server.NodeRegistrationRequest": {
+        "pkg_server.NodeRegistrationRequest": {
             "type": "object",
             "required": [
                 "farm_id",
@@ -1093,14 +1106,14 @@
                 "interfaces": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/db.Interface"
+                        "$ref": "#/definitions/github_com_threefoldtech_tfgrid4-sdk-go_node-registrar_pkg_db.Interface"
                     }
                 },
                 "location": {
-                    "$ref": "#/definitions/db.Location"
+                    "$ref": "#/definitions/github_com_threefoldtech_tfgrid4-sdk-go_node-registrar_pkg_db.Location"
                 },
                 "resources": {
-                    "$ref": "#/definitions/db.Resources"
+                    "$ref": "#/definitions/github_com_threefoldtech_tfgrid4-sdk-go_node-registrar_pkg_db.Resources"
                 },
                 "secure_boot": {
                     "type": "boolean"
@@ -1117,10 +1130,21 @@
                 }
             }
         },
-        "server.UpdateAccountRequest": {
-            "type": "object"
+        "pkg_server.UpdateAccountRequest": {
+            "type": "object",
+            "properties": {
+                "relays": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "rmb_enc_key": {
+                    "type": "string"
+                }
+            }
         },
-        "server.UpdateFarmRequest": {
+        "pkg_server.UpdateFarmRequest": {
             "type": "object",
             "properties": {
                 "farm_name": {
@@ -1128,12 +1152,11 @@
                     "maxLength": 40
                 },
                 "stellar_address": {
-                    "type": "string",
-                    "maxLength": 56
+                    "type": "string"
                 }
             }
         },
-        "server.UpdateNodeRequest": {
+        "pkg_server.UpdateNodeRequest": {
             "type": "object",
             "required": [
                 "farm_id",
@@ -1150,14 +1173,14 @@
                 "interfaces": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/db.Interface"
+                        "$ref": "#/definitions/github_com_threefoldtech_tfgrid4-sdk-go_node-registrar_pkg_db.Interface"
                     }
                 },
                 "location": {
-                    "$ref": "#/definitions/db.Location"
+                    "$ref": "#/definitions/github_com_threefoldtech_tfgrid4-sdk-go_node-registrar_pkg_db.Location"
                 },
                 "resources": {
-                    "$ref": "#/definitions/db.Resources"
+                    "$ref": "#/definitions/github_com_threefoldtech_tfgrid4-sdk-go_node-registrar_pkg_db.Resources"
                 },
                 "secure_boot": {
                     "type": "boolean"
@@ -1170,10 +1193,22 @@
                 }
             }
         },
-        "server.UptimeReportRequest": {
-            "type": "object"
+        "pkg_server.UptimeReportRequest": {
+            "type": "object",
+            "required": [
+                "timestamp",
+                "uptime"
+            ],
+            "properties": {
+                "timestamp": {
+                    "type": "string"
+                },
+                "uptime": {
+                    "$ref": "#/definitions/time.Duration"
+                }
+            }
         },
-        "server.ZOSVersionRequest": {
+        "pkg_server.ZOSVersionRequest": {
             "type": "object",
             "required": [
                 "version"
@@ -1183,6 +1218,45 @@
                     "type": "string"
                 }
             }
+        },
+        "time.Duration": {
+            "type": "integer",
+            "enum": [
+                -9223372036854775808,
+                9223372036854775807,
+                1,
+                1000,
+                1000000,
+                1000000000,
+                60000000000,
+                3600000000000,
+                -9223372036854775808,
+                9223372036854775807,
+                1,
+                1000,
+                1000000,
+                1000000000,
+                60000000000,
+                3600000000000
+            ],
+            "x-enum-varnames": [
+                "minDuration",
+                "maxDuration",
+                "Nanosecond",
+                "Microsecond",
+                "Millisecond",
+                "Second",
+                "Minute",
+                "Hour",
+                "minDuration",
+                "maxDuration",
+                "Nanosecond",
+                "Microsecond",
+                "Millisecond",
+                "Second",
+                "Minute",
+                "Hour"
+            ]
         }
     }
 }

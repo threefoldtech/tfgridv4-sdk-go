@@ -92,8 +92,23 @@ func (db *Database) UpdateNodeLastSeen(nodeID uint64, lastSeen time.Time) error 
 	return nil
 }
 
+// CreateUptimeReportAndUpdateLastSeen creates an uptime report and updates the node's LastSeen field in a single transaction
 func (db *Database) CreateUptimeReport(report *UptimeReport) error {
-	return db.gormDB.Create(report).Error
+	return db.gormDB.Transaction(func(tx *gorm.DB) error {
+		// Create the uptime report
+		if err := tx.Create(report).Error; err != nil {
+			return err
+		}
+
+		// Update the node's LastSeen field
+		if err := tx.Model(&Node{}).
+			Where("node_id = ?", report.NodeID).
+			Update("last_seen", report.Timestamp).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
 }
 
 func (db *Database) SetZOSVersion(version string) error {

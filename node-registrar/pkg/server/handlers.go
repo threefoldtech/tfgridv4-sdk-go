@@ -472,17 +472,11 @@ func (s *Server) uptimeReportHandler(c *gin.Context) {
 		Timestamp: req.Timestamp,
 	}
 
+	// Create report record and Update node LastSeen(the timestamp of the last report)
+	// It's up to the clients to determine if the node is online based on the reporting interval and allowable window.
 	err = s.db.CreateUptimeReport(report)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save report"})
-		return
-	}
-	// Update node LastSeen
-	// We only store the timestamp of the last report
-	// It's up to the clients to determine if the node is online based on the reporting interval and allowable window.
-	err = s.db.UpdateNodeLastSeen(id, req.Timestamp)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update node last seen"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to process uptime report"})
 		return
 	}
 

@@ -15,7 +15,8 @@ import (
 )
 
 const (
-	MaxTimestampDelta = 2 * time.Second
+	MaxTimestampDelta                    = 2 * time.Second
+	UptimeReportTimestampHintDrift int64 = 60
 )
 
 // @title Node Registrar API
@@ -457,6 +458,13 @@ func (s *Server) uptimeReportHandler(c *gin.Context) {
 	// Maybe aggregate reports here and store total uptime?
 	// The total uptime should accumulate unless the node restarts, which is detected when the reported uptime is less than the previous value.
 
+	// Ensuring the timestamp_hint is within an Acceptable Range
+	err = validateTimestampHint(req.Timestamp.Unix())
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid timestamp hint"})
+		return
+	}
+
 	// Create report record
 	report := &db.UptimeReport{
 		NodeID:    id,
@@ -467,6 +475,14 @@ func (s *Server) uptimeReportHandler(c *gin.Context) {
 	err = s.db.CreateUptimeReport(report)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save report"})
+		return
+	}
+	// Update node LastSeen
+	// We only store the timestamp of the last report
+	// It's up to the clients to determine if the node is online based on the reporting interval and allowable window.
+	err = s.db.UpdateNodeLastSeen(id, req.Timestamp)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update node last seen"})
 		return
 	}
 
@@ -782,4 +798,21 @@ func ensureOwner(c *gin.Context, twinID uint64) {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "not authorized"})
 		return
 	}
+}
+
+// Helper function to validate timestamp hint
+func validateTimestampHint(timestampHint int64) error {
+	// Get the current timestamp in seconds
+	now := time.Now().Unix()
+
+	// Calculate acceptable range
+	lowerBound := now - min(now, UptimeReportTimestampHintDrift)
+	upperBound := now + UptimeReportTimestampHintDrift
+
+	// Ensure timestampHint is within the range
+	if timestampHint < lowerBound || timestampHint > upperBound {
+		return errors.New("InvalidTimestampHint")
+	}
+
+	return nil
 }

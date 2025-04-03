@@ -48,10 +48,10 @@ type Node struct {
 	SerialNumber string      `json:"serial_number"`
 
 	UptimeReports []UptimeReport `json:"uptime" gorm:"foreignKey:NodeID;references:NodeID;constraint:OnDelete:CASCADE"`
-
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	Approved  bool      `json:"approved"`
+	LastSeen      time.Time      `json:"last_seen" gorm:"index"` // Last time the node sent Uptime report
+	CreatedAt     time.Time      `json:"created_at"`
+	UpdatedAt     time.Time      `json:"updated_at"`
+	Approved      bool           `json:"approved"`
 }
 
 type UptimeReport struct {

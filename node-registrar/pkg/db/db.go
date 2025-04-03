@@ -54,6 +54,12 @@ func NewDB(c Config) (Database, error) {
 		return Database{}, err
 	}
 
+	// Run the data migration for LastSeen field
+	err = db.MigrateNodeLastSeen()
+	if err != nil {
+		return Database{}, errors.Wrap(err, "failed to migrate node last seen data")
+	}
+
 	return db, sql.Ping()
 }
 
@@ -133,4 +139,24 @@ func (db Database) Close() error {
 		return err
 	}
 	return nil
+}
+
+// MigrateNodeLastSeen updates the LastSeen field for existing nodes
+func (db Database) MigrateNodeLastSeen() error {
+	// Updates all nodes with the latest timestamp from their uptime reports
+	query := `
+        UPDATE nodes n
+        SET last_seen = (
+            SELECT MAX(timestamp)
+            FROM uptime_reports ur
+            WHERE ur.node_id = n.node_id
+        )
+        WHERE EXISTS (
+            SELECT 1
+            FROM uptime_reports ur
+            WHERE ur.node_id = n.node_id
+        )
+    `
+
+	return db.gormDB.Exec(query).Error
 }

@@ -410,8 +410,8 @@ func (s *Server) updateNodeHandler(c *gin.Context) {
 }
 
 type UptimeReportRequest struct {
-	Uptime    time.Duration `json:"uptime" binding:"required"`
-	Timestamp time.Time     `json:"timestamp" binding:"required"`
+	Uptime    uint64 `json:"uptime" binding:"required"`
+	Timestamp uint64 `json:"timestamp" binding:"required"`
 }
 
 // @Summary Report node uptime
@@ -459,7 +459,7 @@ func (s *Server) uptimeReportHandler(c *gin.Context) {
 	// The total uptime should accumulate unless the node restarts, which is detected when the reported uptime is less than the previous value.
 
 	// Ensuring the timestamp_hint is within an Acceptable Range
-	err = validateTimestampHint(req.Timestamp.Unix())
+	err = validateTimestampHint(req.Timestamp)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid timestamp hint"})
 		return
@@ -468,8 +468,8 @@ func (s *Server) uptimeReportHandler(c *gin.Context) {
 	// Create report record
 	report := &db.UptimeReport{
 		NodeID:    id,
-		Duration:  req.Uptime,
-		Timestamp: req.Timestamp,
+		Duration:  time.Duration(req.Uptime) * time.Second,
+		Timestamp: time.Unix(int64(req.Timestamp), 0).UTC(),
 	}
 
 	// Create report record and Update node LastSeen(the timestamp of the last report)
@@ -795,16 +795,18 @@ func ensureOwner(c *gin.Context, twinID uint64) {
 }
 
 // Helper function to validate timestamp hint
-func validateTimestampHint(timestampHint int64) error {
-	// Get the current timestamp in seconds
-	now := time.Now().Unix()
+func validateTimestampHint(timestampHint uint64) error {
+	hintTime := time.Unix(int64(timestampHint), 0)
+
+	now := time.Now()
 
 	// Calculate acceptable range
-	lowerBound := now - min(now, UptimeReportTimestampHintDrift)
-	upperBound := now + UptimeReportTimestampHintDrift
+	maxDrift := time.Duration(UptimeReportTimestampHintDrift) * time.Second
+	earliestAllowed := now.Add(-maxDrift)
+	latestAllowed := now.Add(maxDrift)
 
-	// Ensure timestampHint is within the range
-	if timestampHint < lowerBound || timestampHint > upperBound {
+	// Check if the hint is within the acceptable range
+	if hintTime.Before(earliestAllowed) || hintTime.After(latestAllowed) {
 		return errors.New("InvalidTimestampHint")
 	}
 

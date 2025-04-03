@@ -77,21 +77,6 @@ func (db *Database) GetUptimeReports(nodeID uint64, start, end time.Time) ([]Upt
 	return reports, result.Error
 }
 
-// Update Node Last Seen
-func (db *Database) UpdateNodeLastSeen(nodeID uint64, lastSeen time.Time) error {
-	result := db.gormDB.Model(&Node{}).
-		Where("node_id = ?", nodeID).
-		Update("last_seen", lastSeen)
-
-	if result.Error != nil {
-		return result.Error
-	}
-	if result.RowsAffected == 0 {
-		return ErrRecordNotFound
-	}
-	return nil
-}
-
 // CreateUptimeReportAndUpdateLastSeen creates an uptime report and updates the node's LastSeen field in a single transaction
 func (db *Database) CreateUptimeReport(report *UptimeReport) error {
 	return db.gormDB.Transaction(func(tx *gorm.DB) error {

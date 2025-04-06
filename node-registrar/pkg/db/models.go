@@ -69,9 +69,9 @@ type ZosVersion struct {
 }
 
 type Interface struct {
-	Name string `json:"name"`
-	Mac  string `json:"mac"`
-	IPs  string `json:"ips"`
+	Name string   `json:"name"`
+	Mac  string   `json:"mac"`
+	IPs  []string `json:"ips" gorm:"not null,type:text[];default:'{}'"`
 }
 
 type Resources struct {

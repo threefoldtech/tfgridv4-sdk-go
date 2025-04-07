@@ -752,7 +752,7 @@ func (s *Server) setZOSVersionHandler(c *gin.Context) {
 		return
 	}
 
-	if err := s.db.SetZOSVersion(req.Version); err != nil {
+	if err := s.db.SetZOSVersion(db.ZosVersion{Version: req.Version, SafeToUpgrade: req.SafeToUpgrade}); err != nil {
 		status := http.StatusInternalServerError
 		if err.Error() == "version already set" {
 			status = http.StatusConflict

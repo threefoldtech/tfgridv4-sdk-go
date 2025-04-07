@@ -74,8 +74,9 @@ type UptimeReport struct {
 }
 
 type ZosVersion struct {
-	Key     string `gorm:"primaryKey;size:50"`
-	Version string `gorm:"not null"`
+	Key           string `gorm:"primaryKey;size:50"`
+	Version       string `gorm:"not null"`
+	SafeToUpgrade bool   `json:"safe_to_upgrade"`
 }
 
 type Interface struct {

@@ -5,11 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
+	"github.com/go-playground/validator/v10"
 	"github.com/lib/pq"
 	"github.com/threefoldtech/tfgrid4-sdk-go/node-registrar/pkg/db"
 )
@@ -713,8 +716,11 @@ func (s *Server) getAccountHandler(c *gin.Context) {
 }
 
 type ZOSVersionRequest struct {
-	Version string `json:"version" binding:"required,base64"`
+	Version       string `json:"version" binding:"required,versionfmt"`
+	SafeToUpgrade bool   `json:"safe_to_upgrade" binding:"required"`
 }
+
+var versionRegex = regexp.MustCompile(`^v\d+\.\d+\.\d+$`)
 
 // @Summary Set ZOS Version
 // @Description Sets the ZOS version
@@ -732,6 +738,11 @@ type ZOSVersionRequest struct {
 func (s *Server) setZOSVersionHandler(c *gin.Context) {
 	ensureOwner(c, s.adminTwinID)
 	if c.IsAborted() {
+		return
+	}
+
+	if err := addVersionValidator(); err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -823,5 +834,18 @@ func validateTimestampHint(timestampHint int64) error {
 		return fmt.Errorf("invalid timestamp hint: must be within ±%d seconds of the current time (%s)", UptimeReportTimestampHintDrift, now)
 	}
 
+	return nil
+}
+
+func addVersionValidator() error {
+	// Register the custom validation
+	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
+		if err := v.RegisterValidation("versionfmt", func(fl validator.FieldLevel) bool {
+			version := fl.Field().String()
+			return versionRegex.MatchString(version)
+		}); err != nil {
+			return err
+		}
+	}
 	return nil
 }

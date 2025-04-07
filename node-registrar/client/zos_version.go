@@ -2,11 +2,9 @@ package client
 
 import (
 	"bytes"
-	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -80,23 +78,13 @@ func (c *RegistrarClient) setZosVersion(v string, safeToUpgrade bool) (err error
 		SafeToUpgrade: safeToUpgrade,
 	}
 
-	jsonData, err := json.Marshal(version)
+	var body bytes.Buffer
+	err = json.NewEncoder(&body).Encode(version)
 	if err != nil {
-		return errors.Wrap(err, "failed to marshal zos version")
+		return errors.Wrap(err, "failed to encode request body")
 	}
 
-	encodedVersion := struct {
-		Version string `json:"version"`
-	}{
-		Version: base64.StdEncoding.EncodeToString(jsonData),
-	}
-
-	jsonData, err = json.Marshal(encodedVersion)
-	if err != nil {
-		return errors.Wrap(err, "failed to marshal zos version in hex format")
-	}
-
-	req, err := http.NewRequest("PUT", url, bytes.NewReader(jsonData))
+	req, err := http.NewRequest("PUT", url, &body)
 	if err != nil {
 		return errors.Wrap(err, "failed to construct http request to the registrar")
 	}

@@ -189,7 +189,7 @@ Zos Version command represents events on zos version on Threefold grid4
 
 ```sh
 ➜  ./registrar-cli zos-version update --network dev --version v0.1.8 --safe-to-upgrade --mnemonic <mnemonic>
-5:07PM INF farm is updated successfully
+5:07PM INF zos version is updated successfully
 ➜
 ➜  ./registrar-cli zos-version get --network dev
 5:07PM INF zosVersion={"safe_to_upgrade":true,"version":"v0.1.8"}

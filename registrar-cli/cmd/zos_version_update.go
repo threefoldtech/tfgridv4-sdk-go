@@ -37,7 +37,7 @@ var zosVersionUpdateCmd = &cobra.Command{
 			return err
 		}
 
-		log.Info().Msg("farm is updated successfully")
+		log.Info().Msg("zos version is updated successfully")
 
 		return nil
 	},

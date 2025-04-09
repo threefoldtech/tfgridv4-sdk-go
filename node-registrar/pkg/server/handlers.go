@@ -720,8 +720,6 @@ type ZOSVersionRequest struct {
 	SafeToUpgrade bool   `json:"safe_to_upgrade" binding:"required"`
 }
 
-var versionRegex = regexp.MustCompile(`^v\d+\.\d+\.\d+$`)
-
 // @Summary Set ZOS Version
 // @Description Sets the ZOS version
 // @Tags ZOS
@@ -837,8 +835,10 @@ func validateTimestampHint(timestampHint int64) error {
 	return nil
 }
 
+// addVersionValidato registers a custom validator for version
 func addVersionValidator() error {
-	// Register the custom validation
+	versionRegex := regexp.MustCompile(`^v\d+\.\d+\.\d+$`)
+
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
 		if err := v.RegisterValidation("versionfmt", func(fl validator.FieldLevel) bool {
 			version := fl.Field().String()

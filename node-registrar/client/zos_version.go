@@ -2,9 +2,12 @@ package client
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -56,6 +59,27 @@ func (c *RegistrarClient) getZosVersion() (version ZosVersion, err error) {
 
 	err = json.NewDecoder(strings.NewReader(correctedJSON)).Decode(&version)
 	if err != nil {
+		return version, err
+	}
+
+	err = json.Unmarshal(bodyBytes, &version)
+	if err != nil {
+		// try decoding base64 version
+		var versionString string
+		err = json.Unmarshal(bodyBytes, &versionString)
+		if err != nil {
+			return version, err
+		}
+
+		decodedVersion, err := base64.StdEncoding.DecodeString(versionString)
+		if err != nil {
+			return version, err
+		}
+
+		correctedJSON := strings.ReplaceAll(string(decodedVersion), "'", "\"")
+
+		err = json.Unmarshal([]byte(correctedJSON), &version)
+
 		return version, err
 	}
 

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
-	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -97,6 +96,26 @@ func (c *RegistrarClient) setZosVersion(v string, safeToUpgrade bool) (err error
 		return errors.Wrap(err, "failed to construct registrar url")
 	}
 
+	sendRequest := func(body bytes.Buffer) (resp *http.Response, err error) {
+		req, err := http.NewRequest("PUT", url, &body)
+		if err != nil {
+			return resp, errors.Wrap(err, "failed to construct http request to the registrar")
+		}
+
+		authHeader, err := c.signRequest(time.Now().Unix())
+		if err != nil {
+			return resp, errors.Wrap(err, "failed to sign request")
+		}
+		req.Header.Set("X-Auth", authHeader)
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err = c.httpClient.Do(req)
+		if err != nil {
+			return resp, errors.Wrap(err, "failed to send request to get zos version from the registrar")
+		}
+		return resp, nil
+	}
+
 	version := ZosVersion{
 		Version:       v,
 		SafeToUpgrade: safeToUpgrade,
@@ -108,27 +127,35 @@ func (c *RegistrarClient) setZosVersion(v string, safeToUpgrade bool) (err error
 		return errors.Wrap(err, "failed to encode request body")
 	}
 
-	req, err := http.NewRequest("PUT", url, &body)
+	resp, err := sendRequest(body)
 	if err != nil {
-		return errors.Wrap(err, "failed to construct http request to the registrar")
-	}
-
-	authHeader, err := c.signRequest(time.Now().Unix())
-	if err != nil {
-		return errors.Wrap(err, "failed to sign request")
-	}
-	req.Header.Set("X-Auth", authHeader)
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return errors.Wrap(err, "failed to send request to get zos version from the registrar")
-	}
-
-	if resp == nil {
-		return errors.New("no response received")
+		return err
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusBadRequest {
+		// fallback to old encoded format
+		jsonData, err := json.Marshal(version)
+		if err != nil {
+			return errors.Wrap(err, "failed to marshal zos version")
+		}
+
+		encodedVersion := struct {
+			Version string `json:"version"`
+		}{
+			Version: base64.StdEncoding.EncodeToString(jsonData),
+		}
+
+		jsonData, err = json.Marshal(encodedVersion)
+		if err != nil {
+			return errors.Wrap(err, "failed to marshal zos version in hex format")
+		}
+
+		resp, err = sendRequest(*bytes.NewBuffer(jsonData))
+		if err != nil {
+			return err
+		}
+	}
 
 	if resp.StatusCode != http.StatusOK {
 		return parseResponseError(resp.Body)

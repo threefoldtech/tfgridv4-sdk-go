@@ -98,10 +98,6 @@ func (t *twinDB) Get(id uint32) (Twin, error) {
 		return Twin{}, err
 	}
 
-	if len(e2ePK) == 0 {
-		e2ePK = pk
-	}
-
 	twin := Twin{
 		ID:        id,
 		PublicKey: pk,

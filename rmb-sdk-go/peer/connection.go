@@ -193,7 +193,7 @@ func (c *InnerConnection) listenAndServe(ctx context.Context, output chan []byte
 }
 
 func (c *InnerConnection) connect() (*websocket.Conn, error) {
-	token, err := NewJWT(c.identity, c.twinID, c.session, 60)
+	token, err := NewJWT(c.identity, c.twinID, c.session, 100)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create new jwt")
 	}

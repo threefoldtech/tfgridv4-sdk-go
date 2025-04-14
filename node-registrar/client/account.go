@@ -111,11 +111,15 @@ func (c *RegistrarClient) createAccount(relays []string, rmbEncKey string) (acco
 		return account, mnemonic, errors.Wrap(err, "failed to send request to the registrar")
 	}
 
+	if resp == nil {
+		return account, mnemonic, errors.New("failed to create account, no response received")
+	}
+	defer resp.Body.Close()
+
 	if resp.StatusCode != http.StatusCreated {
 		err = parseResponseError(resp.Body)
 		return account, mnemonic, errors.Wrapf(err, "failed to create account with status %s", resp.Status)
 	}
-	defer resp.Body.Close()
 
 	err = json.NewDecoder(resp.Body).Decode(&account)
 
@@ -146,6 +150,7 @@ func (c *RegistrarClient) getAccount(id uint64) (account Account, err error) {
 	if resp == nil {
 		return account, errors.New("failed to get account, no response received")
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusNotFound {
 		return account, ErrorAccountNotFound
@@ -155,7 +160,6 @@ func (c *RegistrarClient) getAccount(id uint64) (account Account, err error) {
 		err = parseResponseError(resp.Body)
 		return account, errors.Wrapf(err, "failed to get account by twin id with status code %s", resp.Status)
 	}
-	defer resp.Body.Close()
 
 	err = json.NewDecoder(resp.Body).Decode(&account)
 	return

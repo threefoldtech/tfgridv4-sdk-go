@@ -286,11 +286,15 @@ func (c *RegistrarClient) updateNode(opts []UpdateNodeOpts) (err error) {
 		return errors.Wrap(err, "failed to send request to update node")
 	}
 
+	if resp == nil {
+		return errors.New("no response received")
+	}
+	defer resp.Body.Close()
+
 	if resp.StatusCode != http.StatusOK {
 		err = parseResponseError(resp.Body)
 		return errors.Wrapf(err, "failed to update node with twin id %d with status code %s", c.twinID, resp.Status)
 	}
-	defer resp.Body.Close()
 
 	return
 }
@@ -330,11 +334,15 @@ func (c *RegistrarClient) reportUptime(report UptimeReport) (err error) {
 		return errors.Wrap(err, "failed to send request to update uptime of the node")
 	}
 
+	if resp == nil {
+		return errors.New("no response received")
+	}
+	defer resp.Body.Close()
+
 	if resp.StatusCode != http.StatusCreated {
 		err = parseResponseError(resp.Body)
 		return errors.Wrapf(err, "failed to update node uptime for node with id %d with status code %s", c.nodeID, resp.Status)
 	}
-	defer resp.Body.Close()
 
 	return
 }
@@ -350,6 +358,11 @@ func (c *RegistrarClient) getNode(id uint64) (node Node, err error) {
 		return
 	}
 
+	if resp == nil {
+		return node, errors.New("no response received")
+	}
+	defer resp.Body.Close()
+
 	if resp.StatusCode == http.StatusNotFound {
 		return node, ErrorNodeNotFound
 	}
@@ -358,7 +371,6 @@ func (c *RegistrarClient) getNode(id uint64) (node Node, err error) {
 		err = parseResponseError(resp.Body)
 		return node, errors.Wrapf(err, "failed to get node with status code %s", resp.Status)
 	}
-	defer resp.Body.Close()
 
 	err = json.NewDecoder(resp.Body).Decode(&node)
 	if err != nil {
@@ -409,6 +421,7 @@ func (c *RegistrarClient) listNodes(opts []ListNodeOpts) (nodes []Node, err erro
 	if resp == nil {
 		return nodes, errors.New("no response received")
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusNotFound {
 		return nodes, ErrorNodeNotFound
@@ -418,7 +431,6 @@ func (c *RegistrarClient) listNodes(opts []ListNodeOpts) (nodes []Node, err erro
 		err = parseResponseError(resp.Body)
 		return nodes, errors.Wrapf(err, "failed to list nodes with with status code %s", resp.Status)
 	}
-	defer resp.Body.Close()
 
 	err = json.NewDecoder(resp.Body).Decode(&nodes)
 	if err != nil {

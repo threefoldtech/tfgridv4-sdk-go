@@ -503,8 +503,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "type": "object",
-                                "additionalProperties": true
+                                "$ref": "#/definitions/db.Node"
                             }
                         }
                     },
@@ -607,8 +606,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Node details with online status and last_seen information",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/db.Node"
                         }
                     },
                     "400": {
@@ -1007,6 +1005,10 @@ const docTemplate = `{
                 },
                 "node_id": {
                     "type": "integer"
+                },
+                "online": {
+                    "description": "Computed field, not stored in database",
+                    "type": "boolean"
                 },
                 "resources": {
                     "description": "PublicConfig PublicConfig ` + "`" + `json:\"public_config\" gorm:\"type:json\"` + "`" + `",

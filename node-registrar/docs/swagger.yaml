@@ -99,6 +99,9 @@ definitions:
         $ref: '#/definitions/db.Location'
       node_id:
         type: integer
+      online:
+        description: Computed field, not stored in database
+        type: boolean
       resources:
         allOf:
         - $ref: '#/definitions/db.Resources'
@@ -581,8 +584,7 @@ paths:
           description: List of nodes with online status
           schema:
             items:
-              additionalProperties: true
-              type: object
+              $ref: '#/definitions/db.Node'
             type: array
         "400":
           description: Bad request
@@ -652,8 +654,7 @@ paths:
         "200":
           description: Node details with online status and last_seen information
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/db.Node'
         "400":
           description: Invalid node ID
           schema:

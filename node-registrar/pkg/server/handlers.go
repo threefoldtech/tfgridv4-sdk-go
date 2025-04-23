@@ -215,7 +215,7 @@ func (s Server) updateFarmHandler(c *gin.Context) {
 // @Param last_seen query int false "Filter nodes last seen within this many minutes"
 // @Param page query int false "Page number" default(1)
 // @Param size query int false "Results per page" default(10)
-// @Success 200 {object} []map[string]interface{} "List of nodes with online status"
+// @Success 200 {object} []db.Node "List of nodes with online status"
 // @Failure 400 {object} map[string]any "Bad request"
 // @Router /nodes [get]
 func (s Server) listNodesHandler(c *gin.Context) {
@@ -234,28 +234,15 @@ func (s Server) listNodesHandler(c *gin.Context) {
 		return
 	}
 
-	// Enhance nodes with online status information
-	response := make([]gin.H, len(nodes))
+	// Set online status for each node
 	cutoffTime := time.Now().Add(-30 * time.Minute)
-
-	for i, node := range nodes {
-		// Determine if the node is online
-		isOnline := false
-		var lastSeenFormatted string
-
-		if node.LastSeen != nil {
-			isOnline = node.LastSeen.After(cutoffTime)
-			lastSeenFormatted = node.LastSeen.Format(time.RFC3339)
-		}
-
-		response[i] = gin.H{
-			"node":      node,
-			"online":    isOnline,
-			"last_seen": lastSeenFormatted,
+	for i := range nodes {
+		if nodes[i].LastSeen != nil {
+			nodes[i].Online = nodes[i].LastSeen.After(cutoffTime)
 		}
 	}
 
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, nodes)
 }
 
 // @Summary Get node details
@@ -264,7 +251,7 @@ func (s Server) listNodesHandler(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param node_id path int true "Node ID"
-// @Success 200 {object} map[string]interface{} "Node details with online status and last_seen information"
+// @Success 200 {object} db.Node "Node details with online status and last_seen information"
 // @Failure 400 {object} map[string]any "Invalid node ID"
 // @Failure 404 {object} map[string]any "Node not found"
 // @Router /nodes/{node_id} [get]
@@ -289,26 +276,13 @@ func (s Server) getNodeHandler(c *gin.Context) {
 	}
 
 	// Determine if the node is online (has sent an uptime report in the last 30 minutes)
-	isOnline := false
-	var lastSeenFormatted string
-
 	if node.LastSeen != nil {
 		// Calculate if the node is online (last seen within the last 30 minutes)
 		cutoffTime := time.Now().Add(-30 * time.Minute)
-		isOnline = node.LastSeen.After(cutoffTime)
-
-		// Format the last seen time
-		lastSeenFormatted = node.LastSeen.Format(time.RFC3339)
+		node.Online = node.LastSeen.After(cutoffTime)
 	}
 
-	// Create a response with the node data plus online status
-	response := gin.H{
-		"node":      node,
-		"online":    isOnline,
-		"last_seen": lastSeenFormatted,
-	}
-
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, node)
 }
 
 type NodeRegistrationRequest struct {

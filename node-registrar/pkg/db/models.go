@@ -49,6 +49,7 @@ type Node struct {
 
 	UptimeReports []UptimeReport `json:"uptime" gorm:"foreignKey:NodeID;references:NodeID;constraint:OnDelete:CASCADE"`
 	LastSeen      *time.Time     `json:"last_seen" gorm:"index"` // Last time the node sent an uptime report
+	Online        bool           `json:"online" gorm:"-"`        // Computed field, not stored in database
 
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`

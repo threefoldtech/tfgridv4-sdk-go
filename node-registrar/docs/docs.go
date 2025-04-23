@@ -499,11 +499,12 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "List of nodes",
+                        "description": "List of nodes with online status",
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/db.Node"
+                                "type": "object",
+                                "additionalProperties": true
                             }
                         }
                     },
@@ -604,9 +605,10 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Node details with last_seen information",
+                        "description": "Node details with online status and last_seen information",
                         "schema": {
-                            "$ref": "#/definitions/db.Node"
+                            "type": "object",
+                            "additionalProperties": true
                         }
                     },
                     "400": {

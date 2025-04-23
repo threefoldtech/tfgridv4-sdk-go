@@ -471,6 +471,18 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
+                        "type": "boolean",
+                        "description": "Filter by online status (true = online, false = offline)",
+                        "name": "online",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter nodes last seen within this many minutes",
+                        "name": "last_seen",
+                        "in": "query"
+                    },
+                    {
                         "type": "integer",
                         "default": 1,
                         "description": "Page number",
@@ -592,7 +604,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Node details",
+                        "description": "Node details with last_seen information",
                         "schema": {
                             "$ref": "#/definitions/db.Node"
                         }
@@ -894,6 +906,11 @@ const docTemplate = `{
         },
         "db.Farm": {
             "type": "object",
+            "required": [
+                "farm_name",
+                "stellar_address",
+                "twin_id"
+            ],
             "properties": {
                 "created_at": {
                     "type": "string"
@@ -930,7 +947,10 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "ips": {
-                    "type": "string"
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "mac": {
                     "type": "string"
@@ -975,6 +995,10 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/db.Interface"
                     }
+                },
+                "last_seen": {
+                    "description": "Last time the node sent an uptime report",
+                    "type": "string"
                 },
                 "location": {
                     "$ref": "#/definitions/db.Location"
@@ -1139,8 +1163,7 @@ const docTemplate = `{
                     "maxLength": 40
                 },
                 "stellar_address": {
-                    "type": "string",
-                    "maxLength": 56
+                    "type": "string"
                 }
             }
         },
@@ -1200,12 +1223,12 @@ const docTemplate = `{
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "",
+	Version:          "1.0",
 	Host:             "",
-	BasePath:         "",
+	BasePath:         "/v1",
 	Schemes:          []string{},
-	Title:            "",
-	Description:      "",
+	Title:            "Node Registrar API",
+	Description:      "API for managing TFGrid node registration",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

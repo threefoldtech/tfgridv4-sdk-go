@@ -211,6 +211,8 @@ func (s Server) updateFarmHandler(c *gin.Context) {
 // @Param twin_id query int false "Filter by twin ID"
 // @Param status query string false "Filter by status"
 // @Param healthy query bool false "Filter by health status"
+// @Param online query bool false "Filter by online status (true = online, false = offline)"
+// @Param last_seen query int false "Filter nodes last seen within this many minutes"
 // @Param page query int false "Page number" default(1)
 // @Param size query int false "Results per page" default(10)
 // @Success 200 {object} []db.Node "List of nodes"
@@ -241,7 +243,7 @@ func (s Server) listNodesHandler(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param node_id path int true "Node ID"
-// @Success 200 {object} db.Node "Node details"
+// @Success 200 {object} db.Node "Node details with last_seen information"
 // @Failure 400 {object} map[string]any "Invalid node ID"
 // @Failure 404 {object} map[string]any "Node not found"
 // @Router /nodes/{node_id} [get]

@@ -23,6 +23,28 @@ func (db *Database) ListNodes(filter NodeFilter, limit Limit) (nodes []Node, err
 		query = query.Where("twin_id = ?", *filter.TwinID)
 	}
 
+	// Filter by online status (node sent an uptime report in the last 30 minutes)
+	if filter.Online != nil {
+		// Calculate the cutoff time (30 minutes ago by default)
+		cutoffMinutes := int64(30) // Default to 30 minutes
+		if filter.LastSeen != nil {
+			cutoffMinutes = *filter.LastSeen
+		}
+		cutoffTime := time.Now().Add(-time.Duration(cutoffMinutes) * time.Minute)
+
+		if *filter.Online {
+			// Online nodes: last_seen is not null and more recent than cutoff time
+			query = query.Where("last_seen IS NOT NULL AND last_seen > ?", cutoffTime)
+		} else {
+			// Offline nodes: last_seen is null or older than cutoff time
+			query = query.Where("last_seen IS NULL OR last_seen <= ?", cutoffTime)
+		}
+	} else if filter.LastSeen != nil {
+		// If only LastSeen is provided without Online flag, show nodes active within that period
+		cutoffTime := time.Now().Add(-time.Duration(*filter.LastSeen) * time.Minute)
+		query = query.Where("last_seen IS NOT NULL AND last_seen > ?", cutoffTime)
+	}
+
 	offset := (limit.Page - 1) * limit.Size
 	query = query.Offset(int(offset)).Limit(int(limit.Size))
 
@@ -78,7 +100,27 @@ func (db *Database) GetUptimeReports(nodeID uint64, start, end time.Time) ([]Upt
 }
 
 func (db *Database) CreateUptimeReport(report *UptimeReport) error {
-	return db.gormDB.Create(report).Error
+	// Start a transaction
+	tx := db.gormDB.Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
+
+	// Create the uptime report
+	if err := tx.Create(report).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Update the node's LastSeen field
+	now := time.Now()
+	if err := tx.Model(&Node{}).Where("node_id = ?", report.NodeID).Update("last_seen", now).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Commit the transaction
+	return tx.Commit().Error
 }
 
 func (db *Database) SetZOSVersion(version string) error {

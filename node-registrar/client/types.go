@@ -30,6 +30,7 @@ type Node struct {
 	Virtualized   bool           `json:"virtualized"`
 	SerialNumber  string         `json:"serial_number"`
 	UptimeReports []UptimeReport `json:"uptime"`
+	LastSeen      *time.Time     `json:"last_seen"`
 	Approved      bool
 }
 

@@ -59,6 +59,8 @@ type nodeCfg struct {
 	twinID        uint64
 	status        string
 	healthy       bool
+	online        *bool
+	lastSeen      *int64
 	Location      Location
 	Resources     Resources
 	Interfaces    []Interface
@@ -97,6 +99,18 @@ func ListNodesWithStatus(status string) ListNodeOpts {
 func ListNodesWithHealthy() ListNodeOpts {
 	return func(n *nodeCfg) {
 		n.healthy = true
+	}
+}
+
+func ListNodesWithOnline(online bool) ListNodeOpts {
+	return func(n *nodeCfg) {
+		n.online = &online
+	}
+}
+
+func ListNodesWithLastSeen(minutes int64) ListNodeOpts {
+	return func(n *nodeCfg) {
+		n.lastSeen = &minutes
 	}
 }
 
@@ -495,13 +509,15 @@ func (c *RegistrarClient) parseUpdateNodeOpts(node Node, opts []UpdateNodeOpts) 
 
 func parseListNodeOpts(opts []ListNodeOpts) map[string]any {
 	cfg := nodeCfg{
-		nodeID:  0,
-		twinID:  0,
-		farmID:  0,
-		status:  "",
-		healthy: false,
-		size:    50,
-		page:    1,
+		nodeID:   0,
+		twinID:   0,
+		farmID:   0,
+		status:   "",
+		healthy:  false,
+		online:   nil,
+		lastSeen: nil,
+		size:     50,
+		page:     1,
 	}
 
 	for _, opt := range opts {
@@ -528,6 +544,14 @@ func parseListNodeOpts(opts []ListNodeOpts) map[string]any {
 
 	if cfg.healthy {
 		data["healthy"] = cfg.healthy
+	}
+
+	if cfg.online != nil {
+		data["online"] = *cfg.online
+	}
+
+	if cfg.lastSeen != nil {
+		data["last_seen"] = *cfg.lastSeen
 	}
 
 	data["size"] = cfg.size

@@ -1,3 +1,4 @@
+basePath: /v1
 definitions:
   db.Account:
     properties:
@@ -50,11 +51,17 @@ definitions:
         type: integer
       updated_at:
         type: string
+    required:
+    - farm_name
+    - stellar_address
+    - twin_id
     type: object
   db.Interface:
     properties:
       ips:
-        type: string
+        items:
+          type: string
+        type: array
       mac:
         type: string
       name:
@@ -85,6 +92,9 @@ definitions:
         items:
           $ref: '#/definitions/db.Interface'
         type: array
+      last_seen:
+        description: Last time the node sent an uptime report
+        type: string
       location:
         $ref: '#/definitions/db.Location'
       node_id:
@@ -198,7 +208,6 @@ definitions:
         maxLength: 40
         type: string
       stellar_address:
-        maxLength: 56
         type: string
     type: object
   server.UpdateNodeRequest:
@@ -238,6 +247,9 @@ definitions:
     type: object
 info:
   contact: {}
+  description: API for managing TFGrid node registration
+  title: Node Registrar API
+  version: "1.0"
 paths:
   /accounts:
     get:
@@ -544,6 +556,14 @@ paths:
         in: query
         name: healthy
         type: boolean
+      - description: Filter by online status (true = online, false = offline)
+        in: query
+        name: online
+        type: boolean
+      - description: Filter nodes last seen within this many minutes
+        in: query
+        name: last_seen
+        type: integer
       - default: 1
         description: Page number
         in: query
@@ -629,7 +649,7 @@ paths:
       - application/json
       responses:
         "200":
-          description: Node details
+          description: Node details with last_seen information
           schema:
             $ref: '#/definitions/db.Node'
         "400":

@@ -1,8 +1,12 @@
 {
     "swagger": "2.0",
     "info": {
-        "contact": {}
+        "description": "API for managing TFGrid node registration",
+        "title": "Node Registrar API",
+        "contact": {},
+        "version": "1.0"
     },
+    "basePath": "/v1",
     "paths": {
         "/accounts": {
             "get": {
@@ -460,6 +464,18 @@
                         "in": "query"
                     },
                     {
+                        "type": "boolean",
+                        "description": "Filter by online status (true = online, false = offline)",
+                        "name": "online",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter nodes last seen within this many minutes",
+                        "name": "last_seen",
+                        "in": "query"
+                    },
+                    {
                         "type": "integer",
                         "default": 1,
                         "description": "Page number",
@@ -581,7 +597,7 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Node details",
+                        "description": "Node details with last_seen information",
                         "schema": {
                             "$ref": "#/definitions/db.Node"
                         }
@@ -883,6 +899,11 @@
         },
         "db.Farm": {
             "type": "object",
+            "required": [
+                "farm_name",
+                "stellar_address",
+                "twin_id"
+            ],
             "properties": {
                 "created_at": {
                     "type": "string"
@@ -919,7 +940,10 @@
             "type": "object",
             "properties": {
                 "ips": {
-                    "type": "string"
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "mac": {
                     "type": "string"
@@ -964,6 +988,10 @@
                     "items": {
                         "$ref": "#/definitions/db.Interface"
                     }
+                },
+                "last_seen": {
+                    "description": "Last time the node sent an uptime report",
+                    "type": "string"
                 },
                 "location": {
                     "$ref": "#/definitions/db.Location"
@@ -1128,8 +1156,7 @@
                     "maxLength": 40
                 },
                 "stellar_address": {
-                    "type": "string",
-                    "maxLength": 56
+                    "type": "string"
                 }
             }
         },

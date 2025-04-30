@@ -212,9 +212,11 @@ func (s Server) updateFarmHandler(c *gin.Context) {
 // @Param twin_id query int false "Filter by twin ID"
 // @Param status query string false "Filter by status"
 // @Param healthy query bool false "Filter by health status"
+// @Param online query bool false "Filter by online status (true = online, false = offline)"
+// @Param last_seen query int false "Filter nodes last seen within this many minutes"
 // @Param page query int false "Page number" default(1)
 // @Param size query int false "Results per page" default(10)
-// @Success 200 {object} []db.Node "List of nodes"
+// @Success 200 {object} []db.Node "List of nodes with online status"
 // @Failure 400 {object} map[string]any "Bad request"
 // @Router /nodes [get]
 func (s Server) listNodesHandler(c *gin.Context) {
@@ -233,6 +235,12 @@ func (s Server) listNodesHandler(c *gin.Context) {
 		return
 	}
 
+	// Set online status for each node
+	cutoffTime := time.Now().Add(-30 * time.Minute)
+	for i := range nodes {
+		nodes[i].Online = !nodes[i].LastSeen.IsZero() && nodes[i].LastSeen.After(cutoffTime)
+	}
+
 	c.JSON(http.StatusOK, nodes)
 }
 
@@ -242,7 +250,7 @@ func (s Server) listNodesHandler(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param node_id path int true "Node ID"
-// @Success 200 {object} db.Node "Node details"
+// @Success 200 {object} db.Node "Node details with online status and last_seen information"
 // @Failure 400 {object} map[string]any "Invalid node ID"
 // @Failure 404 {object} map[string]any "Node not found"
 // @Router /nodes/{node_id} [get]
@@ -265,6 +273,10 @@ func (s Server) getNodeHandler(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	// Determine if the node is online (has sent an uptime report in the last 30 minutes)
+	cutoffTime := time.Now().Add(-30 * time.Minute)
+	node.Online = !node.LastSeen.IsZero() && node.LastSeen.After(cutoffTime)
 
 	c.JSON(http.StatusOK, node)
 }

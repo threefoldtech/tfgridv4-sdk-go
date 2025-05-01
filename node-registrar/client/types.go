@@ -36,8 +36,8 @@ type Node struct {
 }
 
 type UptimeReport struct {
-	Uptime    time.Duration `json:"uptime"`
-	Timestamp time.Time     `json:"timestamp"`
+	Uptime    uint64 `json:"uptime"`    // in seconds
+	Timestamp int64  `json:"timestamp"` // in seconds since epoch
 }
 
 type ZosVersion struct {

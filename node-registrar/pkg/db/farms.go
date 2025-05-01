@@ -1,6 +1,8 @@
 package db
 
 import (
+	"strings"
+
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
 )
@@ -41,9 +43,10 @@ func (db *Database) GetFarm(farmID uint64) (farm Farm, err error) {
 
 func (db *Database) CreateFarm(farm Farm) (uint64, error) {
 	if err := db.gormDB.Create(&farm).Error; err != nil {
-		if errors.Is(err, gorm.ErrDuplicatedKey) {
+		if strings.Contains(err.Error(), "duplicate key value") {
 			return 0, ErrRecordAlreadyExists
 		}
+		return 0, err
 	}
 
 	return farm.FarmID, nil

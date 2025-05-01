@@ -423,7 +423,7 @@ func (s *Server) updateNodeHandler(c *gin.Context) {
 
 type UptimeReportRequest struct {
 	Uptime    uint64 `json:"uptime" binding:"required"`
-	Timestamp uint64 `json:"timestamp" binding:"required"`
+	Timestamp int64  `json:"timestamp" binding:"required"`
 }
 
 // @Summary Report node uptime
@@ -473,7 +473,8 @@ func (s *Server) uptimeReportHandler(c *gin.Context) {
 	// Ensuring the timestamp_hint is within an Acceptable Range
 	err = validateTimestampHint(req.Timestamp)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid timestamp hint"})
+		// include the error message
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -807,8 +808,8 @@ func ensureOwner(c *gin.Context, twinID uint64) {
 }
 
 // Helper function to validate timestamp hint
-func validateTimestampHint(timestampHint uint64) error {
-	hintTime := time.Unix(int64(timestampHint), 0)
+func validateTimestampHint(timestampHint int64) error {
+	hintTime := time.Unix(timestampHint, 0)
 
 	now := time.Now()
 
@@ -819,7 +820,7 @@ func validateTimestampHint(timestampHint uint64) error {
 
 	// Check if the hint is within the acceptable range
 	if hintTime.Before(earliestAllowed) || hintTime.After(latestAllowed) {
-		return errors.New("InvalidTimestampHint")
+		return fmt.Errorf("invalid timestamp hint: must be within ±%d seconds of the current time (%s)", UptimeReportTimestampHintDrift, now)
 	}
 
 	return nil

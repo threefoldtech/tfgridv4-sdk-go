@@ -254,7 +254,9 @@ func (c *RegistrarClient) registerNode(
 	}{}
 
 	err = json.NewDecoder(resp.Body).Decode(&result)
-
+	if err != nil {
+		return 0, errors.Wrap(err, "failed to decode response body")
+	}
 	c.nodeID = result.NodeID
 	return result.NodeID, err
 }

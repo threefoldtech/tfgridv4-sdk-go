@@ -17,6 +17,7 @@ import (
 const (
 	MaxTimestampDelta                    = 2 * time.Second
 	UptimeReportTimestampHintDrift int64 = 60
+	OnlineCutoffTime                     = 40 * time.Minute
 )
 
 // @title Node Registrar API
@@ -236,7 +237,7 @@ func (s Server) listNodesHandler(c *gin.Context) {
 	}
 
 	// Set online status for each node
-	cutoffTime := time.Now().Add(-30 * time.Minute)
+	cutoffTime := time.Now().Add(-OnlineCutoffTime)
 	for i := range nodes {
 		nodes[i].Online = !nodes[i].LastSeen.IsZero() && nodes[i].LastSeen.After(cutoffTime)
 	}
@@ -275,7 +276,7 @@ func (s Server) getNodeHandler(c *gin.Context) {
 	}
 
 	// Determine if the node is online (has sent an uptime report in the last 30 minutes)
-	cutoffTime := time.Now().Add(-30 * time.Minute)
+	cutoffTime := time.Now().Add(-OnlineCutoffTime)
 	node.Online = !node.LastSeen.IsZero() && node.LastSeen.After(cutoffTime)
 
 	c.JSON(http.StatusOK, node)

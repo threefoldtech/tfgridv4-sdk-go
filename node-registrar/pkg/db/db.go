@@ -121,3 +121,8 @@ func (db Database) Close() error {
 	}
 	return nil
 }
+
+// Transaction executes operations within a database transaction
+func (db *Database) Transaction(fn func(tx *gorm.DB) error) error {
+	return db.gormDB.Transaction(fn)
+}

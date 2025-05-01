@@ -99,8 +99,8 @@ func TestUpdateNode(t *testing.T) {
 		request = updateNodeSendUptimeReport
 
 		report := UptimeReport{
-			Uptime:    40 * time.Minute,
-			Timestamp: time.Now(),
+			Uptime:    40 * 60,
+			Timestamp: time.Now().Unix(),
 		}
 		err = c.ReportUptime(report)
 		require.NoError(err)

@@ -30,12 +30,14 @@ type Node struct {
 	Virtualized   bool           `json:"virtualized"`
 	SerialNumber  string         `json:"serial_number"`
 	UptimeReports []UptimeReport `json:"uptime"`
+	LastSeen      *time.Time     `json:"last_seen"`
+	Online        bool           `json:"online"`
 	Approved      bool
 }
 
 type UptimeReport struct {
-	Uptime    time.Duration `json:"uptime"`
-	Timestamp time.Time     `json:"timestamp"`
+	Uptime    uint64 `json:"uptime"`    // in seconds
+	Timestamp int64  `json:"timestamp"` // in seconds since epoch
 }
 
 type ZosVersion struct {

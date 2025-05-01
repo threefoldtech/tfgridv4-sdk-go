@@ -15,7 +15,9 @@ import (
 )
 
 const (
-	MaxTimestampDelta = 2 * time.Second
+	MaxTimestampDelta                    = 2 * time.Second
+	UptimeReportTimestampHintDrift int64 = 60
+	OnlineCutoffTime                     = 40 * time.Minute
 )
 
 // @title Node Registrar API
@@ -211,9 +213,11 @@ func (s Server) updateFarmHandler(c *gin.Context) {
 // @Param twin_id query int false "Filter by twin ID"
 // @Param status query string false "Filter by status"
 // @Param healthy query bool false "Filter by health status"
+// @Param online query bool false "Filter by online status (true = online, false = offline)"
+// @Param last_seen query int false "Filter nodes last seen within this many minutes"
 // @Param page query int false "Page number" default(1)
 // @Param size query int false "Results per page" default(10)
-// @Success 200 {object} []db.Node "List of nodes"
+// @Success 200 {object} []db.Node "List of nodes with online status"
 // @Failure 400 {object} map[string]any "Bad request"
 // @Router /nodes [get]
 func (s Server) listNodesHandler(c *gin.Context) {
@@ -232,6 +236,12 @@ func (s Server) listNodesHandler(c *gin.Context) {
 		return
 	}
 
+	// Set online status for each node
+	cutoffTime := time.Now().Add(-OnlineCutoffTime)
+	for i := range nodes {
+		nodes[i].Online = !nodes[i].LastSeen.IsZero() && nodes[i].LastSeen.After(cutoffTime)
+	}
+
 	c.JSON(http.StatusOK, nodes)
 }
 
@@ -241,7 +251,7 @@ func (s Server) listNodesHandler(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param node_id path int true "Node ID"
-// @Success 200 {object} db.Node "Node details"
+// @Success 200 {object} db.Node "Node details with online status and last_seen information"
 // @Failure 400 {object} map[string]any "Invalid node ID"
 // @Failure 404 {object} map[string]any "Node not found"
 // @Router /nodes/{node_id} [get]
@@ -264,6 +274,10 @@ func (s Server) getNodeHandler(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	// Determine if the node is online (has sent an uptime report in the last 30 minutes)
+	cutoffTime := time.Now().Add(-OnlineCutoffTime)
+	node.Online = !node.LastSeen.IsZero() && node.LastSeen.After(cutoffTime)
 
 	c.JSON(http.StatusOK, node)
 }
@@ -409,8 +423,8 @@ func (s *Server) updateNodeHandler(c *gin.Context) {
 }
 
 type UptimeReportRequest struct {
-	Uptime    time.Duration `json:"uptime" binding:"required"`
-	Timestamp time.Time     `json:"timestamp" binding:"required"`
+	Uptime    uint64 `json:"uptime" binding:"required"`
+	Timestamp int64  `json:"timestamp" binding:"required"`
 }
 
 // @Summary Report node uptime
@@ -457,16 +471,26 @@ func (s *Server) uptimeReportHandler(c *gin.Context) {
 	// Maybe aggregate reports here and store total uptime?
 	// The total uptime should accumulate unless the node restarts, which is detected when the reported uptime is less than the previous value.
 
+	// Ensuring the timestamp_hint is within an Acceptable Range
+	err = validateTimestampHint(req.Timestamp)
+	if err != nil {
+		// include the error message
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	// Create report record
 	report := &db.UptimeReport{
 		NodeID:    id,
-		Duration:  req.Uptime,
-		Timestamp: req.Timestamp,
+		Duration:  time.Duration(req.Uptime) * time.Second,
+		Timestamp: time.Unix(req.Timestamp, 0).UTC(),
 	}
 
+	// Create report record and Update node LastSeen(the timestamp of the last report)
+	// It's up to the clients to determine if the node is online based on the reporting interval and allowable window.
 	err = s.db.CreateUptimeReport(report)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save report"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to process uptime report"})
 		return
 	}
 
@@ -782,4 +806,23 @@ func ensureOwner(c *gin.Context, twinID uint64) {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "not authorized"})
 		return
 	}
+}
+
+// Helper function to validate timestamp hint
+func validateTimestampHint(timestampHint int64) error {
+	hintTime := time.Unix(timestampHint, 0)
+
+	now := time.Now()
+
+	// Calculate acceptable range
+	maxDrift := time.Duration(UptimeReportTimestampHintDrift) * time.Second
+	earliestAllowed := now.Add(-maxDrift)
+	latestAllowed := now.Add(maxDrift)
+
+	// Check if the hint is within the acceptable range
+	if hintTime.Before(earliestAllowed) || hintTime.After(latestAllowed) {
+		return fmt.Errorf("invalid timestamp hint: must be within ±%d seconds of the current time (%s)", UptimeReportTimestampHintDrift, now)
+	}
+
+	return nil
 }

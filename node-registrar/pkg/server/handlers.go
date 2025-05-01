@@ -482,7 +482,7 @@ func (s *Server) uptimeReportHandler(c *gin.Context) {
 	report := &db.UptimeReport{
 		NodeID:    id,
 		Duration:  time.Duration(req.Uptime) * time.Second,
-		Timestamp: time.Unix(int64(req.Timestamp), 0).UTC(),
+		Timestamp: time.Unix(req.Timestamp, 0).UTC(),
 	}
 
 	// Create report record and Update node LastSeen(the timestamp of the last report)

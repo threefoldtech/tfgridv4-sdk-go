@@ -25,8 +25,8 @@ func (db *Database) ListNodes(filter NodeFilter, limit Limit) (nodes []Node, err
 
 	// Filter by online status (node sent an uptime report in the last 30 minutes)
 	if filter.Online != nil {
-		// Calculate the cutoff time (30 minutes ago by default)
-		cutoffMinutes := int64(30) // Default to 30 minutes
+		// Calculate the cutoff time (40 minutes ago by default)
+		cutoffMinutes := int64(40) // Default to 40 minutes
 		if filter.LastSeen != nil {
 			cutoffMinutes = *filter.LastSeen
 		}

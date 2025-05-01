@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -54,13 +53,6 @@ func NewDB(c Config) (Database, error) {
 	if err != nil {
 		return Database{}, err
 	}
-
-	// Run the data migration for LastSeen field
-	count, err := db.MigrateNodeLastSeen()
-	if err != nil {
-		return Database{}, errors.Wrap(err, "failed to migrate node last seen data")
-	}
-	log.Info().Msgf("Migration: Updated LastSeen for %d nodes", count)
 
 	return db, sql.Ping()
 }
@@ -133,25 +125,4 @@ func (db Database) Close() error {
 // Transaction executes operations within a database transaction
 func (db *Database) Transaction(fn func(tx *gorm.DB) error) error {
 	return db.gormDB.Transaction(fn)
-}
-
-// MigrateNodeLastSeen updates the LastSeen field for existing nodes that don't have it set
-func (db Database) MigrateNodeLastSeen() (int64, error) {
-	query := `
-        UPDATE nodes n
-        SET last_seen = (
-            SELECT MAX(timestamp)
-            FROM uptime_reports ur
-            WHERE ur.node_id = n.node_id
-        )
-        WHERE (last_seen IS NULL OR last_seen = '0001-01-01 00:00:00+00')
-        AND EXISTS (
-            SELECT 1
-            FROM uptime_reports ur
-            WHERE ur.node_id = n.node_id
-        )
-    `
-
-	result := db.gormDB.Exec(query)
-	return result.RowsAffected, result.Error
 }

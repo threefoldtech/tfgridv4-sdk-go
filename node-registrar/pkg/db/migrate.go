@@ -4,6 +4,8 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
+	"gorm.io/gorm"
 )
 
 func (db Database) autoMigrate() error {
@@ -21,12 +23,18 @@ func (db Database) autoMigrate() error {
 		return err
 	}
 
+	err := db.MigrateNodeLastSeen()
+	if err != nil {
+		return errors.Wrap(err, "failed to migrate node last seen data")
+	}
+
 	return nil
 }
 
 func (db Database) migrateNodes() error {
 	// if nodes are already migrated skip migration
 	if result := db.gormDB.First(&Node{}); result.Error == nil {
+		log.Info().Msg("nodes Interfaces are already migrated")
 		return nil
 	}
 
@@ -36,56 +44,63 @@ func (db Database) migrateNodes() error {
 		IPs  string `json:"ips"`
 	}
 
+	//  we'd only load the data we actually need from the database
 	type nodeType struct {
-		NodeID uint64 `json:"node_id" gorm:"primaryKey;autoIncrement"`
-		FarmID uint64 `json:"farm_id" gorm:"not null;check:farm_id> 0;foreignKey:FarmID;references:FarmID;constraint:OnDelete:RESTRICT"`
-		TwinID uint64 `json:"twin_id" gorm:"not null;unique;check:twin_id > 0;foreignKey:TwinID;references:TwinID;constraint:OnDelete:RESTRICT"`
-
-		Location Location `json:"location" gorm:"not null;type:json;serializer:json"`
-
-		Resources    Resources      `json:"resources" gorm:"not null;type:json;serializer:json"`
-		Interfaces   []oldInterface `gorm:"not null;type:json;serializer:json"`
-		SecureBoot   bool           `json:"secure_boot"`
-		Virtualized  bool           `json:"virtualized"`
-		SerialNumber string         `json:"serial_number"`
-
-		Approved bool `json:"approved"`
+		NodeID     uint64         `json:"node_id" gorm:"primaryKey"`
+		Interfaces []oldInterface `gorm:"not null;type:json;serializer:json"`
 	}
 
-	var nodes []nodeType
-	result := db.gormDB.Model(&Node{}).Find(&nodes)
-	if result.Error != nil {
-		return result.Error
-	}
-
-	for _, node := range nodes {
-		var interfaces []Interface
-		for _, i := range node.Interfaces {
-			ips := strings.Split(i.IPs, "/")
-			newInterface := Interface{
-				Name: i.Name,
-				Mac:  i.Mac,
-				IPs:  ips,
-			}
-			interfaces = append(interfaces, newInterface)
-		}
-
-		updatedNode := Node{
-			NodeID:      node.NodeID,
-			FarmID:      node.FarmID,
-			TwinID:      node.TwinID,
-			Location:    node.Location,
-			Resources:   node.Resources,
-			Interfaces:  interfaces,
-			SecureBoot:  node.SecureBoot,
-			Virtualized: node.Virtualized,
-			Approved:    node.Approved,
-		}
-
-		err := db.gormDB.Model(&Node{}).Where("node_id = ?", node.NodeID).Updates(updatedNode).Error
-		if err != nil {
+	// Use a single transaction for all updates to ensure atomicity
+	return db.Transaction(func(tx *gorm.DB) error {
+		var nodes []nodeType
+		if err := tx.Model(&Node{}).Find(&nodes).Error; err != nil {
 			return err
 		}
+
+		for _, node := range nodes {
+			var interfaces []Interface
+			for _, i := range node.Interfaces {
+				ips := strings.Split(i.IPs, "/")
+				newInterface := Interface{
+					Name: i.Name,
+					Mac:  i.Mac,
+					IPs:  ips,
+				}
+				interfaces = append(interfaces, newInterface)
+			}
+
+			// Update only the interfaces field
+			if err := tx.Model(&Node{}).
+				Where("node_id = ?", node.NodeID).
+				Update("interfaces", interfaces).Error; err != nil {
+				return err // This will roll back the entire transaction
+			}
+		}
+
+		return nil
+	})
+}
+
+// MigrateNodeLastSeen updates the LastSeen field for existing nodes that don't have it set
+func (db Database) MigrateNodeLastSeen() error {
+	query := `
+        UPDATE nodes n
+        SET last_seen = (
+            SELECT MAX(timestamp)
+            FROM uptime_reports ur
+            WHERE ur.node_id = n.node_id
+        )
+        WHERE (last_seen IS NULL OR last_seen = '0001-01-01 00:00:00+00')
+        AND EXISTS (
+            SELECT 1
+            FROM uptime_reports ur
+            WHERE ur.node_id = n.node_id
+        )
+    `
+
+	result := db.gormDB.Exec(query)
+	if result.Error == nil {
+		log.Info().Msgf("Migration: Updated LastSeen for %d nodes", result.RowsAffected)
 	}
-	return nil
+	return result.Error
 }

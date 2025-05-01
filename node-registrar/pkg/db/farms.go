@@ -43,7 +43,7 @@ func (db *Database) GetFarm(farmID uint64) (farm Farm, err error) {
 
 func (db *Database) CreateFarm(farm Farm) (uint64, error) {
 	if err := db.gormDB.Create(&farm).Error; err != nil {
-		if strings.Contains(err.Error(), "duplicate key value") {
+		if errors.Is(err, gorm.ErrDuplicatedKey) || strings.Contains(err.Error(), "23505") {
 			return 0, ErrRecordAlreadyExists
 		}
 		return 0, err

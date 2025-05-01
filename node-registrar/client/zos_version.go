@@ -33,12 +33,15 @@ func (c *RegistrarClient) getZosVersion() (version ZosVersion, err error) {
 		return version, err
 	}
 
+	if resp == nil {
+		return version, errors.New("no response received")
+	}
+	defer resp.Body.Close()
+
 	if resp.StatusCode != http.StatusOK {
 		err = parseResponseError(resp.Body)
 		return version, errors.Wrapf(err, "failed to get zos version with status code %s", resp.Status)
 	}
-
-	defer resp.Body.Close()
 
 	var versionString string
 	err = json.NewDecoder(resp.Body).Decode(&versionString)
@@ -110,6 +113,9 @@ func (c *RegistrarClient) setZosVersion(v string, safeToUpgrade bool) (err error
 		return errors.Wrap(err, "failed to send request to get zos version from the registrar")
 	}
 
+	if resp == nil {
+		return errors.New("no response received")
+	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {

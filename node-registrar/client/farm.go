@@ -156,6 +156,9 @@ func (c *RegistrarClient) createFarm(farmName, stellarAddr string, dedicated boo
 		return farmID, errors.Wrap(err, "failed to send request to create farm")
 	}
 
+	if resp == nil {
+		return farmID, errors.New("failed to create farm, no response received")
+	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusCreated {
@@ -214,6 +217,9 @@ func (c *RegistrarClient) updateFarm(farmID uint64, opts []UpdateFarmOpts) (err 
 		return errors.Wrap(err, "failed to send request to update farm")
 	}
 
+	if resp == nil {
+		return errors.New("failed to update farm, no response received")
+	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
@@ -234,6 +240,11 @@ func (c *RegistrarClient) getFarm(id uint64) (farm Farm, err error) {
 		return farm, err
 	}
 
+	if resp == nil {
+		return farm, errors.New("failed to get farm, no response received")
+	}
+	defer resp.Body.Close()
+
 	if resp.StatusCode == http.StatusNotFound {
 		return farm, ErrorFarmNotFound
 	}
@@ -242,7 +253,6 @@ func (c *RegistrarClient) getFarm(id uint64) (farm Farm, err error) {
 		err = parseResponseError(resp.Body)
 		return farm, errors.Wrapf(err, "failed to get farm with status code %s", resp.Status)
 	}
-	defer resp.Body.Close()
 
 	if err = json.NewDecoder(resp.Body).Decode(&farm); err != nil {
 		return farm, err
@@ -276,11 +286,16 @@ func (c *RegistrarClient) listFarms(opts ...ListFarmOpts) (farms []Farm, err err
 		return farms, errors.Wrap(err, "failed to send request to list farm")
 	}
 
+	if resp == nil {
+		return farms, errors.New("failed to list farms, no response received")
+	}
+	defer resp.Body.Close()
+
 	if resp.StatusCode != http.StatusOK {
 		err = parseResponseError(resp.Body)
 		return farms, errors.Wrapf(err, "failed to get list farms with status code %s", resp.Status)
 	}
-	defer resp.Body.Close()
+
 	if err = json.NewDecoder(resp.Body).Decode(&farms); err != nil {
 		return farms, errors.Wrap(err, "failed to decode response body")
 	}

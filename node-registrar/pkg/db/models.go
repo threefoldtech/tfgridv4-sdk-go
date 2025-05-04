@@ -1,9 +1,11 @@
 package db
 
 import (
+	"errors"
 	"time"
 
 	"github.com/lib/pq"
+	"gorm.io/gorm"
 )
 
 type Account struct {
@@ -53,6 +55,13 @@ type Node struct {
 	CreatedAt     time.Time      `json:"created_at"`
 	UpdatedAt     time.Time      `json:"updated_at"`
 	Approved      bool           `json:"approved"`
+}
+
+func (n *Node) BeforeCreate(tx *gorm.DB) (err error) {
+	if len(n.Interfaces) == 0 {
+		return errors.New("interfaces must not be empty")
+	}
+	return nil
 }
 
 type UptimeReport struct {

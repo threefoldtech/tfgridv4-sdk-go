@@ -24,6 +24,7 @@ type Server struct {
 
 func NewServer(db db.Database, network string, adminTwinID uint64) Server {
 	router := gin.Default()
+	router.RedirectTrailingSlash = true
 
 	server := Server{router, db, network, adminTwinID}
 	server.SetupRoutes()

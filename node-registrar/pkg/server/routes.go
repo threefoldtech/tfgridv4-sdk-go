@@ -30,27 +30,27 @@ func (s *Server) SetupRoutes() {
 func (s *Server) registerRoutes(r *gin.RouterGroup) {
 	// farms routes
 	publicFarmRoutes := r.Group("farms")
-	publicFarmRoutes.GET("/", s.listFarmsHandler)
+	publicFarmRoutes.GET("", s.listFarmsHandler)
 	publicFarmRoutes.GET("/:farm_id", s.getFarmHandler)
 	// protected by farmer key
 	protectedFarmRoutes := r.Group("farms", s.AuthMiddleware())
-	protectedFarmRoutes.POST("/", s.createFarmHandler)
+	protectedFarmRoutes.POST("", s.createFarmHandler)
 	protectedFarmRoutes.PATCH("/:farm_id", s.updateFarmHandler)
 
 	// nodes routes
 	publicNodeRoutes := r.Group("nodes")
-	publicNodeRoutes.GET("/", s.listNodesHandler)
+	publicNodeRoutes.GET("", s.listNodesHandler)
 	publicNodeRoutes.GET("/:node_id", s.getNodeHandler)
 	// protected by node key
 	protectedNodeRoutes := r.Group("nodes", s.AuthMiddleware())
-	protectedNodeRoutes.POST("/", s.registerNodeHandler)
+	protectedNodeRoutes.POST("", s.registerNodeHandler)
 	protectedNodeRoutes.PATCH("/:node_id", s.updateNodeHandler)
 	protectedNodeRoutes.POST("/:node_id/uptime", s.uptimeReportHandler)
 
 	// Account routes
 	publicAccountRoutes := r.Group("accounts")
-	publicAccountRoutes.POST("/", s.createAccountHandler)
-	publicAccountRoutes.GET("/", s.getAccountHandler)
+	publicAccountRoutes.POST("", s.createAccountHandler)
+	publicAccountRoutes.GET("", s.getAccountHandler)
 	// protected by farmer key
 	protectedAccountRoutes := r.Group("accounts", s.AuthMiddleware())
 	protectedAccountRoutes.PATCH("/:twin_id", s.updateAccountHandler)

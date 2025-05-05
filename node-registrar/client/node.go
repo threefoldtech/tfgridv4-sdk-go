@@ -314,7 +314,7 @@ func (c *RegistrarClient) updateNode(opts []UpdateNodeOpts) (err error) {
 		}
 
 		if err := handler(node); err != nil {
-			return err
+			return errors.Wrap(err, "failed here")
 		}
 	}
 
@@ -489,6 +489,7 @@ func (c *RegistrarClient) listNodes(opts []ListNodeOpts) (nodes []Node, err erro
 		return
 	}
 
+	// try old interface format
 	var rawNodes []interface{}
 	err = json.Unmarshal(bodyBytes, &rawNodes)
 	if err != nil {
@@ -503,7 +504,7 @@ func (c *RegistrarClient) listNodes(opts []ListNodeOpts) (nodes []Node, err erro
 
 		node, err := parseResponseBodyToNewInterfaceFormat(nodeBytes)
 		if err != nil {
-			return nodes, err
+			return nodes, errors.Wrap(err, "failed to get nodes with old interface format")
 		}
 
 		nodes = append(nodes, node)
@@ -680,6 +681,22 @@ type oldInterfaceFormat struct {
 	IPs  string `json:"ips"`
 }
 
+type oldFormatNodeType struct {
+	Interfaces []oldInterfaceFormat `json:"interfaces"`
+
+	NodeID       uint64     `json:"node_id"`
+	FarmID       uint64     `json:"farm_id"`
+	TwinID       uint64     `json:"twin_id"`
+	Location     Location   `json:"location"`
+	Resources    Resources  `json:"resources"`
+	SecureBoot   bool       `json:"secure_boot"`
+	Virtualized  bool       `json:"virtualized"`
+	SerialNumber string     `json:"serial_number"`
+	LastSeen     *time.Time `json:"last_seen"`
+	Online       bool       `json:"online"`
+	Approved     bool
+}
+
 func createRequestBodyWithOldInterfaceFormat(node Node) (body bytes.Buffer, err error) {
 	var oldInterfaces []oldInterfaceFormat
 	interfaces := node.Interfaces
@@ -692,19 +709,35 @@ func createRequestBodyWithOldInterfaceFormat(node Node) (body bytes.Buffer, err 
 		oldInterfaces = append(oldInterfaces, old)
 	}
 
-	nodeBytes, err := json.Marshal(node)
-	if err != nil {
-		return
-	}
+	oldFormatNode := oldFormatNodeType{
+		Interfaces: oldInterfaces,
 
-	var nodeMap map[string]any
-	err = json.Unmarshal(nodeBytes, &nodeMap)
-	if err != nil {
-		return
+		NodeID:       node.NodeID,
+		FarmID:       node.FarmID,
+		TwinID:       node.TwinID,
+		Location:     node.Location,
+		Resources:    node.Resources,
+		SecureBoot:   node.SecureBoot,
+		Virtualized:  node.Virtualized,
+		SerialNumber: node.SerialNumber,
+		LastSeen:     node.LastSeen,
+		Online:       node.Online,
+		Approved:     node.Approved,
 	}
-	nodeMap["interfaces"] = oldInterfaces
+	//
+	// nodeBytes, err := json.Marshal(node)
+	// if err != nil {
+	// 	return
+	// }
+	//
+	// var nodeMap map[string]any
+	// err = json.Unmarshal(nodeBytes, &nodeMap)
+	// if err != nil {
+	// 	return
+	// }
+	// nodeMap["interfaces"] = oldInterfaces
 
-	err = json.NewEncoder(&body).Encode(node)
+	err = json.NewEncoder(&body).Encode(oldFormatNode)
 	if err != nil {
 		return
 	}
@@ -713,10 +746,7 @@ func createRequestBodyWithOldInterfaceFormat(node Node) (body bytes.Buffer, err 
 }
 
 func parseResponseBodyToNewInterfaceFormat(nodeBytes []byte) (Node, error) {
-	oldFormatNode := struct {
-		Interfaces []oldInterfaceFormat `json:"interfaces"`
-	}{}
-
+	var oldFormatNode oldFormatNodeType
 	err := json.Unmarshal(nodeBytes, &oldFormatNode)
 	if err != nil {
 		return Node{}, err
@@ -731,26 +761,51 @@ func parseResponseBodyToNewInterfaceFormat(nodeBytes []byte) (Node, error) {
 			IPs:  ips,
 		})
 	}
+	return Node{
+		Interfaces: newFormat,
 
-	var nodeMap map[string]any
-	err = json.Unmarshal(nodeBytes, &nodeMap)
-	if err != nil {
-		return Node{}, err
-	}
-	nodeMap["interfaces"] = newFormat
+		NodeID:       oldFormatNode.NodeID,
+		FarmID:       oldFormatNode.FarmID,
+		TwinID:       oldFormatNode.TwinID,
+		Location:     oldFormatNode.Location,
+		Resources:    oldFormatNode.Resources,
+		SecureBoot:   oldFormatNode.SecureBoot,
+		Virtualized:  oldFormatNode.Virtualized,
+		SerialNumber: oldFormatNode.SerialNumber,
+		LastSeen:     oldFormatNode.LastSeen,
+		Online:       oldFormatNode.Online,
+		Approved:     oldFormatNode.Approved,
+	}, nil
 
-	encodedNode, err := json.Marshal(nodeMap)
-	if err != nil {
-		return Node{}, err
-	}
-
-	var node Node
-	err = json.Unmarshal(encodedNode, &node)
-	if err != nil {
-		return Node{}, err
-	}
-
-	return node, nil
+	// data, err := json.Marshal(newFormat)
+	// if err != nil {
+	// 	return Node{}, err
+	// }
+	//
+	// var genericInterface any
+	// if err := json.Unmarshal(data, &genericInterface); err != nil {
+	// 	return Node{}, err
+	// }
+	//
+	// var nodeMap map[string]any
+	// err = json.Unmarshal(nodeBytes, &nodeMap)
+	// if err != nil {
+	// 	return Node{}, err
+	// }
+	// nodeMap["interfaces"] = genericInterface
+	//
+	// encodedNode, err := json.Marshal(nodeMap)
+	// if err != nil {
+	// 	return Node{}, err
+	// }
+	//
+	// var node Node
+	// err = json.Unmarshal(encodedNode, &node)
+	// if err != nil {
+	// 	return Node{}, errors.Wrapf(err, "failed to Unmarshal here %+v", nodeMap)
+	// }
+	//
+	// return node, nil
 }
 
 // nodeBytes, err := json.Marshal(nodeMap)

@@ -370,11 +370,11 @@ func (c *RegistrarClient) reportUptime(report UptimeReport) (err error) {
 	if err = handler(body); err != nil {
 		// try old report format time.Duration and time.Time
 		old := struct {
-			uptime    time.Duration
-			timestamp time.Time
+			Uptime    time.Duration
+			Timestamp time.Time
 		}{
-			uptime:    time.Duration(report.Uptime),
-			timestamp: time.Now(),
+			Uptime:    time.Duration(report.Uptime),
+			Timestamp: time.Now(),
 		}
 		var body bytes.Buffer
 		if err = json.NewEncoder(&body).Encode(old); err != nil {

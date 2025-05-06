@@ -69,12 +69,18 @@ func (db Database) migrateNodes() error {
 				interfaces = append(interfaces, newInterface)
 			}
 
-			// Update only the interfaces field
-			if err := tx.Model(&Node{}).
-				Where("node_id = ?", node.NodeID).
-				Update("interfaces", interfaces).Error; err != nil {
-				return err // This will roll back the entire transaction
+			// skip the node if it has no interfaces
+			if len(interfaces) != 0 {
+				// Update only the interfaces field
+				if err := tx.Model(&Node{}).
+					Where("node_id = ?", node.NodeID).
+					Update("interfaces", interfaces).Error; err != nil {
+					return err // This will roll back the entire transaction
+				}
+
+				log.Info().Uint64("node_id", node.NodeID).Msg("Migration: updating node")
 			}
+
 		}
 
 		return nil

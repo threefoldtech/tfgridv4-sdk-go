@@ -15,6 +15,11 @@ func TestRegistarNode(t *testing.T) {
 	var count int
 	require := require.New(t)
 
+	node := Node{
+		TwinID: twinID,
+		FarmID: farmID,
+	}
+
 	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		statusCode, body := serverHandler(r, request, count, require)
 		w.WriteHeader(statusCode)
@@ -33,7 +38,7 @@ func TestRegistarNode(t *testing.T) {
 		require.NoError(err)
 
 		request = registerNodeWithNoAccount
-		_, err = c.RegisterNode(farmID, twinID, []Interface{}, Location{}, Resources{}, "", false, false)
+		_, err = c.RegisterNode(node)
 		require.Error(err)
 	})
 
@@ -45,7 +50,7 @@ func TestRegistarNode(t *testing.T) {
 
 		count = 0
 		request = registerNodeStatusConflict
-		_, err = c.RegisterNode(farmID, twinID, []Interface{}, Location{}, Resources{}, "", false, false)
+		_, err = c.RegisterNode(node)
 		require.Error(err)
 	})
 
@@ -57,7 +62,7 @@ func TestRegistarNode(t *testing.T) {
 
 		count = 0
 		request = registerNodeStatusCreated
-		result, err := c.RegisterNode(farmID, twinID, []Interface{}, Location{}, Resources{}, "", false, false)
+		result, err := c.RegisterNode(node)
 		require.NoError(err)
 		require.Equal(nodeID, result)
 	})

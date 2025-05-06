@@ -2,19 +2,15 @@ package server
 
 import (
 	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
-	"reflect"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/lib/pq"
-	"github.com/rs/zerolog/log"
 	"github.com/threefoldtech/tfgrid4-sdk-go/node-registrar/pkg/db"
 )
 
@@ -312,35 +308,9 @@ type NodeRegistrationRequest struct {
 func (s Server) registerNodeHandler(c *gin.Context) {
 	var req NodeRegistrationRequest
 
-	bodyBytes, err := io.ReadAll(c.Request.Body)
-	if err != nil {
+	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
-	}
-
-	if err := json.Unmarshal(bodyBytes, &req); err != nil {
-		// try old interfaces format
-		node := map[string]any{}
-		if err := json.Unmarshal(bodyBytes, &node); err != nil {
-			log.Info().Msg("failed to bind")
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-
-		res, err := migrateInterfaces(node, NodeRegistrationRequest{})
-		if err != nil {
-			log.Info().Msg("failed to migrate")
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-		var ok bool
-		req, ok = res.(NodeRegistrationRequest)
-		if !ok {
-			log.Info().Msg("failed to parse")
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "server failed to migrate node Interface in the request"})
-			return
-		}
-
 	}
 
 	ensureOwner(c, req.TwinID)
@@ -420,31 +390,10 @@ func (s *Server) updateNodeHandler(c *gin.Context) {
 		return
 	}
 
-	bodyBytes, err := io.ReadAll(c.Request.Body)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
 	var req UpdateNodeRequest
-	if err := json.Unmarshal(bodyBytes, &req); err != nil {
-		// try old interfaces format
-		node := map[string]any{}
-		if err := json.Unmarshal(bodyBytes, &node); err != nil {
-			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
-			return
-		}
-		res, err := migrateInterfaces(node, UpdateNodeRequest{})
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-		var ok bool
-		req, ok = res.(UpdateNodeRequest)
-		if !ok {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "server failed to migrate node Interface in the request"})
-			return
-		}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
 	}
 
 	updatedNode := db.Node{
@@ -500,28 +449,10 @@ func (s *Server) uptimeReportHandler(c *gin.Context) {
 		return
 	}
 
-	bodyBytes, err := io.ReadAll(c.Request.Body)
-	if err != nil {
+	var req UptimeReportRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
-	}
-
-	var req UptimeReportRequest
-	if err := json.Unmarshal(bodyBytes, &req); err != nil {
-		// try old format
-
-		type oldReport struct {
-			Uptime    time.Duration `json:"uptime"`
-			Timestamp time.Time     `json:"timestamp"`
-		}
-
-		var old oldReport
-		if err := json.Unmarshal(bodyBytes, &old); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-		req.Uptime = uint64(old.Uptime)
-		req.Timestamp = old.Timestamp.Unix()
 	}
 
 	// Get node
@@ -894,59 +825,4 @@ func validateTimestampHint(timestampHint int64) error {
 	}
 
 	return nil
-}
-
-func migrateInterfaces(node map[string]any, t interface{}) (any, error) {
-	type oldInterface struct {
-		Name string `json:"name"`
-		Mac  string `json:"mac"`
-		IPs  string `json:"ips"`
-	}
-
-	var interfaces []db.Interface
-	rawInterfaces, ok := node["interfaces"].([]interface{})
-	if !ok {
-		return nil, fmt.Errorf("interfaces is not a list")
-	}
-
-	// Convert []interface{} to []oldInterface safely
-	interfaceBytes, err := json.Marshal(rawInterfaces)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal interfaces: %w", err)
-	}
-
-	var old []oldInterface
-	if err := json.Unmarshal(interfaceBytes, &old); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal into oldInterface: %w", err)
-	}
-
-	for _, i := range old {
-		ips := strings.Split(i.IPs, "/")
-		newInterface := db.Interface{
-			Name: i.Name,
-			Mac:  i.Mac,
-			IPs:  ips,
-		}
-		interfaces = append(interfaces, newInterface)
-	}
-
-	node["interfaces"] = interfaces
-	nodeByets, err := json.Marshal(node)
-	if err != nil {
-		return nil, err
-	}
-
-	switch reflect.TypeOf(t) {
-	case reflect.TypeOf(NodeRegistrationRequest{}):
-		var res NodeRegistrationRequest
-		err = json.Unmarshal(nodeByets, &res)
-		return res, err
-
-	case reflect.TypeOf(UpdateNodeRequest{}):
-		var res UpdateNodeRequest
-		err = json.Unmarshal(nodeByets, &res)
-		return res, err
-	}
-
-	return nil, errors.New("unsupported t type")
 }

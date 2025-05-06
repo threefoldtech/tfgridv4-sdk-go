@@ -619,62 +619,6 @@ func parseListNodeOpts(opts []ListNodeOpts) map[string]any {
 	return data
 }
 
-//
-// func migrateInterfaces(nodeMap map[string]any) (Node, error) {
-// 	type oldInterface struct {
-// 		Name string `json:"name"`
-// 		Mac  string `json:"mac"`
-// 		IPs  string `json:"ips"`
-// 	}
-//
-// 	rawInterfaces, ok := nodeMap["interfaces"].([]interface{})
-// 	if !ok {
-// 		return Node{}, fmt.Errorf("interfaces is not a list")
-// 	}
-//
-// 	interfaceBytes, err := json.Marshal(rawInterfaces)
-// 	if err != nil {
-// 		return Node{}, fmt.Errorf("failed to marshal interfaces: %w", err)
-// 	}
-//
-// 	var old []oldInterface
-// 	if err := json.Unmarshal(interfaceBytes, &old); err != nil {
-// 		return Node{}, errors.New("node interfaces doesn't implement either old or new Interface struct")
-// 	}
-// 	var newInterfaces []Interface
-// 	for _, ifs := range old {
-// 		ips := strings.Split(ifs.IPs, "/")
-// 		newI := Interface{
-// 			Name: ifs.Name,
-// 			Mac:  ifs.Mac,
-// 			IPs:  ips,
-// 		}
-// 		newInterfaces = append(newInterfaces, newI)
-// 	}
-// 	nodeMap["interfaces"] = newInterfaces
-//
-// 	encodedNode, err := json.Marshal(nodeMap)
-// 	if err != nil {
-// 		return Node{}, err
-// 	}
-//
-// 	var updatedNode Node
-// 	err = json.Unmarshal(encodedNode, updatedNode)
-//
-// 	return updatedNode, err
-// }
-
-/*
-*
-*
-*
-*
-*
-*
-*
-*
- */
-
 type oldInterfaceFormat struct {
 	Name string `json:"name"`
 	Mac  string `json:"mac"`
@@ -724,18 +668,6 @@ func createRequestBodyWithOldInterfaceFormat(node Node) (body bytes.Buffer, err 
 		Online:       node.Online,
 		Approved:     node.Approved,
 	}
-	//
-	// nodeBytes, err := json.Marshal(node)
-	// if err != nil {
-	// 	return
-	// }
-	//
-	// var nodeMap map[string]any
-	// err = json.Unmarshal(nodeBytes, &nodeMap)
-	// if err != nil {
-	// 	return
-	// }
-	// nodeMap["interfaces"] = oldInterfaces
 
 	err = json.NewEncoder(&body).Encode(oldFormatNode)
 	if err != nil {
@@ -776,40 +708,4 @@ func parseResponseBodyToNewInterfaceFormat(nodeBytes []byte) (Node, error) {
 		Online:       oldFormatNode.Online,
 		Approved:     oldFormatNode.Approved,
 	}, nil
-
-	// data, err := json.Marshal(newFormat)
-	// if err != nil {
-	// 	return Node{}, err
-	// }
-	//
-	// var genericInterface any
-	// if err := json.Unmarshal(data, &genericInterface); err != nil {
-	// 	return Node{}, err
-	// }
-	//
-	// var nodeMap map[string]any
-	// err = json.Unmarshal(nodeBytes, &nodeMap)
-	// if err != nil {
-	// 	return Node{}, err
-	// }
-	// nodeMap["interfaces"] = genericInterface
-	//
-	// encodedNode, err := json.Marshal(nodeMap)
-	// if err != nil {
-	// 	return Node{}, err
-	// }
-	//
-	// var node Node
-	// err = json.Unmarshal(encodedNode, &node)
-	// if err != nil {
-	// 	return Node{}, errors.Wrapf(err, "failed to Unmarshal here %+v", nodeMap)
-	// }
-	//
-	// return node, nil
 }
-
-// nodeBytes, err := json.Marshal(nodeMap)
-// if err != nil {
-// 	return Node{}, err
-// }
-//

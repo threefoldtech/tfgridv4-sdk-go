@@ -1,6 +1,7 @@
 package db
 
 import (
+	"encoding/json"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -33,7 +34,8 @@ func (db Database) autoMigrate() error {
 
 func (db Database) migrateNodes() error {
 	// if nodes are already migrated skip migration
-	if result := db.gormDB.First(&Node{}); result.Error == nil {
+	var nodes []Node
+	if result := db.gormDB.Model(&Node{}).Find(&nodes); result.Error == nil {
 		log.Info().Msg("nodes Interfaces are already migrated")
 		return nil
 	}
@@ -54,7 +56,27 @@ func (db Database) migrateNodes() error {
 	return db.Transaction(func(tx *gorm.DB) error {
 		var nodes []nodeType
 		if err := tx.Model(&Node{}).Find(&nodes).Error; err != nil {
-			return err
+			// if it has an error then it's dev net bug we need to fix it
+			type faultyNodeType struct {
+				NodeID     uint64    `json:"node_id" gorm:"primaryKey"`
+				Interfaces Interface `gorm:"type:jsonb;serializer:json"`
+			}
+
+			var faultyNodes []faultyNodeType
+			if err := tx.Model(&Node{}).Find(&faultyNodes).Error; err != nil {
+				return err
+			}
+
+			nodes = []nodeType{}
+			for _, n := range faultyNodes {
+				i := oldInterface{
+					Name: n.Interfaces.Name,
+					Mac:  n.Interfaces.Mac,
+					IPs:  strings.Join(n.Interfaces.IPs, "/"),
+				}
+
+				nodes = append(nodes, nodeType{NodeID: n.NodeID, Interfaces: []oldInterface{i}})
+			}
 		}
 
 		for _, node := range nodes {
@@ -69,17 +91,24 @@ func (db Database) migrateNodes() error {
 				interfaces = append(interfaces, newInterface)
 			}
 
-			// skip the node if it has no interfaces
-			if len(interfaces) != 0 {
-				// Update only the interfaces field
-				if err := tx.Model(&Node{}).
-					Where("node_id = ?", node.NodeID).
-					Update("interfaces", interfaces).Error; err != nil {
-					return err // This will roll back the entire transaction
-				}
-
-				log.Info().Uint64("node_id", node.NodeID).Msg("Migration: updating node")
+			// if node has no interfaces set it to empty interface
+			if len(interfaces) == 0 {
+				interfaces = append(interfaces, Interface{})
 			}
+
+			// Update only the interfaces field
+			// Marshal the interfaces slice into JSON format
+			jsonData, err := json.Marshal(interfaces)
+			if err != nil {
+				return err
+			}
+			if err := tx.Model(&Node{}).
+				Where("node_id = ?", node.NodeID).
+				Update("interfaces", jsonData).Error; err != nil {
+				return err // This will roll back the entire transaction
+			}
+
+			log.Info().Uint64("node_id", node.NodeID).Msg("Migration: updating node")
 
 		}
 

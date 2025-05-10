@@ -6,7 +6,7 @@ This is a `Go` example for the `RMB` [peer router using direct client](https://g
 
 To use the example, you needs to:
 
--   Set the mnemonics variable to a valid mnemonics for client peer and server, with an activated account on the TFChain.
+-   Set the mnemonics variable to a valid mnemonics for client peer and server, with an activated account on the Registrar.
 -   set the client peer destination twin and session with the ones of the created peer router.
 -   make sure you are running the server before the client peer.
    

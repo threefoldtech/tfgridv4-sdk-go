@@ -10,17 +10,14 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
-	substrate "github.com/threefoldtech/tfchain/clients/tfchain-client-go"
 
-	"github.com/threefoldtech/tfgrid-sdk-go/rmb-sdk-go/peer"
-	"github.com/threefoldtech/tfgrid-sdk-go/rmb-sdk-go/peer/types"
-	// "rmbClient/peer"
+	"github.com/threefoldtech/tfgridv4-sdk-go/rmb-sdk-go/peer"
+	"github.com/threefoldtech/tfgridv4-sdk-go/rmb-sdk-go/peer/types"
 )
 
 const (
-	chainUrl = "wss://tfchain.grid.tf/"
 	relayUrl = "ws://localhost:"
-	mnemonic = "<mnemonic>"
+	mnemonic = "<mnemonics goes here>"
 )
 
 type Node struct {
@@ -32,8 +29,6 @@ var static = []uint32{7, 9, 10, 13, 14, 16, 22, 23, 24, 27, 29, 35, 46, 47, 69, 
 const use_static = true
 
 func main() {
-	subMan := substrate.NewManager(chainUrl)
-
 	count := 500
 	var wg sync.WaitGroup
 	wg.Add(count)
@@ -61,8 +56,8 @@ func main() {
 
 	bus, err := peer.NewPeer(context.Background(),
 		mnemonic,
-		subMan,
 		handler,
+		peer.WithRegistrarUrl("https://registrar.dev4.grid.tf"),
 		peer.WithKeyType(peer.KeyTypeSr25519),
 		peer.WithSession("rmb-playground999"),
 		peer.WithInMemoryExpiration(10*60*60), // in seconds that's 10 hours

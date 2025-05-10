@@ -1,3 +1,6 @@
 go 1.21.0
 
-use ./node-registrar
+use (
+	./node-registrar
+	./rmb-sdk-go
+)

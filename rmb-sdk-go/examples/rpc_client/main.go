@@ -6,8 +6,7 @@ import (
 	"log"
 	"time"
 
-	substrate "github.com/threefoldtech/tfchain/clients/tfchain-client-go"
-	"github.com/threefoldtech/tfgrid-sdk-go/rmb-sdk-go/peer"
+	"github.com/threefoldtech/tfgridv4-sdk-go/rmb-sdk-go/peer"
 )
 
 type version struct {
@@ -16,13 +15,15 @@ type version struct {
 }
 
 func app() error {
-	mnemonics := "<mnemonics goes here>"
-	subNodeURL := "wss://tfchain.dev.grid.tf/ws"
-	relayURL := "wss://relay.dev.grid.tf"
+	mnemonic := "<mnemonics goes here>"
 
-	subManager := substrate.NewManager(subNodeURL)
-
-	client, err := peer.NewRpcClient(context.Background(), mnemonics, subManager, peer.WithRelay(relayURL), peer.WithSession("test-client"))
+	client, err := peer.NewRpcClient(
+		context.Background(),
+		mnemonic,
+		peer.WithRegistrarUrl("https://registrar.dev4.grid.tf"),
+		peer.WithRelay("wss://relay.dev.grid.tf"),
+		peer.WithSession("test-client"),
+	)
 	if err != nil {
 		return fmt.Errorf("failed to create direct client: %w", err)
 	}

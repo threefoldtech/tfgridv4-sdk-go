@@ -7,26 +7,25 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
-	substrate "github.com/threefoldtech/tfchain/clients/tfchain-client-go"
-	"github.com/threefoldtech/tfgrid-sdk-go/rmb-sdk-go/peer"
-	"github.com/threefoldtech/tfgrid-sdk-go/rmb-sdk-go/peer/types"
+	"github.com/threefoldtech/tfgridv4-sdk-go/rmb-sdk-go/peer"
+	"github.com/threefoldtech/tfgridv4-sdk-go/rmb-sdk-go/peer/types"
 )
 
 var resultsChan = make(chan bool)
 
 func app() error {
-	mnemonics := "<mnemonics goes here>"
-	subManager := substrate.NewManager("wss://tfchain.dev.grid.tf/ws")
+	mnemonic := "<mnemonics goes here>"
 	ctx := context.Background()
 
 	peer, err := peer.NewPeer(
 		ctx,
-		mnemonics,
-		subManager,
+		mnemonic,
 		relayCallback,
+		peer.WithRegistrarUrl("https://registrar.dev4.grid.tf"),
 		peer.WithRelay("wss://relay.dev.grid.tf"),
 		peer.WithSession("test-client"),
 		peer.WithInMemoryExpiration(6*60*60), // six hours
+		peer.WithKeyType(peer.KeyTypeEd25519),
 	)
 
 	if err != nil {

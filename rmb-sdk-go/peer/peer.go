@@ -19,10 +19,12 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
-	substrate "github.com/threefoldtech/tfchain/clients/tfchain-client-go"
-	"github.com/threefoldtech/tfgrid-sdk-go/rmb-sdk-go"
-	"github.com/threefoldtech/tfgrid-sdk-go/rmb-sdk-go/peer/encoder"
-	"github.com/threefoldtech/tfgrid-sdk-go/rmb-sdk-go/peer/types"
+	"github.com/threefoldtech/tfgridv4-sdk-go/rmb-sdk-go"
+	"github.com/threefoldtech/tfgridv4-sdk-go/rmb-sdk-go/peer/encoder"
+	"github.com/threefoldtech/tfgridv4-sdk-go/rmb-sdk-go/peer/types"
+	"github.com/vedhavyas/go-subkey/v2"
+	"github.com/vedhavyas/go-subkey/v2/ed25519"
+	"github.com/vedhavyas/go-subkey/v2/sr25519"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -35,10 +37,11 @@ const (
 // messages. An error can be non-nil error if verification or decryption failed
 type Handler func(ctx context.Context, peer *Peer, env *types.Envelope, err error)
 
-type cacheFactory = func(inner TwinDB, chainURL string) (TwinDB, error)
+type cacheFactory = func(inner TwinDB) (TwinDB, error)
 
 type peerCfg struct {
 	relayURLs        []string
+	registrarUrl     string
 	keyType          string
 	session          string
 	enableEncryption bool
@@ -69,6 +72,13 @@ func WithRelay(urls ...string) PeerOpt {
 	}
 }
 
+// WithRelay set up the relay url, default is mainnet relay
+func WithRegistrarUrl(url string) PeerOpt {
+	return func(p *peerCfg) {
+		p.registrarUrl = url
+	}
+}
+
 // WithKeyType set up the mnemonic key type, default is Sr25519
 func WithKeyType(keyType string) PeerOpt {
 	return func(p *peerCfg) {
@@ -91,8 +101,8 @@ func WithEncoder(encoder encoder.Encoder) PeerOpt {
 // if ttl == 0, twins are cached forever
 func WithTmpCacheExpiration(ttl uint64) PeerOpt {
 	return func(pc *peerCfg) {
-		pc.cacheFactory = func(inner TwinDB, chainURL string) (TwinDB, error) {
-			return newTmpCache(ttl, inner, chainURL)
+		pc.cacheFactory = func(inner TwinDB) (TwinDB, error) {
+			return newTmpCache(ttl, inner)
 		}
 	}
 }
@@ -100,7 +110,7 @@ func WithTmpCacheExpiration(ttl uint64) PeerOpt {
 // if ttl == 0 twins are cached forever
 func WithInMemoryExpiration(ttl uint64) PeerOpt {
 	return func(pc *peerCfg) {
-		pc.cacheFactory = func(inner TwinDB, chainURL string) (TwinDB, error) {
+		pc.cacheFactory = func(inner TwinDB) (TwinDB, error) {
 			return newInMemoryCache(inner, ttl), nil
 		}
 	}
@@ -109,7 +119,7 @@ func WithInMemoryExpiration(ttl uint64) PeerOpt {
 // Peer exposes the functionality to talk directly to an rmb relay
 type Peer struct {
 	source  *types.Address
-	signer  substrate.Identity
+	signer  subkey.KeyPair
 	twinDB  TwinDB
 	privKey *secp256k1.PrivateKey
 	reader  Reader
@@ -119,27 +129,22 @@ type Peer struct {
 	relays  []string
 }
 
-func generateSecureKey(identity substrate.Identity) (*secp256k1.PrivateKey, error) {
-	keyPair, err := identity.KeyPair()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to generate identity key pair")
-	}
-
+func generateSecureKey(keyPair subkey.KeyPair) (*secp256k1.PrivateKey, error) {
 	priv := secp256k1.PrivKeyFromBytes(keyPair.Seed())
 	return priv, nil
 }
 
-func getIdentity(keytype string, mnemonics string) (substrate.Identity, error) {
-	var identity substrate.Identity
+func getIdentity(keyType string, mnemonic string) (subkey.KeyPair, error) {
+	var identity subkey.KeyPair
 	var err error
 
-	switch keytype {
+	switch keyType {
 	case KeyTypeEd25519:
-		identity, err = substrate.NewIdentityFromEd25519Phrase(mnemonics)
+		identity, err = subkey.DeriveKeyPair(ed25519.Scheme{}, mnemonic)
 	case KeyTypeSr25519:
-		identity, err = substrate.NewIdentityFromSr25519Phrase(mnemonics)
+		identity, err = subkey.DeriveKeyPair(sr25519.Scheme{}, mnemonic)
 	default:
-		return nil, fmt.Errorf("invalid key type %s, should be one of %s or %s ", keytype, KeyTypeEd25519, KeyTypeSr25519)
+		return nil, fmt.Errorf("invalid key type %s, should be one of %s or %s ", keyType, KeyTypeEd25519, KeyTypeSr25519)
 	}
 
 	if err != nil {
@@ -156,17 +161,17 @@ func getIdentity(keytype string, mnemonics string) (substrate.Identity, error) {
 // Call() will panic if called while the directClient's context is canceled.
 func NewPeer(
 	ctx context.Context,
-	mnemonics string,
-	subManager substrate.Manager,
+	mnemonic string,
 	handler Handler,
 	opts ...PeerOpt,
 ) (*Peer, error) {
 	cfg := &peerCfg{
 		relayURLs:        []string{"wss://relay.grid.tf"},
+		registrarUrl:     "https://registrar.prod4.grid.tf",
 		session:          "",
 		enableEncryption: true,
 		keyType:          KeyTypeSr25519,
-		cacheFactory: func(inner TwinDB, _ string) (TwinDB, error) {
+		cacheFactory: func(inner TwinDB) (TwinDB, error) {
 			return newInMemoryCache(inner, 0), nil
 		},
 	}
@@ -178,27 +183,18 @@ func NewPeer(
 	if cfg.encoder == nil {
 		cfg.encoder = encoder.NewJSONEncoder()
 	}
-	identity, err := getIdentity(cfg.keyType, mnemonics)
+
+	identity, err := getIdentity(cfg.keyType, mnemonic)
 	if err != nil {
 		return nil, err
 	}
 
-	subConn, err := subManager.Substrate()
+	twinDB, err := cfg.cacheFactory(NewTwinDB(cfg.registrarUrl))
 	if err != nil {
 		return nil, err
 	}
 
-	api, _, err := subConn.GetClient()
-	if err != nil {
-		return nil, err
-	}
-
-	twinDB, err := cfg.cacheFactory(NewTwinDB(subConn), api.Client.URL())
-	if err != nil {
-		return nil, err
-	}
-
-	id, err := twinDB.GetByPk(identity.PublicKey())
+	id, err := twinDB.GetByPk(identity.Public())
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get twin by public key")
 	}
@@ -233,11 +229,9 @@ func NewPeer(
 	sort.Slice(relayURLs, func(i, j int) bool { return strings.ToLower(relayURLs[i]) < strings.ToLower(relayURLs[j]) })
 	relayURLs = slices.Compact(relayURLs)
 
-	joinURLs := strings.Join(relayURLs, "_")
-
-	if !bytes.Equal(twin.E2EKey, publicKey) || twin.Relay == nil || joinURLs != *twin.Relay {
-		log.Info().Str("Relay url/s", joinURLs).Msg("twin relay/public key didn't match, updating on chain ...")
-		if _, err = subConn.UpdateTwin(identity, joinURLs, publicKey); err != nil {
+	if !bytes.Equal(twin.E2EKey, publicKey) || twin.Relay == nil || relayURLs[0] != *twin.Relay { // TODO: multiple relays (slice?)
+		log.Info().Strs("Relay url/s", relayURLs).Msg("twin relay/public key didn't match, updating on registrar ...")
+		if err = UpdateTwin(twin.ID, cfg.registrarUrl, identity, publicKey, relayURLs); err != nil {
 			return nil, errors.Wrap(err, "could not update twin relay information")
 		}
 	}

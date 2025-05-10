@@ -1,9 +1,4 @@
-DIRS := "node-registrar"
-
-mainnet-release:
-	cd grid-client && go get github.com/threefoldtech/tfchain/clients/tfchain-client-go@5d6a2dd
-	go work sync
-	make tidy
+DIRS := "node-registrar" "rmb-sdk-go"
 
 release-rmb:
 	@echo "Release RMB..." 

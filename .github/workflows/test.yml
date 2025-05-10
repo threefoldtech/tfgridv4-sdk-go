@@ -30,3 +30,4 @@ jobs:
       matrix:
         dir:
           - node-registrar
+          - rmb-sdk-go

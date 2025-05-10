@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/rs/zerolog/log"
-	"github.com/threefoldtech/tfgrid-sdk-go/rmb-sdk-go"
-	"github.com/threefoldtech/tfgrid-sdk-go/rmb-sdk-go/peer/types"
+	"github.com/threefoldtech/tfgridv4-sdk-go/rmb-sdk-go"
+	"github.com/threefoldtech/tfgridv4-sdk-go/rmb-sdk-go/peer/types"
 )
 
 var (

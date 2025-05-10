@@ -7,18 +7,17 @@ import (
 	gomock "github.com/golang/mock/gomock"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
-	substrate "github.com/threefoldtech/tfchain/clients/tfchain-client-go"
-	"github.com/threefoldtech/tfgrid-sdk-go/rmb-sdk-go/peer/types"
+	"github.com/threefoldtech/tfgridv4-sdk-go/rmb-sdk-go/peer/types"
+	"github.com/vedhavyas/go-subkey/v2"
+	"github.com/vedhavyas/go-subkey/v2/sr25519"
 )
 
 const sigVerifyAccMnemonics = "garage dad improve reunion girl saddle theory know label reason fantasy deputy"
 const sigVerifyAccTwinID = uint32(1171)
 
-var sigVerifyAccAddress = "5CtwsdH1ggRAgCv2GVfBviWywHzwsYJvhPWhmShpx2DGnb6B"
-
 func TestSignature(t *testing.T) {
 
-	identity, err := substrate.NewIdentityFromSr25519Phrase(sigVerifyAccMnemonics)
+	identity, err := subkey.DeriveKeyPair(sr25519.Scheme{}, sigVerifyAccMnemonics)
 	if err != nil {
 		t.Fatalf("could not init new identity: %s", err)
 	}
@@ -52,13 +51,10 @@ func TestSignature(t *testing.T) {
 		env.Signature, err = Sign(identity, toSign)
 		assert.NoError(t, err)
 
-		account, err := substrate.FromAddress(sigVerifyAccAddress)
-		assert.NoError(t, err)
-
 		twinDB := NewMockTwinDB(ctrl)
 		twinDB.EXPECT().Get(sigVerifyAccTwinID).Return(Twin{
 			ID:        sigVerifyAccTwinID,
-			PublicKey: account.PublicKey(),
+			PublicKey: identity.Public(),
 		}, nil)
 
 		err = VerifySignature(twinDB, &env)
@@ -97,13 +93,10 @@ func TestSignature(t *testing.T) {
 
 		env.Signature = []byte("s13p49fnaskdjnv")
 
-		account, err := substrate.FromAddress(sigVerifyAccAddress)
-		assert.NoError(t, err)
-
 		twinDB := NewMockTwinDB(ctrl)
 		twinDB.EXPECT().Get(sigVerifyAccTwinID).Return(Twin{
 			ID:        sigVerifyAccTwinID,
-			PublicKey: account.PublicKey(),
+			PublicKey: identity.Public(),
 		}, nil)
 
 		err = VerifySignature(twinDB, &env)

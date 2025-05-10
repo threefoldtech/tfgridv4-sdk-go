@@ -13,7 +13,7 @@ rmb-peer -m "<mnemonics>"
 ```
 
 > Can be added to the system service with systemd so it can be running all the time.\
-> run `rmb-peer -h` to customize the peer, including which relay and which tfchain to connect to.
+> run `rmb-peer -h` to customize the peer, including which relay and which registrar to connect to.
 
 ## Example
 

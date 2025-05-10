@@ -7,9 +7,8 @@ import (
 	"fmt"
 	"os"
 
-	substrate "github.com/threefoldtech/tfchain/clients/tfchain-client-go"
-	"github.com/threefoldtech/tfgrid-sdk-go/rmb-sdk-go"
-	"github.com/threefoldtech/tfgrid-sdk-go/rmb-sdk-go/peer"
+	"github.com/threefoldtech/tfgridv4-sdk-go/rmb-sdk-go"
+	"github.com/threefoldtech/tfgridv4-sdk-go/rmb-sdk-go/peer"
 )
 
 func app() error {
@@ -59,8 +58,7 @@ func app() error {
 	})
 
 	// adding a peer for the router
-	mnemonics := "<mnemonics goes here>"
-	subManager := substrate.NewManager("wss://tfchain.dev.grid.tf/ws")
+	mnemonic := "<mnemonics goes here>"
 	ctx := context.Background()
 
 	// this peer will be a 'calculator' session.
@@ -68,11 +66,12 @@ func app() error {
 	// session id to use when they are making calls
 	_, err := peer.NewPeer(
 		ctx,
-		mnemonics,
-		subManager,
+		mnemonic,
 		router.Serve,
+		peer.WithRegistrarUrl("https://registrar.dev4.grid.tf"),
 		peer.WithRelay("wss://relay.dev.grid.tf"),
 		peer.WithSession("calculator"),
+		peer.WithKeyType(peer.KeyTypeEd25519),
 	)
 
 	if err != nil {

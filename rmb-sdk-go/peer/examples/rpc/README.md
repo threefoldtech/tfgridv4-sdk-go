@@ -6,7 +6,7 @@ This is a `Go` example for the `RMB` [rpc client](https://github.com/threefoldte
 
 To use the example, you needs to:
 
--   Set the mnemonics variable to a valid mnemonics, with an activated account on the TFChain.
+-   Set the mnemonics variable to a valid mnemonics, with an activated account on the Registrar.
 -   A twinId of a remote calculator process that could add two integers
 
 ## Usage

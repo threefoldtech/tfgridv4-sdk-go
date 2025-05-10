@@ -1,17 +1,19 @@
 package peer
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"net/url"
+	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
-	substrate "github.com/threefoldtech/tfchain/clients/tfchain-client-go"
+	"github.com/vedhavyas/go-subkey/v2"
 )
 
 var (
@@ -28,48 +30,166 @@ type TwinDB interface {
 type Twin struct {
 	ID        uint32
 	PublicKey []byte
-	Relay     *string
+	Relay     *string // TODO: multiple relays (slice?)
 	E2EKey    []byte
 	Timestamp uint64
 }
 
+type RegistrarTwin struct {
+	TwinID    uint64   `json:"twin_id"`
+	Relays    []string `json:"relays"`
+	RMBEncKey string   `json:"rmb_enc_key"`
+	PublicKey string   `json:"public_key"`
+}
+
 type twinDB struct {
-	subConn *substrate.Substrate
+	httpClient   *http.Client
+	registrarUrl string
 }
 
 // NewTwinDB creates a new twinDBImpl instance, with a non expiring cache.
-func NewTwinDB(subConn *substrate.Substrate) TwinDB {
+func NewTwinDB(registrarUrl string) TwinDB {
 	return &twinDB{
-		subConn: subConn,
+		httpClient:   &http.Client{},
+		registrarUrl: registrarUrl,
 	}
+}
+
+type updateTwin struct {
+	Relays    []string `json:"relays"`
+	RMBEncKey string   `json:"rmb_enc_key"`
 }
 
 // GetTwin gets Twin from cache if present. if not, gets it from substrate client and caches it.
 func (t *twinDB) Get(id uint32) (Twin, error) {
-	substrateTwin, err := t.subConn.GetTwin(id)
+	req, err := http.NewRequest(
+		"GET",
+		fmt.Sprintf("%s/v1/accounts?twin_id=%v", t.registrarUrl, id),
+		nil,
+	)
+	if err != nil {
+		return Twin{}, errors.Wrap(err, "could not create new request")
+	}
+
+	resp, err := t.httpClient.Do(req)
 	if err != nil {
 		return Twin{}, errors.Wrapf(err, "could not get twin with id %d", id)
+	}
+	defer resp.Body.Close()
+
+	var registrarTwin RegistrarTwin
+	if err = json.NewDecoder(resp.Body).Decode(&registrarTwin); err != nil {
+		return Twin{}, err
 	}
 
 	var relay *string
 
-	if substrateTwin.Relay.HasValue {
-		relay = &substrateTwin.Relay.AsValue
+	if len(registrarTwin.Relays) > 0 {
+		relay = &registrarTwin.Relays[0] // TODO: will relays be a slice???
 	}
 
-	_, PK := substrateTwin.Pk.Unwrap()
+	pk, err := base64.StdEncoding.DecodeString(registrarTwin.PublicKey)
+	if err != nil {
+		return Twin{}, err
+	}
+
+	e2ePK, err := base64.StdEncoding.DecodeString(registrarTwin.RMBEncKey)
+	if err != nil {
+		return Twin{}, err
+	}
+
 	twin := Twin{
 		ID:        id,
-		PublicKey: substrateTwin.Account.PublicKey(),
+		PublicKey: pk,
 		Relay:     relay,
-		E2EKey:    PK,
+		E2EKey:    e2ePK,
 	}
 
 	return twin, nil
 }
 
 func (t *twinDB) GetByPk(pk []byte) (uint32, error) {
-	return t.subConn.GetTwinByPubKey(pk)
+	req, err := http.NewRequest(
+		"GET",
+		fmt.Sprintf("%s/v1/accounts", t.registrarUrl),
+		nil,
+	)
+	if err != nil {
+		return 0, errors.Wrap(err, "could not create new request")
+	}
+
+	q := req.URL.Query()
+	q.Add("public_key", base64.StdEncoding.EncodeToString(pk))
+	req.URL.RawQuery = q.Encode()
+
+	resp, err := t.httpClient.Do(req)
+	if err != nil {
+		return 0, errors.Wrap(err, "could not get twin")
+	}
+	defer resp.Body.Close()
+
+	var registrarTwin RegistrarTwin
+	if err = json.NewDecoder(resp.Body).Decode(&registrarTwin); err != nil {
+		return 0, err
+	}
+
+	return uint32(registrarTwin.TwinID), nil
+}
+
+func UpdateTwin(twinID uint32, registrarUrl string, kp subkey.KeyPair, rmbEncKey []byte, relays []string) error {
+	client := &http.Client{}
+
+	timestamp := time.Now().Unix()
+	challenge := []byte(fmt.Sprintf("%d:%v", timestamp, twinID))
+	signature, err := kp.Sign(challenge)
+	if err != nil {
+		return err
+	}
+
+	updates := updateTwin{
+		Relays:    relays,
+		RMBEncKey: base64.StdEncoding.EncodeToString(rmbEncKey),
+	}
+
+	jsonData, err := json.Marshal(updates)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest(
+		"PATCH",
+		fmt.Sprintf("%s/v1/accounts/%v", registrarUrl, twinID),
+		strings.NewReader(string(jsonData)),
+	)
+	if err != nil {
+		return errors.Wrap(err, "could not create new request")
+	}
+
+	authHeader := fmt.Sprintf(
+		"%s:%s",
+		base64.StdEncoding.EncodeToString(challenge),
+		base64.StdEncoding.EncodeToString(signature),
+	)
+
+	req.Header.Set("X-Auth", authHeader)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+
+	if resp == nil {
+		return errors.New("failed to update twin, no response received")
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("request failed with %d", resp.StatusCode)
+	}
+
+	return nil
 }
 
 // if ttl == 0, then the data will stay forever
@@ -126,12 +246,8 @@ type tmpCache struct {
 	inner TwinDB
 }
 
-func newTmpCache(ttl uint64, inner TwinDB, chainURL string) (TwinDB, error) {
-	u, err := url.Parse(chainURL)
-	if err != nil {
-		return nil, err
-	}
-	path := filepath.Join(os.TempDir(), "rmb-cache", u.Host)
+func newTmpCache(ttl uint64, inner TwinDB) (TwinDB, error) {
+	path := filepath.Join(os.TempDir(), "rmb-cache")
 	if err := os.MkdirAll(path, 0755); err != nil {
 		return nil, err
 	}

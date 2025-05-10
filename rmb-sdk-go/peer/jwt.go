@@ -2,11 +2,13 @@ package peer
 
 import (
 	"encoding/base64"
+	"errors"
 	"fmt"
+	"reflect"
 	"time"
 
 	"github.com/golang-jwt/jwt"
-	substrate "github.com/threefoldtech/tfchain/clients/tfchain-client-go"
+	"github.com/vedhavyas/go-subkey/v2"
 )
 
 const CustomSigning = "RMB"
@@ -22,9 +24,9 @@ func (s *RmbSigner) Verify(signingString, signature string, key interface{}) err
 }
 
 func (s *RmbSigner) Sign(signingString string, key interface{}) (string, error) {
-	identity, ok := key.(substrate.Identity)
+	identity, ok := key.(subkey.KeyPair)
 	if !ok {
-		return "", fmt.Errorf("invalid key expecting substrate identity")
+		return "", fmt.Errorf("invalid key expecting subkey keypair")
 	}
 
 	signature, err := Sign(identity, []byte(signingString))
@@ -39,7 +41,7 @@ func (s *RmbSigner) Alg() string {
 	return "RS512"
 }
 
-func NewJWT(identity substrate.Identity, id uint32, session string, ttl uint32) (string, error) {
+func NewJWT(identity subkey.KeyPair, id uint32, session string, ttl uint32) (string, error) {
 	now := time.Now().Unix()
 	claims := jwt.MapClaims{
 		"sub": id,
@@ -54,14 +56,37 @@ func NewJWT(identity substrate.Identity, id uint32, session string, ttl uint32) 
 	return token.SignedString(identity)
 }
 
-func Sign(signer substrate.Identity, input []byte) ([]byte, error) {
+func Sign(signer subkey.KeyPair, input []byte) ([]byte, error) {
 	signature, err := signer.Sign(input)
 	if err != nil {
 		return nil, err
 	}
 	withType := make([]byte, len(signature)+1)
 
-	withType[0] = signer.Type()[0] // edIdentity will return e, while sr will be s
+	keyType, err := getKeyPairType(signer)
+	if err != nil {
+		return nil, err
+	}
+
+	if keyType == KeyTypeSr25519 {
+		withType[0] = []byte("s")[0] // edIdentity will return e, while sr will be s
+	}
+
+	if keyType == KeyTypeEd25519 {
+		withType[0] = []byte("e")[0] // edIdentity will return e, while sr will be s
+	}
+
 	copy(withType[1:], signature)
 	return withType, nil
+}
+
+func getKeyPairType(pair subkey.KeyPair) (string, error) {
+	switch reflect.TypeOf(pair).String() {
+	case "*sr25519.keyRing":
+		return KeyTypeSr25519, nil
+	case "ed25519.keyRing":
+		return KeyTypeEd25519, nil
+	default:
+		return "", errors.New("unknown key type")
+	}
 }

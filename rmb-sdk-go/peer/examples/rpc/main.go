@@ -7,18 +7,16 @@ import (
 
 	"log"
 
-	substrate "github.com/threefoldtech/tfchain/clients/tfchain-client-go"
-	"github.com/threefoldtech/tfgrid-sdk-go/rmb-sdk-go/peer"
+	"github.com/threefoldtech/tfgridv4-sdk-go/rmb-sdk-go/peer"
 )
 
 func app() error {
-	mnemonics := "<mnemonics goes here>"
-	subManager := substrate.NewManager("wss://tfchain.dev.grid.tf/ws")
+	mnemonic := "<mnemonics goes here>"
 
 	client, err := peer.NewRpcClient(
 		context.Background(),
-		mnemonics,
-		subManager,
+		mnemonic,
+		peer.WithRegistrarUrl("https://registrar.dev4.grid.tf"),
 		peer.WithKeyType(peer.KeyTypeSr25519),
 		peer.WithRelay("wss://relay.dev.grid.tf"),
 		peer.WithSession("test-client"),

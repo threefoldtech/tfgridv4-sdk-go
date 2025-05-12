@@ -2,6 +2,7 @@
 package cmd
 
 import (
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/threefoldtech/tfgrid4-sdk-go/registrar-cli/internal/cmd"
@@ -14,26 +15,25 @@ var accountGetCmd = &cobra.Command{
 	RunE: func(cobraCmd *cobra.Command, args []string) error {
 		network, err := cobraCmd.Flags().GetString("network")
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to get network flag")
 		}
 
 		twinID, err := cobraCmd.Flags().GetUint64("twin-id")
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to get twin-id flag")
 		}
 
 		pk, err := cobraCmd.Flags().GetString("public-key")
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to get public-key flag")
 		}
 
 		account, err := cmd.GetAccount(network, twinID, pk)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to get account")
 		}
 
 		log.Info().Any("account", account).Send()
-
 		return nil
 	},
 }

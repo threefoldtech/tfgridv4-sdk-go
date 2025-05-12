@@ -3,18 +3,19 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/pkg/errors"
 	"github.com/threefoldtech/tfgrid4-sdk-go/node-registrar/client"
 )
 
 func GetNode(network string, nodeID, twinID uint64) (node client.Node, err error) {
 	u, ok := urls[network]
 	if !ok {
-		return node, fmt.Errorf("invalid network %s", network)
+		return node, fmt.Errorf("invalid network %s (must be one of: dev, qa, test, main)", network)
 	}
 
 	cli, err := client.NewRegistrarClient(u)
 	if err != nil {
-		return
+		return node, errors.Wrap(err, "client initialization failed")
 	}
 
 	if nodeID != 0 {
@@ -29,7 +30,7 @@ func GetNode(network string, nodeID, twinID uint64) (node client.Node, err error
 			return
 		}
 	} else {
-		return node, fmt.Errorf("you need to provide either twin id or node id to load a node")
+		return client.Node{}, fmt.Errorf("you need to provide either twin id or node id to load a node")
 	}
 
 	return

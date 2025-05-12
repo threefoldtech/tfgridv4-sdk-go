@@ -2,6 +2,7 @@
 package cmd
 
 import (
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/threefoldtech/tfgrid4-sdk-go/registrar-cli/internal/cmd"
@@ -14,26 +15,25 @@ var nodeGetCmd = &cobra.Command{
 	RunE: func(cobraCmd *cobra.Command, args []string) error {
 		network, err := cobraCmd.Flags().GetString("network")
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to get network flag")
 		}
 
 		nodeID, err := cobraCmd.Flags().GetUint64("node-id")
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to get node-id flag")
 		}
 
 		twinID, err := cobraCmd.Flags().GetUint64("twin-id")
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to get twin-id flag")
 		}
 
 		node, err := cmd.GetNode(network, nodeID, twinID)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to get node")
 		}
 
 		log.Info().Any("node", node).Send()
-
 		return nil
 	},
 }

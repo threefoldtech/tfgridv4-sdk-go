@@ -61,7 +61,7 @@ Account command represents events on account on Threefold grid4
 ➜  ./registrar-cli account get --network dev --twin-id 33
 5:00PM INF account={"public_key":"w5TYTeB/rCskd1iNrOKaFlpGn+Cp28gFZobTNABUv50=","relays":[],"rmb_enc_key":"","twin_id":33}
 ➜
-➜  ./registrar-cli account get --network dev --public-key <public-key> 
+➜  ./registrar-cli account get --network dev --public-key <public-key>
 5:01PM INF account={"public_key":"w5TYTeB/rCskd1iNrOKaFlpGn+Cp28gFZobTNABUv50=","relays":[],"rmb_enc_key":"","twin_id":33}
 ```
 
@@ -92,7 +92,7 @@ Farm command represents events on farms on Threefold grid4
 
 **Flags**:
 
-- `--farm_name` (required): The name of the farm to create.
+- `--farm-name` (required): The name of the farm to create.
 - `--network` (required): Specifies the network (`dev`, `qa`, `test`, `main`).
 - `--mnemonic`  (required): Account mnemonic.
 - `--dedicated` (optional default: false): is the farm dedicated.
@@ -125,7 +125,7 @@ Farm command represents events on farms on Threefold grid4
 - `--network` (required): Specifies the network (`dev`, `qa`, `test`, `main`).
 - `--mnemonic`  (required): Account mnemonic.
 - `--farm-id` (optional): id of the farm needed to be loaded.
-- `--farm_name` (optional): The new name of the farm.
+- `--farm-name` (optional): The new name of the farm.
 - `--dedicated` (optional): update the farm to dedicated.
 
 **Example Usage**:

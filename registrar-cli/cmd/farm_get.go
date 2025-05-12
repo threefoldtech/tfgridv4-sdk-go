@@ -2,8 +2,7 @@
 package cmd
 
 import (
-	"fmt"
-
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/threefoldtech/tfgrid4-sdk-go/registrar-cli/internal/cmd"
@@ -16,21 +15,21 @@ var farmGetCmd = &cobra.Command{
 	RunE: func(cobraCmd *cobra.Command, args []string) error {
 		network, err := cobraCmd.Flags().GetString("network")
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to get network flag")
 		}
 
 		farmID, err := cobraCmd.Flags().GetUint64("farm-id")
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to get farm-id flag")
 		}
 
 		if farmID == 0 {
-			return fmt.Errorf("you need to provide farm id to load a farm")
+			return errors.New("farm id is required (use --farm-id flag with a non-zero value)")
 		}
 
 		farm, err := cmd.GetFarm(network, farmID)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to get farm")
 		}
 
 		log.Info().Any("farm", farm).Send()

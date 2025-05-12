@@ -3,25 +3,31 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/pkg/errors"
 	"github.com/threefoldtech/tfgrid4-sdk-go/node-registrar/client"
 )
 
 func CreateFarm(mnemonic, network, farmName, stellarAddress string, dedicated bool) (farmID uint64, err error) {
 	u, ok := urls[network]
 	if !ok {
-		return farmID, fmt.Errorf("invalid network %s", network)
+		return farmID, fmt.Errorf("invalid network %s (must be one of: dev, qa, test, main)", network)
 	}
 
 	if len(mnemonic) == 0 {
-		return farmID, fmt.Errorf("can not initialize registrar client with no mnemonic")
+		return farmID, errors.New("empty mnemonic provided")
 	}
 
 	cli, err := client.NewRegistrarClient(u, mnemonic)
 	if err != nil {
-		return
+		return farmID, errors.Wrap(err, "client initialization failed")
 	}
 
-	return cli.CreateFarm(farmName, stellarAddress, dedicated)
+	farmID, err = cli.CreateFarm(farmName, stellarAddress, dedicated)
+	if err != nil {
+		return farmID, errors.Wrap(err, "farm creation failed")
+	}
+
+	return farmID, nil
 }
 
 func GetFarm(network string, farmID uint64) (farm client.Farm, err error) {

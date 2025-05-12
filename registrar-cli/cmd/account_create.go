@@ -2,6 +2,7 @@
 package cmd
 
 import (
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/threefoldtech/tfgrid4-sdk-go/registrar-cli/internal/cmd"
@@ -14,12 +15,12 @@ var accountCreateCmd = &cobra.Command{
 	RunE: func(cobraCmd *cobra.Command, args []string) error {
 		mnemonic, err := cobraCmd.Flags().GetString("mnemonic")
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to get mnemonic flag")
 		}
 
 		network, err := cobraCmd.Flags().GetString("network")
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to get network flag")
 		}
 
 		relays, err := cobraCmd.Flags().GetStringArray("relays")
@@ -34,12 +35,10 @@ var accountCreateCmd = &cobra.Command{
 
 		account, mnemonic, err := cmd.CreateAccount(network, relays, rmbEncKey, mnemonic)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to create account")
 		}
 		log.Info().Str("mnemonic", mnemonic).Msg("new account is created with mnemonic")
-
 		log.Info().Uint64("twinID", account.TwinID).Msg("account is created successfully")
-
 		return nil
 	},
 }

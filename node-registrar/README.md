@@ -81,11 +81,11 @@ Replace `<domain>` and `<port>` with the appropriate values.
 
 ## How to run the server with docker
 
-1. use the docker file to build the docker image
+1. To use the docker file to build the docker image, run this command in the root directory of the sdk
 
-   ```bash
-   docker build -t registrar:latest .
-   ```
+```bash
+docker build -t myserver:latest -f node-registrar/Dockerfile .
+```
 
 2. run the image
 

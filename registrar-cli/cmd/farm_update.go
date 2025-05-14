@@ -58,7 +58,7 @@ func init() {
 	farmUpdateCmd.Flags().StringP("mnemonic", "m", "", "account mnemonic")
 	farmUpdateCmd.Flags().Uint64P("farm-id", "i", 0, "farm id")
 	farmUpdateCmd.Flags().String("farm-name", "", "new farm name")
-	farmUpdateCmd.MarkFlagsRequiredTogether("mnemonic", "farm-id", "farm-name")
+	farmUpdateCmd.MarkFlagsRequiredTogether("mnemonic", "farm-id")
 
 	farmUpdateCmd.Flags().StringP("stellar-address", "s", "", "stellar address")
 	farmUpdateCmd.Flags().BoolP("dedicated", "d", false, "farm is dedicated")

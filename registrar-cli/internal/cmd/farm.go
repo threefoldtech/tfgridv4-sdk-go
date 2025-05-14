@@ -68,7 +68,7 @@ func UpdateFarm(farmID uint64, mnemonic, network, farmName, stellarAddress strin
 		opts = append(opts, client.UpdateFarmWithDedicated())
 	}
 	if len(stellarAddress) != 0 {
-		// opts = append(opts, client.Updfarm)
+		opts = append(opts, client.UpdateFarmWithStellarAddress(stellarAddress))
 	}
 
 	return cli.UpdateFarm(farmID, opts...)

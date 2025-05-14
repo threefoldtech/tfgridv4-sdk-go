@@ -1,11 +1,11 @@
 package client
 
 import (
-	"github.com/cosmos/go-bip39"
+	bip39 "github.com/cosmos/go-bip39"
 	"github.com/pkg/errors"
 	subkeyEd25519 "github.com/vedhavyas/go-subkey/v2/ed25519"
 
-	"github.com/vedhavyas/go-subkey/v2"
+	subkey "github.com/vedhavyas/go-subkey/v2"
 )
 
 func (c *RegistrarClient) Mnemonic() string {

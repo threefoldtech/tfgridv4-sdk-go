@@ -77,7 +77,8 @@ func TestUpdateFarm(t *testing.T) {
 		require.NoError(err)
 
 		request = updateFarmWithStatusUnauthorized
-		err = c.UpdateFarm(farmID, UpdateFarmWithName("notFreeFarm"))
+		name := "notFreeFarm"
+		err = c.UpdateFarm(farmID, FarmUpdate{FarmName: &name})
 		require.Error(err)
 	})
 
@@ -88,7 +89,8 @@ func TestUpdateFarm(t *testing.T) {
 		require.NoError(err)
 
 		request = updateFarmWithStatusOK
-		err = c.UpdateFarm(farmID, UpdateFarmWithName("notFreeFarm"))
+		name := "notFreeFarm"
+		err = c.UpdateFarm(farmID, FarmUpdate{FarmName: &name})
 		require.NoError(err)
 	})
 }

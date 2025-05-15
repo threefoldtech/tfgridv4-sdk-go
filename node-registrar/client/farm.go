@@ -20,9 +20,9 @@ func (c *RegistrarClient) CreateFarm(farmName, stellarAddr string, dedicated boo
 	return c.createFarm(farmName, stellarAddr, dedicated)
 }
 
-// UpdateFarm update farm configuration (farmName, stellarAddress, dedicated).
-func (c *RegistrarClient) UpdateFarm(farmID uint64, opts ...UpdateFarmOpts) (err error) {
-	return c.updateFarm(farmID, opts)
+// UpdateFarm updates an existing farm's configuration
+func (c *RegistrarClient) UpdateFarm(farmID uint64, update FarmUpdate) (err error) {
+	return c.updateFarm(farmID, update)
 }
 
 // GetFarm get a farm using its farmID
@@ -30,87 +30,26 @@ func (c *RegistrarClient) GetFarm(farmID uint64) (farm Farm, err error) {
 	return c.getFarm(farmID)
 }
 
-// ListFarms get a list of farm using ListFarmOpts
-func (c *RegistrarClient) ListFarms(opts ...ListFarmOpts) (farms []Farm, err error) {
-	return c.listFarms(opts...)
+// ListFarms gets a list of farms using filter options
+func (c *RegistrarClient) ListFarms(filter FarmFilter) (farms []Farm, err error) {
+	return c.listFarms(filter)
 }
 
-type farmCfg struct {
-	farmName       string
-	farmID         uint64
-	twinID         uint64
-	dedicated      bool
-	stellarAddress string
-	page           uint32
-	size           uint32
+// FarmUpdate represents the data needed to update an existing farm
+type FarmUpdate struct {
+	FarmName       *string
+	StellarAddress *string
+	Dedicated      *bool
 }
 
-type (
-	ListFarmOpts   func(*farmCfg)
-	UpdateFarmOpts func(*farmCfg)
-)
-
-// ListFarmWithName lists farms with farm name
-func ListFarmWithName(name string) ListFarmOpts {
-	return func(n *farmCfg) {
-		n.farmName = name
-	}
-}
-
-// ListFarmWithFarmID lists farms with farmID
-func ListFarmWithFarmID(id uint64) ListFarmOpts {
-	return func(n *farmCfg) {
-		n.farmID = id
-	}
-}
-
-// ListFarmWithTwinID lists farms with twinID
-func ListFarmWithTwinID(id uint64) ListFarmOpts {
-	return func(n *farmCfg) {
-		n.twinID = id
-	}
-}
-
-// ListFarmWithDedicated lists dedicated farms
-func ListFarmWithDedicated() ListFarmOpts {
-	return func(n *farmCfg) {
-		n.dedicated = true
-	}
-}
-
-// ListFarmWithPage lists farms in a certain page
-func ListFarmWithPage(page uint32) ListFarmOpts {
-	return func(n *farmCfg) {
-		n.page = page
-	}
-}
-
-// ListFarmWithPage lists size number of farms
-func ListFarmWithSize(size uint32) ListFarmOpts {
-	return func(n *farmCfg) {
-		n.size = size
-	}
-}
-
-// UpdateFarmWithName update farm name
-func UpdateFarmWithName(name string) UpdateFarmOpts {
-	return func(n *farmCfg) {
-		n.farmName = name
-	}
-}
-
-// UpdateFarmWithName set farm status to dedicated
-func UpdateFarmWithDedicated() UpdateFarmOpts {
-	return func(n *farmCfg) {
-		n.dedicated = true
-	}
-}
-
-// UpdateFarmWithName set farm status to dedicated
-func UpdateFarmWithStellarAddress(address string) UpdateFarmOpts {
-	return func(n *farmCfg) {
-		n.stellarAddress = address
-	}
+// FarmFilter represents filtering options for listing farms
+type FarmFilter struct {
+	FarmID    *uint64
+	FarmName  *string
+	TwinID    *uint64
+	Dedicated *bool
+	Page      *uint32
+	Size      *uint32
 }
 
 func (c *RegistrarClient) createFarm(farmName, stellarAddr string, dedicated bool) (farmID uint64, err error) {
@@ -177,7 +116,7 @@ func (c *RegistrarClient) createFarm(farmName, stellarAddr string, dedicated boo
 	return result.FarmID, nil
 }
 
-func (c *RegistrarClient) updateFarm(farmID uint64, opts []UpdateFarmOpts) (err error) {
+func (c *RegistrarClient) updateFarm(farmID uint64, update FarmUpdate) (err error) {
 	if err = c.ensureTwinID(); err != nil {
 		return errors.Wrap(err, "failed to ensure twin id")
 	}
@@ -188,7 +127,7 @@ func (c *RegistrarClient) updateFarm(farmID uint64, opts []UpdateFarmOpts) (err 
 	}
 
 	var body bytes.Buffer
-	data := parseUpdateFarmOpts(opts)
+	data := parseUpdateFarmOpts(update)
 
 	if stellarAddr, ok := data["stellar_address"]; ok {
 		if err = validateStellarAddress(stellarAddr.(string)); err != nil {
@@ -224,7 +163,7 @@ func (c *RegistrarClient) updateFarm(farmID uint64, opts []UpdateFarmOpts) (err 
 
 	if resp.StatusCode != http.StatusOK {
 		err = parseResponseError(resp.Body)
-		return errors.Wrapf(err, "failed to create farm with status code %s", resp.Status)
+		return errors.Wrapf(err, "failed to update farm with status code %s", resp.Status)
 	}
 
 	return
@@ -261,13 +200,13 @@ func (c *RegistrarClient) getFarm(id uint64) (farm Farm, err error) {
 	return
 }
 
-func (c *RegistrarClient) listFarms(opts ...ListFarmOpts) (farms []Farm, err error) {
+func (c *RegistrarClient) listFarms(filter FarmFilter) (farms []Farm, err error) {
 	url, err := url.JoinPath(c.baseURL, "farms")
 	if err != nil {
 		return farms, errors.Wrap(err, "failed to construct registrar url")
 	}
 
-	data := parseListFarmOpts(opts)
+	data := parseListFarmOpts(filter)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -303,63 +242,53 @@ func (c *RegistrarClient) listFarms(opts ...ListFarmOpts) (farms []Farm, err err
 	return
 }
 
-func parseListFarmOpts(opts []ListFarmOpts) map[string]any {
-	cfg := farmCfg{
-		farmName:  "",
-		farmID:    0,
-		twinID:    0,
-		dedicated: false,
-		page:      1,
-		size:      50,
-	}
-
-	for _, opt := range opts {
-		opt(&cfg)
-	}
-
+func parseListFarmOpts(filter FarmFilter) map[string]any {
 	data := map[string]any{}
 
-	if len(cfg.farmName) != 0 {
-		data["farm_name"] = cfg.farmName
+	if filter.FarmName != nil && *filter.FarmName != "" {
+		data["farm_name"] = *filter.FarmName
 	}
 
-	if cfg.farmID != 0 {
-		data["farm_id"] = cfg.farmID
+	if filter.FarmID != nil {
+		data["farm_id"] = *filter.FarmID
 	}
 
-	if cfg.twinID != 0 {
-		data["twin_id"] = cfg.twinID
+	if filter.TwinID != nil {
+		data["twin_id"] = *filter.TwinID
 	}
 
-	if cfg.dedicated {
-		data["dedicated"] = true
+	if filter.Dedicated != nil {
+		data["dedicated"] = *filter.Dedicated
 	}
 
-	data["page"] = cfg.page
-	data["size"] = cfg.size
+	page := uint32(1)
+	if filter.Page != nil {
+		page = *filter.Page
+	}
+	data["page"] = page
+
+	size := uint32(50)
+	if filter.Size != nil {
+		size = *filter.Size
+	}
+	data["size"] = size
 
 	return data
 }
 
-func parseUpdateFarmOpts(opts []UpdateFarmOpts) map[string]any {
-	cfg := farmCfg{}
-
-	for _, opt := range opts {
-		opt(&cfg)
-	}
-
+func parseUpdateFarmOpts(update FarmUpdate) map[string]any {
 	data := map[string]any{}
 
-	if len(cfg.farmName) != 0 {
-		data["farm_name"] = cfg.farmName
+	if update.FarmName != nil {
+		data["farm_name"] = *update.FarmName
 	}
 
-	if cfg.dedicated {
-		data["dedicated"] = true
+	if update.StellarAddress != nil {
+		data["stellar_address"] = *update.StellarAddress
 	}
 
-	if len(cfg.stellarAddress) != 0 {
-		data["stellar_address"] = cfg.stellarAddress
+	if update.Dedicated != nil {
+		data["dedicated"] = *update.Dedicated
 	}
 
 	return data

@@ -91,7 +91,7 @@ Replace `<domain>` and `<port>` with the appropriate values.
 1. To use the docker file to build the docker image, run this command in the root directory of the sdk
 
 ```bash
-docker build -t myserver:latest -f node-registrar/Dockerfile .
+docker build -t registrar:latest -f node-registrar/Dockerfile .
 ```
 
 2. run the image
@@ -162,7 +162,17 @@ import "github.com/threefoldtech/tfgrid-sdk-go/node-registrar/client"
 cli, err := client.NewRegistrarClient("https://registrar.dev.grid.tf", mnemonic)
 
 // Register a node
-nodeID, err := cli.RegisterNode(farmID, twinID, interfaces, location, resources, serialNumber, secureBoot, virtualized)
+ node := Node{
+  TwinID: twinID,
+  FarmID: farmID,
+  Interfaces: interfaces,
+  Location: location,
+  Resources: resources,
+  SerialNumber: serialNumber,
+  SecureBoot: secureBoot,
+  Virtualized: virtualized,
+ }
+nodeID, err := cli.RegisterNode(node)
 ```
 
 ### Generating Swagger Documentation

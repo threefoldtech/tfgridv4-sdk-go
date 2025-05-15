@@ -19,7 +19,7 @@ type flags struct {
 	db.Config
 	debug       bool
 	version     bool
-	domain      string
+	addr        string
 	serverPort  uint
 	network     string
 	adminTwinID uint64
@@ -58,7 +58,7 @@ func Run() error {
 	flag.BoolVar(&f.version, "v", false, "shows the package version")
 	flag.BoolVar(&f.debug, "debug", false, "allow debug logs")
 	flag.UintVar(&f.serverPort, "server-port", 8080, "server port")
-	flag.StringVar(&f.domain, "domain", "", "domain on which the server will be served")
+	flag.StringVar(&f.addr, "address", "", "address or domain on which the server will be served")
 	flag.StringVar(&f.network, "network", "dev", "the registrar network")
 	flag.Uint64Var(&f.adminTwinID, "admin-twin-id", 1, "admin twin ID")
 
@@ -96,7 +96,7 @@ func Run() error {
 
 	log.Info().Msgf("server is running on port :%d", f.serverPort)
 
-	err = s.Run(fmt.Sprintf("%s:%d", f.domain, f.serverPort))
+	err = s.Run(fmt.Sprintf("%s:%d", f.addr, f.serverPort))
 	if err != nil {
 		return errors.Wrap(err, "failed to run gin server")
 	}
@@ -120,8 +120,20 @@ func (f flags) validate() error {
 		return errors.Errorf("invalid admin twin id %d, admin twin id should not be 0", f.adminTwinID)
 	}
 
-	if _, err := net.LookupHost(f.domain); err != nil {
-		return errors.Wrapf(err, "invalid domain %s", f.domain)
+	if strings.TrimSpace(f.addr) == "" {
+		return errors.New("invalid domain/address, should not be empty")
+	}
+
+	// Skip validation for common binding addresses
+	if f.addr == "0.0.0.0" || f.addr == "localhost" || f.addr == "127.0.0.1" {
+		return f.Config.Validate()
+	}
+
+	if net.ParseIP(f.addr) == nil {
+		// if not valid IP address, check if valid domain
+		if _, err := net.LookupHost(f.addr); err != nil {
+			return errors.Wrapf(err, "invalid domain %s", f.addr)
+		}
 	}
 
 	return f.Validate()

@@ -1,7 +1,7 @@
 run:
 	go run cmds/main.go --postgres-host localhost --postgres-port 5432 --postgres-db postgres --postgres-user postgres --postgres-password password --domain localhost --server-port 8080
 
-postgres:
+start-postgres:
 	docker run --name postgres -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=password -e POSTGRES_DB=postgres -p 5432:5432 -d postgres
 
 stop-postgres:

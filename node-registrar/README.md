@@ -1,10 +1,13 @@
 
 # Node Registrar Service
 
+[![Go Report Card](https://goreportcard.com/badge/github.com/threefoldtech/tfgrid-sdk-go/node-registrar)](https://goreportcard.com/report/github.com/threefoldtech/tfgrid-sdk-go/node-registrar)
+[![GoDoc](https://godoc.org/github.com/threefoldtech/tfgrid-sdk-go/node-registrar?status.svg)](https://godoc.org/github.com/threefoldtech/tfgrid-sdk-go/node-registrar)
+
 ## Overview
 
-This project provides an API for registring zos nodes using the Go Gin framework and PostgreSQL database.
-The API supports operations like registring, listing, and updating farms and nodes, as well as reporting uptime and consumption data for nodes.
+This project provides an API for registring and managing zos nodes on ThreeFold GridV4. Built with the Go Gin framework and PostgreSQL database,
+It offers operations like registring, listing, and updating farms and nodes, as well as reporting uptime and consumption data for nodes.
 
 ## Features
 
@@ -31,25 +34,29 @@ The API supports operations like registring, listing, and updating farms and nod
 
 ### Farms Endpoints
 
-1. **GET /farms/** - List all farms, or use FarmFilter to list specific set of farms.
-2. **GET /farms/:farm_id** - Get a specific farm by ID.
-3. **POST /farms/** - Create a new farm.
-4. **PATCH /farms/** - Update an existing farm.
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/farms/` | List all farms with optional filtering |
+| GET | `/farms/:farm_id` | Get a specific farm by ID |
+| POST | `/farms/` | Create a new farm |
+| PATCH | `/farms/` | Update an existing farm |
 
 ### Nodes Endpoints
 
-1. **GET /nodes/** - List all nodes, or use NodeFilter to list specific set of nodes.
-2. **GET /nodes/:node_id** - Get a specific node by ID.
-3. **POST /nodes/** - Register a new node.
-4. **POST /nodes/:node_id/uptime** - Report uptime for a specific node.
-5. **POST /nodes/:node_id/consumption** - Report consumption for a specific node.
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/nodes/` | List all nodes with optional filtering |
+| GET | `/nodes/:node_id` | Get a specific node by ID |
+| POST | `/nodes/` | Register a new node |
+| POST | `/nodes/:node_id/uptime` | Report uptime for a specific node |
+| POST | `/nodes/:node_id/consumption` | Report consumption for a specific node |
 
 ## Setup Instructions
 
 1. **Start PostgreSQL:**
 
    ```bash
-   make postgres
+   make start-postgres
    ```
 
 2. **Run the Server:**
@@ -81,11 +88,11 @@ Replace `<domain>` and `<port>` with the appropriate values.
 
 ## How to run the server with docker
 
-1. use the docker file to build the docker image
+1. To use the docker file to build the docker image, run this command in the root directory of the sdk
 
-   ```bash
-   docker build -t registrar:latest .
-   ```
+```bash
+docker build -t registrar:latest -f node-registrar/Dockerfile .
+```
 
 2. run the image
 
@@ -125,14 +132,14 @@ X-Auth: Base64(Challenge):Base64(Signature)
 **Signature:**
 ED25519/SR25519 signature of challenge bytes
 
-## Database Schema
+The service uses a PostgreSQL database with the following key tables:
 
-Key Tables:
-
-- `accounts` - Authentication credentials and relay configs
-- `farms` - Farm metadata with owner relationship
-- `nodes` - Node hardware/resources specification
-- `uptime_reports` - Historical node availability data
+| Table | Description |
+|-------|-------------|
+| `accounts` | Authentication credentials and relay configurations |
+| `farms` | Farm metadata with owner relationship |
+| `nodes` | Node hardware specifications and resources |
+| `uptime_reports` | Historical node availability data |
 
 ## Development
 
@@ -140,4 +147,42 @@ Key Tables:
 
 ```bash
 swag init -g pkg/server/handlers.go --output docs --parseDependency --parseDepth 2
+```
+
+## Client Library
+
+A Go client library is available to interact with the Node Registrar Service. See the [client documentation](./client/README.md) for details on installation and usage.
+
+Example usage:
+
+```go
+import "github.com/threefoldtech/tfgrid-sdk-go/node-registrar/client"
+
+// Initialize client
+cli, err := client.NewRegistrarClient("https://registrar.dev.grid.tf", mnemonic)
+
+// Register a node
+ node := Node{
+  TwinID: twinID,
+  FarmID: farmID,
+  Interfaces: interfaces,
+  Location: location,
+  Resources: resources,
+  SerialNumber: serialNumber,
+  SecureBoot: secureBoot,
+  Virtualized: virtualized,
+ }
+nodeID, err := cli.RegisterNode(node)
+```
+
+### Generating Swagger Documentation
+
+```bash
+swag init -g pkg/server/handlers.go --output docs --parseDependency --parseDepth 2
+```
+
+### Running Tests
+
+```bash
+make test
 ```

@@ -1,6 +1,6 @@
 module github.com/threefoldtech/tfgrid4-sdk-go/node-registrar
 
-go 1.21.0
+go 1.23.0
 
 require (
 	github.com/cosmos/go-bip39 v1.0.0

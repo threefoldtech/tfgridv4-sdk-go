@@ -2,7 +2,7 @@ package server
 
 import (
 	"github.com/pkg/errors"
-	"github.com/vedhavyas/go-subkey/v2"
+	subkey "github.com/vedhavyas/go-subkey/v2"
 	"github.com/vedhavyas/go-subkey/v2/ed25519"
 	"github.com/vedhavyas/go-subkey/v2/sr25519"
 )

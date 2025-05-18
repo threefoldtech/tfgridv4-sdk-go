@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"reflect"
 	"strings"
 	"time"
 
@@ -22,8 +21,8 @@ func (c *RegistrarClient) RegisterNode(node Node) (nodeID uint64, err error) {
 }
 
 // UpdateNode update node configuration (farmID, interfaces, resources, location, secureBoot, virtualized).
-func (c *RegistrarClient) UpdateNode(opts ...UpdateNodeOpts) (err error) {
-	return c.updateNode(opts)
+func (c *RegistrarClient) UpdateNode(updateOpts NodeUpdate) (err error) {
+	return c.updateNode(updateOpts)
 }
 
 // ReportUptime update node Uptime.
@@ -42,141 +41,8 @@ func (c *RegistrarClient) GetNodeByTwinID(id uint64) (node Node, err error) {
 }
 
 // ListNodes lists registered nodes details using (nodeID, twinID, farmID).
-func (c *RegistrarClient) ListNodes(opts ...ListNodeOpts) (nodes []Node, err error) {
-	return c.listNodes(opts)
-}
-
-type nodeCfg struct {
-	nodeID        uint64
-	farmID        uint64
-	twinID        uint64
-	status        string
-	healthy       bool
-	online        *bool
-	lastSeen      *int64
-	Location      Location
-	Resources     Resources
-	Interfaces    []Interface
-	SecureBoot    bool
-	Virtualized   bool
-	SerialNumber  string
-	UptimeReports []UptimeReport
-	Approved      bool
-	page          uint32
-	size          uint32
-}
-
-type (
-	ListNodeOpts   func(*nodeCfg)
-	UpdateNodeOpts func(*nodeCfg)
-)
-
-func ListNodesWithNodeID(id uint64) ListNodeOpts {
-	return func(n *nodeCfg) {
-		n.nodeID = id
-	}
-}
-
-func ListNodesWithFarmID(id uint64) ListNodeOpts {
-	return func(n *nodeCfg) {
-		n.farmID = id
-	}
-}
-
-func ListNodesWithStatus(status string) ListNodeOpts {
-	return func(n *nodeCfg) {
-		n.status = status
-	}
-}
-
-func ListNodesWithHealthy() ListNodeOpts {
-	return func(n *nodeCfg) {
-		n.healthy = true
-	}
-}
-
-func ListNodesWithOnline(online bool) ListNodeOpts {
-	return func(n *nodeCfg) {
-		n.online = &online
-	}
-}
-
-func ListNodesWithLastSeen(minutes int64) ListNodeOpts {
-	return func(n *nodeCfg) {
-		n.lastSeen = &minutes
-	}
-}
-
-func ListNodesWithTwinID(id uint64) ListNodeOpts {
-	return func(n *nodeCfg) {
-		n.twinID = id
-	}
-}
-
-func ListNodesWithPage(page uint32) ListNodeOpts {
-	return func(n *nodeCfg) {
-		n.page = page
-	}
-}
-
-func ListNodesWithSize(size uint32) ListNodeOpts {
-	return func(n *nodeCfg) {
-		n.size = size
-	}
-}
-
-func UpdateNodesWithFarmID(id uint64) UpdateNodeOpts {
-	return func(n *nodeCfg) {
-		n.farmID = id
-	}
-}
-
-func UpdateNodesWithInterfaces(interfaces []Interface) UpdateNodeOpts {
-	return func(n *nodeCfg) {
-		n.Interfaces = interfaces
-	}
-}
-
-func UpdateNodesWithLocation(location Location) UpdateNodeOpts {
-	return func(n *nodeCfg) {
-		n.Location = location
-	}
-}
-
-func UpdateNodesWithResources(resources Resources) UpdateNodeOpts {
-	return func(n *nodeCfg) {
-		n.Resources = resources
-	}
-}
-
-func UpdateNodesWithSerialNumber(serialNumbe string) UpdateNodeOpts {
-	return func(n *nodeCfg) {
-		n.SerialNumber = serialNumbe
-	}
-}
-
-func UpdateNodesWithSecureBoot() UpdateNodeOpts {
-	return func(n *nodeCfg) {
-		n.SecureBoot = true
-	}
-}
-
-func UpdateNodesWithVirtualized() UpdateNodeOpts {
-	return func(n *nodeCfg) {
-		n.Virtualized = true
-	}
-}
-
-func UpdateNodeWithStatus(status string) UpdateNodeOpts {
-	return func(n *nodeCfg) {
-		n.status = status
-	}
-}
-
-func UpdateNodeWithHealthy() UpdateNodeOpts {
-	return func(n *nodeCfg) {
-		n.healthy = true
-	}
+func (c *RegistrarClient) ListNodes(opts NodeFilter) (nodes []Node, err error) {
+	return c.listNodesWithFilter(opts)
 }
 
 func (c *RegistrarClient) registerNode(node Node) (nodeID uint64, err error) {
@@ -253,7 +119,21 @@ func (c *RegistrarClient) registerNode(node Node) (nodeID uint64, err error) {
 	return nodeID, nil
 }
 
-func (c *RegistrarClient) updateNode(opts []UpdateNodeOpts) (err error) {
+// NodeUpdate represents update options for a node
+type NodeUpdate struct {
+	FarmID       *uint64
+	Location     *Location
+	Resources    *Resources
+	Interfaces   []Interface
+	SecureBoot   *bool
+	Virtualized  *bool
+	SerialNumber *string
+	Status       *string
+	Healthy      *bool
+	Approved     *bool
+}
+
+func (c *RegistrarClient) updateNode(opts NodeUpdate) (err error) {
 	err = c.ensureNodeID()
 	if err != nil {
 		return err
@@ -428,7 +308,7 @@ func (c *RegistrarClient) getNode(id uint64) (node Node, err error) {
 }
 
 func (c *RegistrarClient) getNodeByTwinID(id uint64) (node Node, err error) {
-	nodes, err := c.ListNodes(ListNodesWithTwinID(id))
+	nodes, err := c.ListNodes(NodeFilter{TwinID: &id})
 	if err != nil {
 		return
 	}
@@ -440,7 +320,20 @@ func (c *RegistrarClient) getNodeByTwinID(id uint64) (node Node, err error) {
 	return nodes[0], nil
 }
 
-func (c *RegistrarClient) listNodes(opts []ListNodeOpts) (nodes []Node, err error) {
+// NodeFilter represents filtering options for listing nodes
+type NodeFilter struct {
+	NodeID   *uint64
+	FarmID   *uint64
+	TwinID   *uint64
+	Status   *string
+	Healthy  *bool
+	Online   *bool
+	LastSeen *int64
+	Page     *uint32
+	Size     *uint32
+}
+
+func (c *RegistrarClient) listNodesWithFilter(filter NodeFilter) (nodes []Node, err error) {
 	url, err := url.JoinPath(c.baseURL, "nodes")
 	if err != nil {
 		return nodes, errors.Wrap(err, "failed to construct registrar url")
@@ -452,7 +345,7 @@ func (c *RegistrarClient) listNodes(opts []ListNodeOpts) (nodes []Node, err erro
 	}
 
 	q := req.URL.Query()
-	data := parseListNodeOpts(opts)
+	data := parseListNodeOpts(filter)
 
 	for key, val := range data {
 		q.Add(key, fmt.Sprint(val))
@@ -532,89 +425,78 @@ func (c *RegistrarClient) ensureNodeID() error {
 	return nil
 }
 
-func (c *RegistrarClient) parseUpdateNodeOpts(node Node, opts []UpdateNodeOpts) Node {
-	cfg := nodeCfg{
-		farmID:      0,
-		Location:    Location{},
-		Resources:   Resources{},
-		Interfaces:  []Interface{},
-		SecureBoot:  false,
-		Virtualized: false,
-		Approved:    false,
+func (c *RegistrarClient) parseUpdateNodeOpts(node Node, update NodeUpdate) Node {
+	if update.FarmID != nil {
+		node.FarmID = *update.FarmID
 	}
-
-	for _, opt := range opts {
-		opt(&cfg)
+	if update.Location != nil {
+		node.Location = *update.Location
 	}
-
-	if cfg.farmID != 0 {
-		node.FarmID = cfg.farmID
+	if update.Resources != nil {
+		node.Resources = *update.Resources
 	}
-
-	if !reflect.DeepEqual(cfg.Location, Location{}) {
-		node.Location = cfg.Location
+	if len(update.Interfaces) > 0 {
+		node.Interfaces = update.Interfaces
 	}
-
-	if !reflect.DeepEqual(cfg.Resources, Resources{}) {
-		node.Resources = cfg.Resources
+	if update.SerialNumber != nil {
+		node.SerialNumber = *update.SerialNumber
 	}
-
-	if len(cfg.Interfaces) != 0 {
-		node.Interfaces = cfg.Interfaces
+	if update.SecureBoot != nil {
+		node.SecureBoot = *update.SecureBoot
+	}
+	if update.Virtualized != nil {
+		node.Virtualized = *update.Virtualized
+	}
+	if update.Status != nil {
+		node.Virtualized = *update.Virtualized
+	}
+	if update.Healthy != nil {
+		node.Virtualized = *update.Virtualized
+	}
+	if update.Approved != nil {
+		node.Virtualized = *update.Virtualized
 	}
 
 	return node
 }
 
-func parseListNodeOpts(opts []ListNodeOpts) map[string]any {
-	cfg := nodeCfg{
-		nodeID:   0,
-		twinID:   0,
-		farmID:   0,
-		status:   "",
-		healthy:  false,
-		online:   nil,
-		lastSeen: nil,
-		size:     50,
-		page:     1,
-	}
-
-	for _, opt := range opts {
-		opt(&cfg)
-	}
-
+func parseListNodeOpts(filter NodeFilter) map[string]any {
 	data := map[string]any{}
 
-	if cfg.nodeID != 0 {
-		data["node_id"] = cfg.nodeID
+	if filter.NodeID != nil {
+		data["node_id"] = *filter.NodeID
+	}
+	if filter.TwinID != nil {
+		data["twin_id"] = *filter.TwinID
+	}
+	if filter.FarmID != nil {
+		data["farm_id"] = *filter.FarmID
+	}
+	if filter.Status != nil && *filter.Status != "" {
+		data["status"] = *filter.Status
+	}
+	if filter.Healthy != nil {
+		data["healthy"] = *filter.Healthy
+	}
+	if filter.Online != nil {
+		data["online"] = *filter.Online
+	}
+	if filter.LastSeen != nil {
+		data["last_seen"] = *filter.LastSeen
 	}
 
-	if cfg.twinID != 0 {
-		data["twin_id"] = cfg.twinID
+	page := uint32(1)
+	if filter.Page != nil {
+		page = *filter.Page
+	}
+	data["page"] = page
+
+	size := uint32(50)
+	if filter.Size != nil {
+		size = *filter.Size
 	}
 
-	if cfg.farmID != 0 {
-		data["farm_id"] = cfg.farmID
-	}
-
-	if len(cfg.status) != 0 {
-		data["status"] = cfg.status
-	}
-
-	if cfg.healthy {
-		data["healthy"] = cfg.healthy
-	}
-
-	if cfg.online != nil {
-		data["online"] = *cfg.online
-	}
-
-	if cfg.lastSeen != nil {
-		data["last_seen"] = *cfg.lastSeen
-	}
-
-	data["size"] = cfg.size
-	data["page"] = cfg.page
+	data["size"] = size
 
 	return data
 }

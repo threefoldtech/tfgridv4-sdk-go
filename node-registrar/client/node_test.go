@@ -96,7 +96,8 @@ func TestUpdateNode(t *testing.T) {
 	t.Run("test update node with status ok", func(t *testing.T) {
 		count = 0
 		request = updateNodeStatusOK
-		err = c.UpdateNode(UpdateNodesWithFarmID(2))
+		var farmID uint64 = 2
+		err = c.UpdateNode(NodeUpdate{FarmID: &farmID})
 		require.NoError(err)
 	})
 
@@ -159,7 +160,8 @@ func TestGetNode(t *testing.T) {
 
 	t.Run("test list nodes of specific farm", func(t *testing.T) {
 		request = listNodesInFarm
-		result, err := c.ListNodes(ListNodesWithFarmID(farmID))
+		id := farmID
+		result, err := c.ListNodes(NodeFilter{FarmID: &id})
 		require.NoError(err)
 		require.Equal([]Node{node}, result)
 	})

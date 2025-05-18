@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/vedhavyas/go-subkey/v2"
+	subkey "github.com/vedhavyas/go-subkey/v2"
 )
 
 var ErrorAccountNotFound = fmt.Errorf("failed to get requested account from node registrar")

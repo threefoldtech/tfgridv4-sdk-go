@@ -40,15 +40,15 @@ func main() {
 func Run() error {
 	f := flags{}
 	var sqlLogLevel int
-	flag.StringVar(&f.Config.PostgresHost, "postgres-host", "", "postgres host")
-	flag.Uint64Var(&f.Config.PostgresPort, "postgres-port", 5432, "postgres port")
-	flag.StringVar(&f.Config.DBName, "postgres-db", "", "postgres database")
-	flag.StringVar(&f.Config.PostgresUser, "postgres-user", "", "postgres username")
-	flag.StringVar(&f.Config.PostgresPassword, "postgres-password", "", "postgres password")
-	flag.StringVar(&f.Config.SSLMode, "ssl-mode", "disable", "postgres ssl mode[disable, require, verify-ca, verify-full]")
+	flag.StringVar(&f.PostgresHost, "postgres-host", "", "postgres host")
+	flag.Uint64Var(&f.PostgresPort, "postgres-port", 5432, "postgres port")
+	flag.StringVar(&f.DBName, "postgres-db", "", "postgres database")
+	flag.StringVar(&f.PostgresUser, "postgres-user", "", "postgres username")
+	flag.StringVar(&f.PostgresPassword, "postgres-password", "", "postgres password")
+	flag.StringVar(&f.SSLMode, "ssl-mode", "disable", "postgres ssl mode[disable, require, verify-ca, verify-full]")
 	flag.IntVar(&sqlLogLevel, "sql-log-level", 2, "sql logger level")
-	flag.Uint64Var(&f.Config.MaxOpenConns, "max-open-conn", 3, "max open sql connections")
-	flag.Uint64Var(&f.Config.MaxIdleConns, "max-idle-conn", 3, "max idle sql connections")
+	flag.Uint64Var(&f.MaxOpenConns, "max-open-conn", 3, "max open sql connections")
+	flag.Uint64Var(&f.MaxIdleConns, "max-idle-conn", 3, "max idle sql connections")
 
 	flag.BoolVar(&f.version, "v", false, "shows the package version")
 	flag.BoolVar(&f.debug, "debug", false, "allow debug logs")
@@ -58,7 +58,7 @@ func Run() error {
 	flag.Uint64Var(&f.adminTwinID, "admin-twin-id", 1, "admin twin ID")
 
 	flag.Parse()
-	f.Config.SqlLogLevel = logger.LogLevel(sqlLogLevel)
+	f.SqlLogLevel = logger.LogLevel(sqlLogLevel)
 
 	if f.version {
 		log.Info().Str("version", version).Str("commit", commit).Send()
@@ -108,8 +108,8 @@ func (f flags) validate() error {
 		return errors.New("invalid domain name, domain name should not be empty")
 	}
 
-	if f.Config.SqlLogLevel < 1 || f.Config.SqlLogLevel > 4 {
-		return errors.Errorf("invalid sql log level %d, sql log level should be in the range 1-4", f.Config.SqlLogLevel)
+	if f.SqlLogLevel < 1 || f.SqlLogLevel > 4 {
+		return errors.Errorf("invalid sql log level %d, sql log level should be in the range 1-4", f.SqlLogLevel)
 	}
 	if f.adminTwinID == 0 {
 		return errors.Errorf("invalid admin twin id %d, admin twin id should not be 0", f.adminTwinID)
@@ -119,5 +119,5 @@ func (f flags) validate() error {
 		return errors.Wrapf(err, "invalid domain %s", f.domain)
 	}
 
-	return f.Config.Validate()
+	return f.Validate()
 }

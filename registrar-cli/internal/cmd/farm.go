@@ -59,17 +59,18 @@ func UpdateFarm(farmID uint64, mnemonic, network, farmName, stellarAddress strin
 		return err
 	}
 
-	var opts []client.UpdateFarmOpts
+	var opts client.FarmUpdate
 	if len(farmName) > 0 {
-		opts = append(opts, client.UpdateFarmWithName(farmName))
+		opts.FarmName = &farmName
 	}
 
 	if dedicated {
-		opts = append(opts, client.UpdateFarmWithDedicated())
+		trueVal := true
+		opts.Dedicated = &trueVal
 	}
 	if len(stellarAddress) != 0 {
-		opts = append(opts, client.UpdateFarmWithStellarAddress(stellarAddress))
+		opts.StellarAddress = &stellarAddress
 	}
 
-	return cli.UpdateFarm(farmID, opts...)
+	return cli.UpdateFarm(farmID, opts)
 }

@@ -286,9 +286,6 @@ func parseUpdateFarmOpts(update FarmUpdate) map[string]any {
 	if update.StellarAddress != nil {
 		data["stellar_address"] = *update.StellarAddress
 	}
-	if len(cfg.stellarAddress) != 0 {
-		data["stellar_address"] = cfg.stellarAddress
-	}
 
 	if update.Dedicated != nil {
 		data["dedicated"] = *update.Dedicated

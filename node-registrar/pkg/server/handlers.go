@@ -20,6 +20,14 @@ const (
 	OnlineCutoffTime                     = 40 * time.Minute
 )
 
+type Farm struct {
+	FarmID         uint64 `json:"farm_id"`
+	FarmName       string `json:"farm_name"`
+	TwinID         uint64 `json:"twin_id"`
+	Dedicated      bool   `json:"dedicated"`
+	StellarAddress string `json:"stellar_address"`
+}
+
 // @title Node Registrar API
 // @version 1.0
 // @description API for managing TFGrid node registration
@@ -35,7 +43,7 @@ const (
 // @Param twin_id query int false "Filter by twin ID"
 // @Param page query int false "Page number" default(1)
 // @Param size query int false "Results per page" default(10)
-// @Success 200 {object} []db.Farm "List of farms"
+// @Success 200 {object} []Farm "List of farms"
 // @Failure 400 {object} map[string]any "Bad request"
 // @Router /farms [get]
 func (s Server) listFarmsHandler(c *gin.Context) {
@@ -54,7 +62,19 @@ func (s Server) listFarmsHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, farms)
+	// dorp extra db field
+	var res []Farm
+	for _, farm := range farms {
+		res = append(res, Farm{
+			FarmID:         farm.FarmID,
+			FarmName:       farm.FarmName,
+			TwinID:         farm.TwinID,
+			Dedicated:      farm.Dedicated,
+			StellarAddress: farm.StellarAddress,
+		})
+	}
+
+	c.JSON(http.StatusOK, res)
 }
 
 // @Summary Get farm details
@@ -63,7 +83,7 @@ func (s Server) listFarmsHandler(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param farm_id path int true "Farm ID"
-// @Success 200 {object} db.Farm "Farm details"
+// @Success 200 {object} Farm "Farm details"
 // @Failure 400 {object} map[string]any "Invalid farm ID"
 // @Failure 404 {object} map[string]any "Farm not found"
 // @Router /farms/{farm_id} [get]
@@ -88,7 +108,16 @@ func (s Server) getFarmHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, farm)
+	// dorp extra db field
+	res := Farm{
+		FarmID:         farm.FarmID,
+		FarmName:       farm.FarmName,
+		TwinID:         farm.TwinID,
+		Dedicated:      farm.Dedicated,
+		StellarAddress: farm.StellarAddress,
+	}
+
+	c.JSON(http.StatusOK, res)
 }
 
 // @Summary Create new farm
@@ -203,6 +232,21 @@ func (s Server) updateFarmHandler(c *gin.Context) {
 	})
 }
 
+type Node struct {
+	NodeID       uint64         `json:"node_id"`
+	FarmID       uint64         `json:"farm_id"`
+	TwinID       uint64         `json:"twin_id"`
+	Location     db.Location    `json:"location"`
+	Resources    db.Resources   `json:"resources"`
+	Interfaces   []db.Interface `json:"interfaces"`
+	SecureBoot   bool           `json:"secure_boot"`
+	Virtualized  bool           `json:"virtualized"`
+	SerialNumber string         `json:"serial_number"`
+	LastSeen     time.Time      `json:"last_seen"`
+	Online       bool           `json:"online"`
+	Approved     bool
+}
+
 // @Summary List nodes
 // @Description Get a list of nodes with optional filters
 // @Tags nodes
@@ -217,7 +261,7 @@ func (s Server) updateFarmHandler(c *gin.Context) {
 // @Param last_seen query int false "Filter nodes last seen within this many minutes"
 // @Param page query int false "Page number" default(1)
 // @Param size query int false "Results per page" default(10)
-// @Success 200 {object} []db.Node "List of nodes with online status"
+// @Success 200 {object} []Node "List of nodes with online status"
 // @Failure 400 {object} map[string]any "Bad request"
 // @Router /nodes [get]
 func (s Server) listNodesHandler(c *gin.Context) {
@@ -236,13 +280,27 @@ func (s Server) listNodesHandler(c *gin.Context) {
 		return
 	}
 
-	// Set online status for each node
 	cutoffTime := time.Now().Add(-OnlineCutoffTime)
-	for i := range nodes {
-		nodes[i].Online = !nodes[i].LastSeen.IsZero() && nodes[i].LastSeen.After(cutoffTime)
+	var res []Node
+	for i, node := range nodes {
+		res = append(res, Node{
+			NodeID:       node.NodeID,
+			FarmID:       node.FarmID,
+			TwinID:       node.TwinID,
+			Location:     node.Location,
+			Resources:    node.Resources,
+			Interfaces:   node.Interfaces,
+			SecureBoot:   node.SecureBoot,
+			SerialNumber: node.SerialNumber,
+			Virtualized:  node.Virtualized,
+			LastSeen:     node.LastSeen,
+			Approved:     node.Approved,
+			// Set online status for each node
+			Online: !nodes[i].LastSeen.IsZero() && nodes[i].LastSeen.After(cutoffTime),
+		})
 	}
 
-	c.JSON(http.StatusOK, nodes)
+	c.JSON(http.StatusOK, res)
 }
 
 // @Summary Get node details
@@ -251,7 +309,7 @@ func (s Server) listNodesHandler(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param node_id path int true "Node ID"
-// @Success 200 {object} db.Node "Node details with online status and last_seen information"
+// @Success 200 {object} Node "Node details with online status and last_seen information"
 // @Failure 400 {object} map[string]any "Invalid node ID"
 // @Failure 404 {object} map[string]any "Node not found"
 // @Router /nodes/{node_id} [get]
@@ -275,11 +333,24 @@ func (s Server) getNodeHandler(c *gin.Context) {
 		return
 	}
 
-	// Determine if the node is online (has sent an uptime report in the last 30 minutes)
 	cutoffTime := time.Now().Add(-OnlineCutoffTime)
-	node.Online = !node.LastSeen.IsZero() && node.LastSeen.After(cutoffTime)
+	res := Node{
+		NodeID:       node.NodeID,
+		FarmID:       node.FarmID,
+		TwinID:       node.TwinID,
+		Location:     node.Location,
+		Resources:    node.Resources,
+		Interfaces:   node.Interfaces,
+		SecureBoot:   node.SecureBoot,
+		SerialNumber: node.SerialNumber,
+		Virtualized:  node.Virtualized,
+		LastSeen:     node.LastSeen,
+		Approved:     node.Approved,
+		// Determine if the node is online (has sent an uptime report in the last 30 minutes)
+		Online: !node.LastSeen.IsZero() && node.LastSeen.After(cutoffTime),
+	}
 
-	c.JSON(http.StatusOK, node)
+	c.JSON(http.StatusOK, res)
 }
 
 type NodeRegistrationRequest struct {
@@ -517,13 +588,20 @@ type AccountCreationRequest struct {
 	RMBEncKey string   `json:"rmb_enc_key,omitempty"`
 }
 
+type Account struct {
+	TwinID    uint64   `json:"twin_id"`
+	Relays    []string `json:"relays"`      // Optional list of relay domains
+	RMBEncKey string   `json:"rmb_enc_key"` // Optional base64 encoded public key for rmb communication
+	PublicKey string   `json:"public_key"`
+}
+
 // @Summary Create new account
 // @Description Create a new twin account with cryptographic verification
 // @Tags accounts
 // @Accept json
 // @Produce json
 // @Param request body AccountCreationRequest true "Account creation data"
-// @Success 201 {object} db.Account "Created account details"
+// @Success 201 {object} Account "Created account details"
 // @Failure 400 {object} map[string]any "Invalid request"
 // @Failure 409 {object} map[string]any "Account already exists"
 // @Router /accounts [post]
@@ -593,7 +671,13 @@ func (s *Server) createAccountHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, account)
+	res := Account{
+		TwinID:    account.TwinID,
+		PublicKey: account.PublicKey,
+		RMBEncKey: account.RMBEncKey,
+		Relays:    account.Relays,
+	}
+	c.JSON(http.StatusCreated, res)
 }
 
 type UpdateAccountRequest struct {
@@ -654,7 +738,7 @@ func (s *Server) updateAccountHandler(c *gin.Context) {
 // @Produce json
 // @Param twin_id query uint64 false "Twin ID of the account"
 // @Param public_key query string false "Base64 decoded Public key of the account"
-// @Success 200 {object} db.Account "Account details"
+// @Success 200 {object} Account "Account details"
 // @Failure 400 {object} map[string]any "Invalid request"
 // @Failure 404 {object} map[string]any "Account not found"
 // @Router /accounts [get]
@@ -694,7 +778,13 @@ func (s *Server) getAccountHandler(c *gin.Context) {
 			return
 		}
 
-		c.JSON(http.StatusOK, account)
+		res := Account{
+			TwinID:    account.TwinID,
+			PublicKey: account.PublicKey,
+			RMBEncKey: account.RMBEncKey,
+			Relays:    account.Relays,
+		}
+		c.JSON(http.StatusCreated, res)
 		return
 	}
 
@@ -708,7 +798,14 @@ func (s *Server) getAccountHandler(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get account"})
 			return
 		}
-		c.JSON(http.StatusOK, account)
+
+		res := Account{
+			TwinID:    account.TwinID,
+			PublicKey: account.PublicKey,
+			RMBEncKey: account.RMBEncKey,
+			Relays:    account.Relays,
+		}
+		c.JSON(http.StatusCreated, res)
 		return
 	}
 }

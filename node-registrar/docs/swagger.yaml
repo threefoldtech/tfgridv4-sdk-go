@@ -1,16 +1,9 @@
-basePath: /v1
+basePath: /api/v1
 definitions:
-  github_com_threefoldtech_tfgrid4-sdk-go_node-registrar_pkg_db.Account:
+  db.Account:
     properties:
       created_at:
         type: string
-      farms:
-        description: |-
-          Relations | likely we need to use OnDelete:RESTRICT (Prevent Twin deletion if farms exist)
-          @swagger:ignore
-        items:
-          $ref: '#/definitions/github_com_threefoldtech_tfgrid4-sdk-go_node-registrar_pkg_db.Farm'
-        type: array
       public_key:
         description: |-
           The public key (ED25519 for nodes, ED25519 or SR25519 for farmers) in the more standard base64 since we are moving from substrate echo system?
@@ -29,7 +22,7 @@ definitions:
       updated_at:
         type: string
     type: object
-  github_com_threefoldtech_tfgrid4-sdk-go_node-registrar_pkg_db.Farm:
+  db.Farm:
     properties:
       created_at:
         type: string
@@ -39,11 +32,6 @@ definitions:
         type: integer
       farm_name:
         type: string
-      nodes:
-        description: '@swagger:ignore'
-        items:
-          $ref: '#/definitions/github_com_threefoldtech_tfgrid4-sdk-go_node-registrar_pkg_db.Node'
-        type: array
       stellar_address:
         type: string
       twin_id:
@@ -56,16 +44,18 @@ definitions:
     - stellar_address
     - twin_id
     type: object
-  github_com_threefoldtech_tfgrid4-sdk-go_node-registrar_pkg_db.Interface:
+  db.Interface:
     properties:
       ips:
-        type: string
+        items:
+          type: string
+        type: array
       mac:
         type: string
       name:
         type: string
     type: object
-  github_com_threefoldtech_tfgrid4-sdk-go_node-registrar_pkg_db.Location:
+  db.Location:
     properties:
       city:
         type: string
@@ -76,7 +66,7 @@ definitions:
       longitude:
         type: string
     type: object
-  github_com_threefoldtech_tfgrid4-sdk-go_node-registrar_pkg_db.Node:
+  db.Node:
     properties:
       approved:
         type: boolean
@@ -88,18 +78,21 @@ definitions:
         type: integer
       interfaces:
         items:
-          $ref: '#/definitions/github_com_threefoldtech_tfgrid4-sdk-go_node-registrar_pkg_db.Interface'
+          $ref: '#/definitions/db.Interface'
         type: array
       last_seen:
         description: Last time the node sent Uptime report
         type: string
       location:
-        $ref: '#/definitions/github_com_threefoldtech_tfgrid4-sdk-go_node-registrar_pkg_db.Location'
+        $ref: '#/definitions/db.Location'
       node_id:
         type: integer
+      online:
+        description: Computed field, not stored in database
+        type: boolean
       resources:
         allOf:
-        - $ref: '#/definitions/github_com_threefoldtech_tfgrid4-sdk-go_node-registrar_pkg_db.Resources'
+        - $ref: '#/definitions/db.Resources'
         description: PublicConfig PublicConfig `json:"public_config" gorm:"type:json"`
       secure_boot:
         type: boolean
@@ -110,14 +103,10 @@ definitions:
         type: integer
       updated_at:
         type: string
-      uptime:
-        items:
-          $ref: '#/definitions/github_com_threefoldtech_tfgrid4-sdk-go_node-registrar_pkg_db.UptimeReport'
-        type: array
       virtualized:
         type: boolean
     type: object
-  github_com_threefoldtech_tfgrid4-sdk-go_node-registrar_pkg_db.Resources:
+  db.Resources:
     properties:
       cru:
         type: integer
@@ -128,24 +117,7 @@ definitions:
       sru:
         type: integer
     type: object
-  github_com_threefoldtech_tfgrid4-sdk-go_node-registrar_pkg_db.UptimeReport:
-    properties:
-      created_at:
-        type: string
-      duration:
-        description: Uptime duration for this period
-        type: integer
-      id:
-        type: integer
-      node_id:
-        type: integer
-      timestamp:
-        type: string
-      was_restart:
-        description: True if this report followed a restart
-        type: boolean
-    type: object
-  pkg_server.AccountCreationRequest:
+  server.AccountCreationRequest:
     properties:
       public_key:
         description: base64 encoded
@@ -168,19 +140,19 @@ definitions:
     - signature
     - timestamp
     type: object
-  pkg_server.NodeRegistrationRequest:
+  server.NodeRegistrationRequest:
     properties:
       farm_id:
         minimum: 1
         type: integer
       interfaces:
         items:
-          $ref: '#/definitions/github_com_threefoldtech_tfgrid4-sdk-go_node-registrar_pkg_db.Interface'
+          $ref: '#/definitions/db.Interface'
         type: array
       location:
-        $ref: '#/definitions/github_com_threefoldtech_tfgrid4-sdk-go_node-registrar_pkg_db.Location'
+        $ref: '#/definitions/db.Location'
       resources:
-        $ref: '#/definitions/github_com_threefoldtech_tfgrid4-sdk-go_node-registrar_pkg_db.Resources'
+        $ref: '#/definitions/db.Resources'
       secure_boot:
         type: boolean
       serial_number:
@@ -198,7 +170,7 @@ definitions:
     - serial_number
     - twin_id
     type: object
-  pkg_server.UpdateAccountRequest:
+  server.UpdateAccountRequest:
     properties:
       relays:
         items:
@@ -207,7 +179,7 @@ definitions:
       rmb_enc_key:
         type: string
     type: object
-  pkg_server.UpdateFarmRequest:
+  server.UpdateFarmRequest:
     properties:
       farm_name:
         maxLength: 40
@@ -215,19 +187,19 @@ definitions:
       stellar_address:
         type: string
     type: object
-  pkg_server.UpdateNodeRequest:
+  server.UpdateNodeRequest:
     properties:
       farm_id:
         minimum: 1
         type: integer
       interfaces:
         items:
-          $ref: '#/definitions/github_com_threefoldtech_tfgrid4-sdk-go_node-registrar_pkg_db.Interface'
+          $ref: '#/definitions/db.Interface'
         type: array
       location:
-        $ref: '#/definitions/github_com_threefoldtech_tfgrid4-sdk-go_node-registrar_pkg_db.Location'
+        $ref: '#/definitions/db.Location'
       resources:
-        $ref: '#/definitions/github_com_threefoldtech_tfgrid4-sdk-go_node-registrar_pkg_db.Resources'
+        $ref: '#/definitions/db.Resources'
       secure_boot:
         type: boolean
       serial_number:
@@ -241,59 +213,23 @@ definitions:
     - resources
     - serial_number
     type: object
-  pkg_server.UptimeReportRequest:
+  server.UptimeReportRequest:
     properties:
       timestamp:
-        type: string
+        type: integer
       uptime:
-        $ref: '#/definitions/time.Duration'
+        type: integer
     required:
     - timestamp
     - uptime
     type: object
-  pkg_server.ZOSVersionRequest:
+  server.ZOSVersionRequest:
     properties:
       version:
         type: string
     required:
     - version
     type: object
-  time.Duration:
-    enum:
-    - -9223372036854775808
-    - 9223372036854775807
-    - 1
-    - 1000
-    - 1000000
-    - 1000000000
-    - 60000000000
-    - 3600000000000
-    - -9223372036854775808
-    - 9223372036854775807
-    - 1
-    - 1000
-    - 1000000
-    - 1000000000
-    - 60000000000
-    - 3600000000000
-    type: integer
-    x-enum-varnames:
-    - minDuration
-    - maxDuration
-    - Nanosecond
-    - Microsecond
-    - Millisecond
-    - Second
-    - Minute
-    - Hour
-    - minDuration
-    - maxDuration
-    - Nanosecond
-    - Microsecond
-    - Millisecond
-    - Second
-    - Minute
-    - Hour
 info:
   contact: {}
   description: API for managing TFGrid node registration
@@ -320,7 +256,7 @@ paths:
         "200":
           description: Account details
           schema:
-            $ref: '#/definitions/github_com_threefoldtech_tfgrid4-sdk-go_node-registrar_pkg_db.Account'
+            $ref: '#/definitions/db.Account'
         "400":
           description: Invalid request
           schema:
@@ -344,14 +280,14 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/pkg_server.AccountCreationRequest'
+          $ref: '#/definitions/server.AccountCreationRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Created account details
           schema:
-            $ref: '#/definitions/github_com_threefoldtech_tfgrid4-sdk-go_node-registrar_pkg_db.Account'
+            $ref: '#/definitions/db.Account'
         "400":
           description: Invalid request
           schema:
@@ -386,7 +322,7 @@ paths:
         name: account
         required: true
         schema:
-          $ref: '#/definitions/pkg_server.UpdateAccountRequest'
+          $ref: '#/definitions/server.UpdateAccountRequest'
       produces:
       - application/json
       responses:
@@ -448,7 +384,7 @@ paths:
           description: List of farms
           schema:
             items:
-              $ref: '#/definitions/github_com_threefoldtech_tfgrid4-sdk-go_node-registrar_pkg_db.Farm'
+              $ref: '#/definitions/db.Farm'
             type: array
         "400":
           description: Bad request
@@ -473,7 +409,7 @@ paths:
         name: farm
         required: true
         schema:
-          $ref: '#/definitions/github_com_threefoldtech_tfgrid4-sdk-go_node-registrar_pkg_db.Farm'
+          $ref: '#/definitions/db.Farm'
       produces:
       - application/json
       responses:
@@ -518,7 +454,7 @@ paths:
         "200":
           description: Farm details
           schema:
-            $ref: '#/definitions/github_com_threefoldtech_tfgrid4-sdk-go_node-registrar_pkg_db.Farm'
+            $ref: '#/definitions/db.Farm'
         "400":
           description: Invalid farm ID
           schema:
@@ -552,7 +488,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/pkg_server.UpdateFarmRequest'
+          $ref: '#/definitions/server.UpdateFarmRequest'
       produces:
       - application/json
       responses:
@@ -605,6 +541,14 @@ paths:
         in: query
         name: healthy
         type: boolean
+      - description: Filter by online status (true = online, false = offline)
+        in: query
+        name: online
+        type: boolean
+      - description: Filter nodes last seen within this many minutes
+        in: query
+        name: last_seen
+        type: integer
       - default: 1
         description: Page number
         in: query
@@ -619,10 +563,10 @@ paths:
       - application/json
       responses:
         "200":
-          description: List of nodes
+          description: List of nodes with online status
           schema:
             items:
-              $ref: '#/definitions/github_com_threefoldtech_tfgrid4-sdk-go_node-registrar_pkg_db.Node'
+              $ref: '#/definitions/db.Node'
             type: array
         "400":
           description: Bad request
@@ -647,7 +591,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/pkg_server.NodeRegistrationRequest'
+          $ref: '#/definitions/server.NodeRegistrationRequest'
       produces:
       - application/json
       responses:
@@ -690,9 +634,9 @@ paths:
       - application/json
       responses:
         "200":
-          description: Node details
+          description: Node details with online status and last_seen information
           schema:
-            $ref: '#/definitions/github_com_threefoldtech_tfgrid4-sdk-go_node-registrar_pkg_db.Node'
+            $ref: '#/definitions/db.Node'
         "400":
           description: Invalid node ID
           schema:
@@ -726,7 +670,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/pkg_server.UpdateNodeRequest'
+          $ref: '#/definitions/server.UpdateNodeRequest'
       produces:
       - application/json
       responses:
@@ -774,7 +718,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/pkg_server.UptimeReportRequest'
+          $ref: '#/definitions/server.UptimeReportRequest'
       produces:
       - application/json
       responses:
@@ -839,7 +783,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/pkg_server.ZOSVersionRequest'
+          $ref: '#/definitions/server.ZOSVersionRequest'
       produces:
       - application/json
       responses:

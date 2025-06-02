@@ -23,7 +23,7 @@ const (
 // @title Node Registrar API
 // @version 1.0
 // @description API for managing TFGrid node registration
-// @BasePath /v1
+// @BasePath /api/v1
 
 // @Summary List farms
 // @Description Get a list of farms with optional filters
@@ -596,7 +596,7 @@ func (s *Server) createAccountHandler(c *gin.Context) {
 }
 
 type UpdateAccountRequest struct {
-	Relays    pq.StringArray `json:"relays"`
+	Relays    pq.StringArray `json:"relays" swaggertype:"array,string"`
 	RMBEncKey string         `json:"rmb_enc_key"`
 }
 

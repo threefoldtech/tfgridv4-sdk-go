@@ -31,6 +31,11 @@ var (
 	version string
 )
 
+// @title Node Registrar API
+// @version 1.0
+// @description API for managing TFGrid node registration
+// @BasePath /api/v1
+
 func main() {
 	if err := Run(); err != nil {
 		log.Fatal().Err(err).Send()

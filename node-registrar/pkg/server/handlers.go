@@ -2,7 +2,6 @@ package server
 
 import (
 	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -36,7 +35,7 @@ const (
 // @Param twin_id query int false "Filter by twin ID"
 // @Param page query int false "Page number" default(1)
 // @Param size query int false "Results per page" default(10)
-// @Success 200 {object} []db.Farm "List of farms"]
+// @Success 200 {object} []db.Farm "List of farms"
 // @Failure 400 {object} map[string]any "Bad request"
 // @Router /farms [get]
 func (s Server) listFarmsHandler(c *gin.Context) {
@@ -55,19 +54,7 @@ func (s Server) listFarmsHandler(c *gin.Context) {
 		return
 	}
 
-	// dorp extra db field
-	var res []map[string]any
-	for _, farm := range farms {
-		data, err := toMap(farm)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-		delete(data, "nodes")
-		res = append(res, data)
-	}
-
-	c.JSON(http.StatusOK, res)
+	c.JSON(http.StatusOK, farms)
 }
 
 // @Summary Get farm details
@@ -101,15 +88,7 @@ func (s Server) getFarmHandler(c *gin.Context) {
 		return
 	}
 
-	// dorp extra db field
-	res, err := toMap(farm)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	delete(res, "nodes")
-
-	c.JSON(http.StatusOK, res)
+	c.JSON(http.StatusOK, farm)
 }
 
 // @Summary Create new farm
@@ -257,23 +236,13 @@ func (s Server) listNodesHandler(c *gin.Context) {
 		return
 	}
 
+	// Set online status for each node
 	cutoffTime := time.Now().Add(-OnlineCutoffTime)
-	// dorp extra db field
-	var res []map[string]any
-	for _, node := range nodes {
-		node.Online = !node.LastSeen.IsZero() && node.LastSeen.After(cutoffTime)
-
-		data, err := toMap(node)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-
-		delete(data, "uptime")
-		res = append(res, data)
+	for i := range nodes {
+		nodes[i].Online = !nodes[i].LastSeen.IsZero() && nodes[i].LastSeen.After(cutoffTime)
 	}
 
-	c.JSON(http.StatusOK, res)
+	c.JSON(http.StatusOK, nodes)
 }
 
 // @Summary Get node details
@@ -305,20 +274,11 @@ func (s Server) getNodeHandler(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-
+	// Determine if the node is online (has sent an uptime report in the last 30 minutes)
 	cutoffTime := time.Now().Add(-OnlineCutoffTime)
 	node.Online = !node.LastSeen.IsZero() && node.LastSeen.After(cutoffTime)
 
-	// dorp extra db field
-	data, err := toMap(node)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	delete(data, "uptime")
-
-	c.JSON(http.StatusOK, data)
+	c.JSON(http.StatusOK, node)
 }
 
 type NodeRegistrationRequest struct {
@@ -632,15 +592,7 @@ func (s *Server) createAccountHandler(c *gin.Context) {
 		return
 	}
 
-	// dorp extra db field
-	data, err := toMap(account)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	delete(data, "farms")
-	c.JSON(http.StatusCreated, data)
+	c.JSON(http.StatusCreated, account)
 }
 
 type UpdateAccountRequest struct {
@@ -741,15 +693,7 @@ func (s *Server) getAccountHandler(c *gin.Context) {
 			return
 		}
 
-		// dorp extra db field
-		data, err := toMap(account)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-
-		delete(data, "farms")
-		c.JSON(http.StatusCreated, data)
+		c.JSON(http.StatusOK, account)
 		return
 	}
 
@@ -763,16 +707,7 @@ func (s *Server) getAccountHandler(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get account"})
 			return
 		}
-
-		// dorp extra db field
-		data, err := toMap(account)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-
-		delete(data, "farms")
-		c.JSON(http.StatusCreated, data)
+		c.JSON(http.StatusOK, account)
 		return
 	}
 }
@@ -889,17 +824,4 @@ func validateTimestampHint(timestampHint int64) error {
 	}
 
 	return nil
-}
-
-func toMap(val any) (map[string]any, error) {
-	bytes, err := json.Marshal(val)
-	if err != nil {
-		return nil, err
-	}
-	data := map[string]any{}
-	err = json.Unmarshal(bytes, &data)
-	if err != nil {
-		return nil, err
-	}
-	return data, nil
 }

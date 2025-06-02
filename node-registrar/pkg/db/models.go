@@ -19,7 +19,7 @@ type Account struct {
 	PublicKey string `gorm:"type:text;not null;unique" json:"public_key"`
 	// Relations | likely we need to use OnDelete:RESTRICT (Prevent Twin deletion if farms exist)
 	// @swagger:ignore
-    Farms []Farm `gorm:"foreignKey:TwinID;references:TwinID;constraint:OnDelete:RESTRICT" json:"farms"`
+	Farms []Farm `gorm:"foreignKey:TwinID;references:TwinID;constraint:OnDelete:RESTRICT" json:"farms"`
 }
 
 type Farm struct {

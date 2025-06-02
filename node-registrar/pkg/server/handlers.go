@@ -12,7 +12,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/lib/pq"
-	"github.com/rs/zerolog/log"
 	"github.com/threefoldtech/tfgrid4-sdk-go/node-registrar/pkg/db"
 )
 
@@ -749,9 +748,7 @@ func (s *Server) getAccountHandler(c *gin.Context) {
 			return
 		}
 
-		log.Info().Any("farms", data).Send()
 		delete(data, "farms")
-		log.Info().Any("farms", data).Send()
 		c.JSON(http.StatusCreated, data)
 		return
 	}

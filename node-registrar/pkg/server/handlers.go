@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -20,14 +21,6 @@ const (
 	OnlineCutoffTime                     = 40 * time.Minute
 )
 
-type Farm struct {
-	FarmID         uint64 `json:"farm_id"`
-	FarmName       string `json:"farm_name"`
-	TwinID         uint64 `json:"twin_id"`
-	Dedicated      bool   `json:"dedicated"`
-	StellarAddress string `json:"stellar_address"`
-}
-
 // @title Node Registrar API
 // @version 1.0
 // @description API for managing TFGrid node registration
@@ -43,7 +36,7 @@ type Farm struct {
 // @Param twin_id query int false "Filter by twin ID"
 // @Param page query int false "Page number" default(1)
 // @Param size query int false "Results per page" default(10)
-// @Success 200 {object} []Farm "List of farms"
+// @Success 200 {object} []map[string]any "List of farms"]
 // @Failure 400 {object} map[string]any "Bad request"
 // @Router /farms [get]
 func (s Server) listFarmsHandler(c *gin.Context) {
@@ -63,15 +56,15 @@ func (s Server) listFarmsHandler(c *gin.Context) {
 	}
 
 	// dorp extra db field
-	var res []Farm
+	var res []map[string]any
 	for _, farm := range farms {
-		res = append(res, Farm{
-			FarmID:         farm.FarmID,
-			FarmName:       farm.FarmName,
-			TwinID:         farm.TwinID,
-			Dedicated:      farm.Dedicated,
-			StellarAddress: farm.StellarAddress,
-		})
+		data, err := toMap(farm)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		delete(data, "nodes")
+		res = append(res, data)
 	}
 
 	c.JSON(http.StatusOK, res)
@@ -83,7 +76,7 @@ func (s Server) listFarmsHandler(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param farm_id path int true "Farm ID"
-// @Success 200 {object} Farm "Farm details"
+// @Success 200 {object} db.Farm "Farm details"
 // @Failure 400 {object} map[string]any "Invalid farm ID"
 // @Failure 404 {object} map[string]any "Farm not found"
 // @Router /farms/{farm_id} [get]
@@ -109,13 +102,12 @@ func (s Server) getFarmHandler(c *gin.Context) {
 	}
 
 	// dorp extra db field
-	res := Farm{
-		FarmID:         farm.FarmID,
-		FarmName:       farm.FarmName,
-		TwinID:         farm.TwinID,
-		Dedicated:      farm.Dedicated,
-		StellarAddress: farm.StellarAddress,
+	res, err := toMap(farm)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
 	}
+	delete(res, "nodes")
 
 	c.JSON(http.StatusOK, res)
 }
@@ -922,4 +914,17 @@ func validateTimestampHint(timestampHint int64) error {
 	}
 
 	return nil
+}
+
+func toMap(val any) (map[string]any, error) {
+	bytes, err := json.Marshal(val)
+	if err != nil {
+		return nil, err
+	}
+	data := map[string]any{}
+	err = json.Unmarshal(bytes, &data)
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
 }

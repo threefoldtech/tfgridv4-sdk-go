@@ -19,7 +19,7 @@ type Account struct {
 	PublicKey string `gorm:"type:text;not null;unique" json:"public_key"`
 	// Relations | likely we need to use OnDelete:RESTRICT (Prevent Twin deletion if farms exist)
 	// @swagger:ignore
-	Farms []Farm `gorm:"foreignKey:TwinID;references:TwinID;constraint:OnDelete:RESTRICT"`
+	Farms []Farm `gorm:"foreignKey:TwinID;references:TwinID;constraint:OnDelete:RESTRICT" json:"-"`
 }
 
 type Farm struct {
@@ -31,7 +31,7 @@ type Farm struct {
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`
 	// @swagger:ignore
-	Nodes []Node `gorm:"foreignKey:FarmID;references:FarmID;constraint:OnDelete:RESTRICT" json:"nodes"`
+	Nodes []Node `gorm:"foreignKey:FarmID;references:FarmID;constraint:OnDelete:RESTRICT" json:"-"`
 }
 
 type Node struct {
@@ -49,7 +49,7 @@ type Node struct {
 	Virtualized  bool        `json:"virtualized"`
 	SerialNumber string      `json:"serial_number"`
 
-	UptimeReports []UptimeReport `json:"uptime" gorm:"foreignKey:NodeID;references:NodeID;constraint:OnDelete:CASCADE"`
+	UptimeReports []UptimeReport `json:"-" gorm:"foreignKey:NodeID;references:NodeID;constraint:OnDelete:CASCADE"`
 	LastSeen      time.Time      `json:"last_seen" gorm:"index"` // Last time the node sent Uptime report
 	Online        bool           `json:"online" gorm:"-"`        // Computed field, not stored in database
 	CreatedAt     time.Time      `json:"created_at"`

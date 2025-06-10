@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -43,13 +44,24 @@ func (c *RegistrarClient) getZosVersion() (version ZosVersion, err error) {
 		return version, errors.Wrapf(err, "failed to get zos version with status code %s", resp.Status)
 	}
 
-	var versionString string
-	err = json.NewDecoder(resp.Body).Decode(&versionString)
+	// read version body
+	versionBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return version, err
 	}
 
-	versionBytes, err := base64.StdEncoding.DecodeString(versionString)
+	// try parsing res to ZosVersion struct
+	if err := json.Unmarshal(versionBytes, &version); err == nil {
+		return version, nil
+	}
+
+	// otherwise it's the old encrypted version
+	var versionString string
+	if err := json.Unmarshal(versionBytes, &versionString); err != nil {
+		return version, err
+	}
+
+	versionBytes, err = base64.StdEncoding.DecodeString(versionString)
 	if err != nil {
 		return version, err
 	}
@@ -58,27 +70,6 @@ func (c *RegistrarClient) getZosVersion() (version ZosVersion, err error) {
 
 	err = json.NewDecoder(strings.NewReader(correctedJSON)).Decode(&version)
 	if err != nil {
-		return version, err
-	}
-
-	err = json.Unmarshal(bodyBytes, &version)
-	if err != nil {
-		// try decoding base64 version
-		var versionString string
-		err = json.Unmarshal(bodyBytes, &versionString)
-		if err != nil {
-			return version, err
-		}
-
-		decodedVersion, err := base64.StdEncoding.DecodeString(versionString)
-		if err != nil {
-			return version, err
-		}
-
-		correctedJSON := strings.ReplaceAll(string(decodedVersion), "'", "\"")
-
-		err = json.Unmarshal([]byte(correctedJSON), &version)
-
 		return version, err
 	}
 

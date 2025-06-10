@@ -59,6 +59,14 @@ func Run() error {
 	flag.BoolVar(&f.debug, "debug", false, "allow debug logs")
 	flag.UintVar(&f.serverPort, "server-port", 8080, "server port")
 	flag.StringVar(&f.addr, "address", "", "address or domain on which the server will be served")
+
+	// Deprecated flag handling
+	flag.Func("domain", "deprecated: use --address instead", func(val string) error {
+		log.Warn().Msg("Warning: --domain flag is deprecated, please use --address instead")
+		f.addr = val
+		return nil
+	})
+
 	flag.StringVar(&f.network, "network", "dev", "the registrar network")
 	flag.Uint64Var(&f.adminTwinID, "admin-twin-id", 1, "admin twin ID")
 
@@ -107,10 +115,6 @@ func Run() error {
 func (f flags) validate() error {
 	if f.serverPort < 1 || f.serverPort > 65535 {
 		return errors.Errorf("invalid port %d, server port should be in the valid port range 1–65535", f.serverPort)
-	}
-
-	if strings.TrimSpace(f.domain) == "" {
-		return errors.New("invalid domain name, domain name should not be empty")
 	}
 
 	if f.SqlLogLevel < 1 || f.SqlLogLevel > 4 {

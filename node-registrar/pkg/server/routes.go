@@ -38,6 +38,7 @@ func (s *Server) registerRoutes(r *gin.RouterGroup) {
 	// added to stop redirecting when creating a farm with extra /
 	protectedFarmRoutes.POST("/", s.createFarmHandler)
 	protectedFarmRoutes.PATCH("/:farm_id", s.updateFarmHandler)
+	protectedFarmRoutes.POST("/:farm_id/approve", s.approveNodesHandler)
 
 	// nodes routes
 	publicNodeRoutes := r.Group("nodes")

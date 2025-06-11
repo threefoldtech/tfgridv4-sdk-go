@@ -1,6 +1,7 @@
 package db
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -70,4 +71,31 @@ func (db *Database) UpdateFarm(farmID uint64, name string, stellarAddr string) (
 		return ErrRecordNotFound
 	}
 	return nil
+}
+
+// ApproveNodes approves multiple nodes for a specific farm
+func (db *Database) ApproveNodes(farmID uint64, nodeIDs []uint64) error {
+	// Start a transaction to ensure all updates are atomic
+	tx := db.gormDB.Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
+
+	result := tx.Model(&Node{}).
+		Where("farm_id = ? AND node_id IN ? AND approved = ?", farmID, nodeIDs, false).
+		Update("approved", true)
+
+	if result.Error != nil {
+		tx.Rollback()
+		return result.Error
+	}
+
+	// Check if all nodes were found and updated
+	if int(result.RowsAffected) != len(nodeIDs) {
+		tx.Rollback()
+		return fmt.Errorf("some nodes were not found, do not belong to farm %d, or are already approved", farmID)
+	}
+
+	// Commit the transaction
+	return tx.Commit().Error
 }

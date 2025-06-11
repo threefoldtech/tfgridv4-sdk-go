@@ -825,3 +825,60 @@ func validateTimestampHint(timestampHint int64) error {
 
 	return nil
 }
+
+type ApproveNodesRequest struct {
+	NodeIDs []uint64 `json:"node_ids" binding:"required,min=1"`
+}
+
+// @Summary Approve nodes for a farm
+// @Description Approve a list of nodes for a specific farm
+// @Tags farms
+// @Accept json
+// @Produce json
+// @Param X-Auth header string true "Authentication format: Base64(<unix_timestamp>:<twin_id>):Base64(signature)"
+// @Param farm_id path int true "Farm ID"
+// @Param request body ApproveNodesRequest true "List of node IDs to approve"
+// @Success 200 {object} map[string]any "Nodes approved successfully"
+// @Failure 400 {object} map[string]any "Invalid request"
+// @Failure 401 {object} map[string]any "Unauthorized"
+// @Failure 404 {object} map[string]any "Farm not found"
+// @Router /farms/{farm_id}/approve [post]
+func (s *Server) approveNodesHandler(c *gin.Context) {
+	farmID := c.Param("farm_id")
+
+	id, err := strconv.ParseUint(farmID, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid farm_id: %v", err.Error())})
+		return
+	}
+
+	// Verify farm exists and get owner
+	farm, err := s.db.GetFarm(id)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Farm not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Ensure the requester owns the farm
+	ensureOwner(c, farm.TwinID)
+	if c.IsAborted() {
+		return
+	}
+
+	var req ApproveNodesRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := s.db.ApproveNodes(id, req.NodeIDs); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Nodes approved successfully"})
+}

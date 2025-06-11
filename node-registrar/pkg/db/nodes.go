@@ -22,6 +22,15 @@ func (db *Database) ListNodes(filter NodeFilter, limit Limit) (nodes []Node, err
 	if filter.TwinID != nil {
 		query = query.Where("twin_id = ?", *filter.TwinID)
 	}
+	if filter.Healthy != nil {
+		query = query.Where("healthy= ?", *filter.Healthy)
+	}
+	if filter.Status != nil {
+		query = query.Where("status= ?", *filter.Status)
+	}
+	if filter.Approved != nil {
+		query = query.Where("approved= ?", *filter.Approved)
+	}
 
 	// Filter by online status (node sent an uptime report in the last 30 minutes)
 	if filter.Online != nil {

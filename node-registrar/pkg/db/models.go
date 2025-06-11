@@ -102,10 +102,11 @@ type NodeFilter struct {
 	NodeID   *uint64 `form:"node_id"`
 	FarmID   *uint64 `form:"farm_id"`
 	TwinID   *uint64 `form:"twin_id"`
-	Status   string  `form:"status"`
-	Healthy  bool    `form:"healthy"`
+	Status   *string `form:"status"`
+	Healthy  *bool   `form:"healthy"`
 	Online   *bool   `form:"online"`    // Filter by online status (true = online, false = offline, nil = both)
 	LastSeen *int64  `form:"last_seen"` // Filter nodes last seen within this many minutes
+	Approved *bool   `form:"approved"`
 }
 
 type FarmFilter struct {

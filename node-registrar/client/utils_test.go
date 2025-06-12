@@ -33,6 +33,8 @@ const (
 	updateFarmWithStatusUnauthorized
 	getFarmWithStatusNotfound
 	getFarmWithStatusOK
+	approveNodesWithStatusOK
+	approveNodesWithStatusUnauthorized
 
 	registerNodeStatusCreated
 	registerNodeWithNoAccount
@@ -43,6 +45,7 @@ const (
 	getNodeWithIDStatusNotFound
 	getNodeWithTwinID
 	listNodesInFarm
+	listUnapprovedNodesInFarm
 
 	testMnemonic = "bottom drive obey lake curtain smoke basket hold race lonely fit walk"
 
@@ -215,6 +218,47 @@ func serverHandler(r *http.Request, request, count int, require *require.Asserti
 	case listNodesInFarm:
 		require.Equal("/v1/nodes", r.URL.Path)
 		require.Equal(fmt.Sprint(farmID), r.URL.Query().Get("farm_id"))
+		require.Equal(http.MethodGet, r.Method)
+		resp, err := json.Marshal([]Node{node})
+		require.NoError(err)
+		return http.StatusOK, resp
+
+	case approveNodesWithStatusOK:
+		require.Equal("/v1/farms/1/approve", r.URL.Path)
+		require.Equal(http.MethodPost, r.Method)
+		require.NotEmpty(r.Body)
+		var body struct {
+			NodeIDs []uint64 `json:"node_ids"`
+		}
+		err := json.NewDecoder(r.Body).Decode(&body)
+		require.NoError(err)
+		require.Equal([]uint64{1, 2, 3}, body.NodeIDs)
+		return http.StatusOK, nil
+
+	case approveNodesWithStatusUnauthorized:
+		switch count {
+		case 0:
+			require.Equal("/v1/accounts", r.URL.Path)
+			require.Equal(account.PublicKey, r.URL.Query().Get("public_key"))
+			require.Equal(http.MethodGet, r.Method)
+			return http.StatusNotFound, nil
+		case 1:
+			require.Equal("/v1/farms/1/approve", r.URL.Path)
+			require.Equal(http.MethodPost, r.Method)
+			require.NotEmpty(r.Body)
+			var body struct {
+				NodeIDs []uint64 `json:"node_ids"`
+			}
+			err := json.NewDecoder(r.Body).Decode(&body)
+			require.NoError(err)
+			require.Equal([]uint64{1, 2, 3}, body.NodeIDs)
+			return http.StatusUnauthorized, nil
+		}
+
+	case listUnapprovedNodesInFarm:
+		require.Equal("/v1/nodes", r.URL.Path)
+		require.Equal(fmt.Sprint(farmID), r.URL.Query().Get("farm_id"))
+		require.Equal("false", r.URL.Query().Get("approved"))
 		require.Equal(http.MethodGet, r.Method)
 		resp, err := json.Marshal([]Node{node})
 		require.NoError(err)

@@ -496,6 +496,9 @@ func parseListNodeOpts(filter NodeFilter) map[string]any {
 	if filter.LastSeen != nil {
 		data["last_seen"] = *filter.LastSeen
 	}
+	if filter.Approved != nil {
+		data["approved"] = *filter.Approved
+	}
 
 	page := uint32(1)
 	if filter.Page != nil {

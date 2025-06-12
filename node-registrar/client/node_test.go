@@ -166,3 +166,32 @@ func TestGetNode(t *testing.T) {
 		require.Equal([]Node{node}, result)
 	})
 }
+
+func TestListUnapprovedNodes(t *testing.T) {
+	var request int
+	var count int
+	require := require.New(t)
+
+	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		statusCode, body := serverHandler(r, request, count, require)
+		w.WriteHeader(statusCode)
+		_, err := w.Write(body)
+		require.NoError(err)
+		count++
+	}))
+	defer testServer.Close()
+
+	baseURL, err := url.JoinPath(testServer.URL, "v1")
+	require.NoError(err)
+
+	t.Run("test list unapproved nodes in farm", func(t *testing.T) {
+		request = newClientWithAccountNoNode
+		c, err := NewRegistrarClient(baseURL, testMnemonic)
+		require.NoError(err)
+
+		request = listUnapprovedNodesInFarm
+		nodes, err := c.ListUnapprovedNodes(farmID)
+		require.NoError(err)
+		require.Equal([]Node{node}, nodes)
+	})
+}

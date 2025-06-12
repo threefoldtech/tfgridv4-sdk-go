@@ -134,3 +134,49 @@ func TestGetFarm(t *testing.T) {
 		require.Equal(result, farm)
 	})
 }
+
+func TestApproveNodes(t *testing.T) {
+	var request int
+	var count int
+	require := require.New(t)
+
+	keyPair, err := parseKeysFromMnemonicOrSeed(testMnemonic)
+	require.NoError(err)
+	account.PublicKey = base64.StdEncoding.EncodeToString(keyPair.Public())
+
+	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		statusCode, body := serverHandler(r, request, count, require)
+		w.WriteHeader(statusCode)
+		_, err := w.Write(body)
+		require.NoError(err)
+		count++
+	}))
+	defer testServer.Close()
+
+	baseURL, err := url.JoinPath(testServer.URL, "v1")
+	require.NoError(err)
+
+	t.Run("test approve nodes with status unauthorized", func(t *testing.T) {
+		count = 0
+		request = newClientWithNoAccount
+		c, err := NewRegistrarClient(baseURL, testMnemonic)
+		require.NoError(err)
+
+		count = 0
+		request = approveNodesWithStatusUnauthorized
+		err = c.ApproveNodes(farmID, []uint64{1, 2, 3})
+		require.Error(err)
+	})
+
+	t.Run("test approve nodes with status ok", func(t *testing.T) {
+		count = 0
+		request = newClientWithAccountNoNode
+		c, err := NewRegistrarClient(baseURL, testMnemonic)
+		require.NoError(err)
+
+		count = 0
+		request = approveNodesWithStatusOK
+		err = c.ApproveNodes(farmID, []uint64{1, 2, 3})
+		require.NoError(err)
+	})
+}

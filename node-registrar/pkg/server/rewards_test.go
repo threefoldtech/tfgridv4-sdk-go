@@ -70,6 +70,12 @@ func TestCalculateMonthlyReward(t *testing.T) {
 			wantError:        false,
 		},
 		{
+			name:             "uptime below threshold as float (89.1%)",
+			capacity:         standardCapacity,
+			upTimePercentage: 89.1,
+			wantError:        false,
+		},
+		{
 			name:             "uptime at 98%",
 			capacity:         standardCapacity,
 			upTimePercentage: 98,
@@ -86,7 +92,7 @@ func TestCalculateMonthlyReward(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := CalculateMonthlyReward(tt.capacity, tt.upTimePercentage)
-			
+
 			// Error check
 			if tt.wantError {
 				if err == nil {
@@ -95,12 +101,12 @@ func TestCalculateMonthlyReward(t *testing.T) {
 				assert.Equal(t, tt.expectedErrorMsg, err.Error())
 				return
 			}
-			
+
 			// No error expected
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
-			
+
 			// Check reward calculation
 			AssertMonthlyReward(t, tt.capacity, tt.upTimePercentage, got)
 		})
@@ -114,15 +120,15 @@ func AssertMonthlyReward(t testing.TB, resources db.Resources, upTimePercentage 
 		assert.Equal(t, Reward{}, got)
 		return
 	}
-	
+
 	// Calculate rewards
 	memoryReward := bytesToGB(resources.MRU) * MEMORY_REWARD_PER_GB
 	ssdReward := bytesToTB(resources.SRU) * SSD_REWARD_PER_TB
 	hddReward := bytesToTB(resources.HRU) * HDD_REWARD_PER_TB
-	
+
 	// Calculate total rewards
 	total := memoryReward + ssdReward + hddReward
-	
+
 	// Apply uptime percentage
 	total = total * (upTimePercentage / 100)
 

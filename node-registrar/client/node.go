@@ -45,6 +45,17 @@ func (c *RegistrarClient) ListNodes(opts NodeFilter) (nodes []Node, err error) {
 	return c.listNodesWithFilter(opts)
 }
 
+// ListUnapprovedNodes gets a list of unapproved nodes for a specific farm
+func (c *RegistrarClient) ListUnapprovedNodes(farmID uint64) ([]Node, error) {
+	falseVal := false
+	filter := NodeFilter{
+		FarmID:   &farmID,
+		Approved: &falseVal,
+	}
+
+	return c.ListNodes(filter)
+}
+
 func (c *RegistrarClient) registerNode(node Node) (nodeID uint64, err error) {
 	err = c.ensureTwinID()
 	if err != nil {
@@ -331,6 +342,7 @@ type NodeFilter struct {
 	LastSeen *int64
 	Page     *uint32
 	Size     *uint32
+	Approved *bool
 }
 
 func (c *RegistrarClient) listNodesWithFilter(filter NodeFilter) (nodes []Node, err error) {

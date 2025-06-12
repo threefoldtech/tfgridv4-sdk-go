@@ -281,6 +281,39 @@ func (s Server) getNodeHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, node)
 }
 
+func (s Server) getNodeRewardHandler(c *gin.Context) {
+	nodeID := c.Param("node_id")
+
+	id, err := strconv.ParseUint(nodeID, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid node id"})
+		return
+	}
+
+	node, err := s.db.GetNode(id)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// TODO: calculate uptime percentage based on uptime reports
+	// uptimeReports, err := s.db.GetUptimeReports(id, time.Now().Add(-time.Hour*48), time.Now())
+	// if err != nil {
+	// 	c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	// 	return
+	// }
+	rewards, err := CalculateMonthlyReward(node.Resources, 100)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	}
+	c.JSON(http.StatusOK, rewards)
+}
+
 type NodeRegistrationRequest struct {
 	TwinID       uint64         `json:"twin_id" binding:"required,min=1"`
 	FarmID       uint64         `json:"farm_id" binding:"required,min=1"`

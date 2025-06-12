@@ -35,6 +35,62 @@ func (c *RegistrarClient) ListFarms(filter FarmFilter) (farms []Farm, err error)
 	return c.listFarms(filter)
 }
 
+// ApproveNodes approves multiple nodes for a specific farm
+func (c *RegistrarClient) ApproveNodes(farmID uint64, nodeIDs []uint64) error {
+	return c.approveNodes(farmID, nodeIDs)
+}
+
+func (c *RegistrarClient) approveNodes(farmID uint64, nodeIDs []uint64) error {
+	if err := c.ensureTwinID(); err != nil {
+		return errors.Wrap(err, "failed to ensure twin id")
+	}
+
+	url, err := url.JoinPath(c.baseURL, "farms", fmt.Sprint(farmID), "approve")
+	if err != nil {
+		return errors.Wrap(err, "failed to construct registrar url")
+	}
+
+	data := struct {
+		NodeIDs []uint64 `json:"node_ids"`
+	}{
+		NodeIDs: nodeIDs,
+	}
+
+	var body bytes.Buffer
+	if err = json.NewEncoder(&body).Encode(data); err != nil {
+		return errors.Wrap(err, "failed to encode request body")
+	}
+
+	req, err := http.NewRequest("POST", url, &body)
+	if err != nil {
+		return errors.Wrap(err, "failed to construct http request to the registrar")
+	}
+
+	authHeader, err := c.signRequest(time.Now().Unix())
+	if err != nil {
+		return errors.Wrap(err, "failed to sign request")
+	}
+	req.Header.Set("X-Auth", authHeader)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return errors.Wrap(err, "failed to send request to approve nodes")
+	}
+
+	if resp == nil {
+		return errors.New("failed to approve nodes, no response received")
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		err = parseResponseError(resp.Body)
+		return errors.Wrapf(err, "failed to approve nodes with status code %s", resp.Status)
+	}
+
+	return nil
+}
+
 // FarmUpdate represents the data needed to update an existing farm
 type FarmUpdate struct {
 	FarmName       *string

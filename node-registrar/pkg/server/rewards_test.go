@@ -29,14 +29,14 @@ func TestCalculateMonthlyReward(t *testing.T) {
 		capacity         db.Resources
 		upTimePercentage float64
 		wantError        bool
-		expectedErrorMsg string
+		expectedError    error
 	}{
 		{
 			name:             "negative uptime percentage",
 			capacity:         standardCapacity,
 			upTimePercentage: -1,
 			wantError:        true,
-			expectedErrorMsg: INVALID_UPTIME_PERCENTAGE,
+			expectedError:    ErrInvalidUptimePercentage,
 		},
 		{
 			name:             "valid uptime (5%)",
@@ -49,7 +49,7 @@ func TestCalculateMonthlyReward(t *testing.T) {
 			capacity:         standardCapacity,
 			upTimePercentage: 101,
 			wantError:        true,
-			expectedErrorMsg: INVALID_UPTIME_PERCENTAGE,
+			expectedError:    ErrInvalidUptimePercentage,
 		},
 		{
 			name:             "uptime at 100%",
@@ -98,7 +98,7 @@ func TestCalculateMonthlyReward(t *testing.T) {
 				if err == nil {
 					t.Fatal("expected error, got nil")
 				}
-				assert.Equal(t, tt.expectedErrorMsg, err.Error())
+				assert.Equal(t, tt.expectedError, err)
 				return
 			}
 

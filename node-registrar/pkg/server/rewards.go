@@ -19,9 +19,10 @@ const (
 	TF_REWARD_PERCENTAGE     = 0.2 // 20% of the reward goes to the Threefold Foundation
 	FP_REWARD_PERCENTAGE     = 0.2 // 20% of the reward goes to the Farming Pool
 
-	// Error messages
-	INVALID_UPTIME_PERCENTAGE = "invalid uptime percentage"
 )
+
+// Error messages
+var ErrInvalidUptimePercentage = errors.New("invalid uptime percentage")
 
 type Reward struct {
 	FarmerReward float64
@@ -59,7 +60,7 @@ type Reward struct {
 
 func CalculateMonthlyReward(capacity db.Resources, upTimePercentage float64) (Reward, error) {
 	if upTimePercentage < 0 || upTimePercentage > 100 {
-		return Reward{}, errors.New(INVALID_UPTIME_PERCENTAGE)
+		return Reward{}, ErrInvalidUptimePercentage
 	}
 	if upTimePercentage < 90 {
 		return Reward{

@@ -2,7 +2,6 @@ package server
 
 import (
 	"errors"
-	"log"
 	"math"
 	"time"
 
@@ -36,10 +35,11 @@ const (
 var ErrInvalidUptimePercentage = errors.New("invalid uptime percentage")
 
 type Reward struct {
-	FarmerReward float64
-	TFReward     float64
-	FPReward     float64
-	Total        float64
+	FarmerReward     float64
+	TFReward         float64
+	FPReward         float64
+	Total            float64
+	UpTimePercentage float64
 }
 
 // CalculateMonthlyReward calculates the monthly reward in INCA for a given node capacity.
@@ -85,10 +85,11 @@ func CalculateMonthlyReward(capacity db.Resources, upTimePercentage float64) (Re
 	total := (bytesToGB(capacity.MRU)*MEMORY_REWARD_PER_GB + bytesToTB(capacity.SRU)*SSD_REWARD_PER_TB + bytesToTB(capacity.HRU)*HDD_REWARD_PER_TB) * (upTimePercentage / 100)
 
 	return Reward{
-		FarmerReward: total * FARMER_REWARD_PERCENTAGE,
-		TFReward:     total * TF_REWARD_PERCENTAGE,
-		FPReward:     total * FP_REWARD_PERCENTAGE,
-		Total:        total,
+		FarmerReward:     total * FARMER_REWARD_PERCENTAGE,
+		TFReward:         total * TF_REWARD_PERCENTAGE,
+		FPReward:         total * FP_REWARD_PERCENTAGE,
+		Total:            total,
+		UpTimePercentage: upTimePercentage,
 	}, nil
 }
 
@@ -153,7 +154,6 @@ func calculateUpTimePercentage(reports []db.UptimeReport, periodStart, now time.
 	// if there is a gap equals or larger than th @UPTIME_EVENTS_INTERVAL between the last report and now, add it to the downtime
 	elapsedSinceLast := now.Sub(reports[len(reports)-1].Timestamp).Truncate(time.Second)
 	if elapsedSinceLast.Seconds() >= UPTIME_EVENTS_INTERVAL {
-		log.Println("elapsedSinceLast: ", elapsedSinceLast.Hours())
 		downtime += elapsedSinceLast
 	}
 	return truncateFloat(float64(now.Sub(periodStart)-downtime)/float64(now.Sub(periodStart))*100, 2)

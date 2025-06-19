@@ -455,7 +455,7 @@ func (s *Server) updateNodeHandler(c *gin.Context) {
 }
 
 type UptimeReportRequest struct {
-	Uptime    uint64 `json:"uptime" binding:"required"`
+	Uptime    uint64 `json:"uptime" binding:"required"` // in seconds
 	Timestamp int64  `json:"timestamp" binding:"required"`
 }
 

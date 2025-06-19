@@ -67,7 +67,7 @@ func (n *Node) BeforeCreate(tx *gorm.DB) (err error) {
 type UptimeReport struct {
 	ID         uint64        `gorm:"primaryKey;autoIncrement"`
 	NodeID     uint64        `gorm:"index" json:"node_id"`
-	Duration   time.Duration `json:"duration" swaggertype:"integer"` // Uptime duration for this period
+	Duration   time.Duration `json:"duration" swaggertype:"integer"` // Uptime duration for this period in seconds
 	Timestamp  time.Time     `json:"timestamp" gorm:"index"`
 	WasRestart bool          `json:"was_restart"` // True if this report followed a restart
 	CreatedAt  time.Time     `json:"created_at"`

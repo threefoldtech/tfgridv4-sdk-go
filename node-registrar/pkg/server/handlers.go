@@ -301,13 +301,19 @@ func (s Server) getNodeRewardHandler(c *gin.Context) {
 		return
 	}
 
-	// TODO: calculate uptime percentage based on uptime reports
-	// uptimeReports, err := s.db.GetUptimeReports(id, time.Now().Add(-time.Hour*48), time.Now())
-	// if err != nil {
-	// 	c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-	// 	return
-	// }
-	rewards, err := CalculateMonthlyReward(node.Resources, 100)
+	now := time.Now()
+	currentPeriodStart := calculateCurrentPeriodStart(now)
+
+	reports, err := s.db.GetUptimeReports(id, currentPeriodStart, now)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	upTimePercentage := calculateUpTimePercentage(reports, currentPeriodStart, now)
+
+	rewards, err := CalculateMonthlyReward(node.Resources, upTimePercentage)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 	}

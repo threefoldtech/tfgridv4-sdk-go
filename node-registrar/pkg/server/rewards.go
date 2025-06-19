@@ -2,7 +2,9 @@ package server
 
 import (
 	"errors"
+	"log"
 	"math"
+	"time"
 
 	"github.com/threefoldtech/tfgrid4-sdk-go/node-registrar/pkg/db"
 )
@@ -19,6 +21,15 @@ const (
 	TF_REWARD_PERCENTAGE     = 0.2 // 20% of the reward goes to the Threefold Foundation
 	FP_REWARD_PERCENTAGE     = 0.2 // 20% of the reward goes to the Farming Pool
 
+	// TODO update the start timestamp
+	FIRST_PERIOD_START_TIMESTAMP int64 = 1522501000
+
+	// uptime events are supposed to happen every 40 minutes.
+	// here we set this to one hour (3600 sec) to allow some room.
+	UPTIME_EVENTS_INTERVAL = 3600
+
+	// The duration of a standard period, as used by the minting payouts, in seconds.
+	STANDARD_PERIOD_DURATION int64 = 24 * 60 * 60 * (365*3 + 366*2) / 60
 )
 
 // Error messages
@@ -87,4 +98,81 @@ func bytesToGB(bytes uint64) float64 {
 
 func bytesToTB(bytes uint64) float64 {
 	return float64(bytes) / math.Pow(1024, 4)
+}
+
+// calculateUpTimePercentage calculates the uptime percentage for a given node within a specific period.
+//
+// This function takes a slice of UptimeReport, a period start time and a current time as parameters.
+// It calculates the uptime percentage by comparing the expected uptime (calculated by subtracting the timestamp of the previous report from the current report)
+// with the actual uptime (calculated from the duration the current report).
+// If the actual uptime is less than the expected uptime, the difference is counted as downtime.
+// Additionally, if there is a gap equals or larger than the @UPTIME_EVENTS_INTERVAL between the last report and now, add it to the downtime.
+// The uptime percentage is then calculated by subtracting the total downtime from the total elapsed time since the period start and dividing the result by the total elapsed time.
+// The result is then multiplied by 100 to get the percentage.
+//
+// Note: This function assumes that the reports are ordered by timestamp in ascending order.
+//
+// Parameters:
+//   - reports: a slice of UptimeReport
+//   - periodStart: the start of the period
+//   - now: the current time
+//
+// Returns:
+//   - a float64 representing the uptime percentage
+func calculateUpTimePercentage(reports []db.UptimeReport, periodStart, now time.Time) float64 {
+
+	if len(reports) == 0 {
+		return 0.0
+	}
+
+	//append starter point
+	reports = append([]db.UptimeReport{
+		{
+			Timestamp: periodStart,
+			Duration:  time.Duration(0),
+		},
+	}, reports...)
+
+	var downtime time.Duration = 0
+	for i := 0; i < len(reports)-1; i++ {
+
+		curr := reports[i]
+		next := reports[i+1]
+
+		curr.Duration = time.Duration(curr.Duration * time.Second)
+		next.Duration = time.Duration(next.Duration * time.Second)
+
+		//TODO should we check the order of timestamp?
+
+		expected := next.Timestamp.Sub(curr.Timestamp).Truncate(time.Second)
+		actual := next.Duration.Truncate(time.Second)
+		if curr.Duration > next.Duration || actual < expected {
+			downtime += expected - actual
+		}
+	}
+	// if there is a gap equals or larger than th @UPTIME_EVENTS_INTERVAL between the last report and now, add it to the downtime
+	elapsedSinceLast := now.Sub(reports[len(reports)-1].Timestamp).Truncate(time.Second)
+	if elapsedSinceLast.Seconds() >= UPTIME_EVENTS_INTERVAL {
+		log.Println("elapsedSinceLast: ", elapsedSinceLast.Hours())
+		downtime += elapsedSinceLast
+	}
+	return truncateFloat(float64(now.Sub(periodStart)-downtime)/float64(now.Sub(periodStart))*100, 2)
+}
+
+// calculateCurrentPeriodStart returns the start of the current period.
+//
+// The function uses the unix timestamp of the first period start (FIRST_PERIOD_START_TIMESTAMP) and the standard period duration (STANDARD_PERIOD_DURATION) to calculate the start of the current period.
+//
+// Parameter:
+//   - now: the reference time used to calculate the current period start
+func calculateCurrentPeriodStart(now time.Time) time.Time {
+	secondsSinceFirstPeriod := now.Unix() - FIRST_PERIOD_START_TIMESTAMP
+	periodOffset := secondsSinceFirstPeriod % STANDARD_PERIOD_DURATION
+	currentPeriodStart := now.Unix() - periodOffset
+	return time.Unix(currentPeriodStart, 0)
+}
+
+func truncateFloat(num float64, precision int) float64 {
+	pow := math.Pow(10, float64(precision))
+	return math.Trunc(num*pow) / pow
 }

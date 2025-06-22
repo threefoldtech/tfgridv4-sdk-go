@@ -80,10 +80,10 @@ func CalculateMonthlyReward(capacity db.Resources, upTimePercentage float64) (Re
 	total := (bytesToGB(capacity.MRU)*MEMORY_REWARD_PER_GB + bytesToTB(capacity.SRU)*SSD_REWARD_PER_TB + bytesToTB(capacity.HRU)*HDD_REWARD_PER_TB) * (upTimePercentage / 100)
 
 	return Reward{
-		FarmerReward:     total * FARMER_REWARD_PERCENTAGE,
-		TFReward:         total * TF_REWARD_PERCENTAGE,
-		FPReward:         total * FP_REWARD_PERCENTAGE,
-		Total:            total,
+		FarmerReward:     truncateFloat(total*FARMER_REWARD_PERCENTAGE, 3),
+		TFReward:         truncateFloat(total*TF_REWARD_PERCENTAGE, 3),
+		FPReward:         truncateFloat(total*FP_REWARD_PERCENTAGE, 3),
+		Total:            truncateFloat(total, 3),
 		UpTimePercentage: upTimePercentage,
 	}, nil
 }
@@ -137,8 +137,6 @@ func calculateUpTimePercentage(reports []db.UptimeReport, periodStart, now time.
 
 		curr.Duration = time.Duration(curr.Duration * time.Second)
 		next.Duration = time.Duration(next.Duration * time.Second)
-
-		//TODO should we check the order of timestamp?
 
 		expected := next.Timestamp.Sub(curr.Timestamp).Truncate(time.Second)
 		actual := next.Duration.Truncate(time.Second)

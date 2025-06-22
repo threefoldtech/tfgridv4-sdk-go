@@ -281,6 +281,16 @@ func (s Server) getNodeHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, node)
 }
 
+// @Summary Get node monthly reward information
+// @Description Retrieves reward calculation for a specific node based on resources and uptime
+// @Tags nodes
+// @Accept json
+// @Produce json
+// @Param node_id path int true "Node ID"
+// @Success 200 {object} Reward "Rewards details with the node uptime percentage"
+// @Failure 400 {object} map[string]any "Invalid node ID"
+// @Failure 404 {object} map[string]any "Node not found"
+// @Router /nodes/{node_id}/reward [get]
 func (s Server) getNodeRewardHandler(c *gin.Context) {
 	nodeID := c.Param("node_id")
 

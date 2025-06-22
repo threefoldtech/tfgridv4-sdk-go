@@ -74,12 +74,7 @@ func CalculateMonthlyReward(capacity db.Resources, upTimePercentage float64) (Re
 		return Reward{}, ErrInvalidUptimePercentage
 	}
 	if upTimePercentage < 90 {
-		return Reward{
-			FarmerReward: 0,
-			TFReward:     0,
-			FPReward:     0,
-			Total:        0,
-		}, nil
+		return Reward{UpTimePercentage: upTimePercentage}, nil
 	}
 
 	total := (bytesToGB(capacity.MRU)*MEMORY_REWARD_PER_GB + bytesToTB(capacity.SRU)*SSD_REWARD_PER_TB + bytesToTB(capacity.HRU)*HDD_REWARD_PER_TB) * (upTimePercentage / 100)

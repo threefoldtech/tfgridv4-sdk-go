@@ -170,6 +170,19 @@ definitions:
     - serial_number
     - twin_id
     type: object
+  server.Reward:
+    properties:
+      farmerReward:
+        type: number
+      fpreward:
+        type: number
+      tfreward:
+        type: number
+      total:
+        type: number
+      upTimePercentage:
+        type: number
+    type: object
   server.UpdateAccountRequest:
     properties:
       relays:
@@ -697,7 +710,7 @@ paths:
       summary: Update node
       tags:
       - nodes
-  /nodes/{node_id}/reward:
+  /nodes/{node_id}/rewards:
     get:
       consumes:
       - application/json

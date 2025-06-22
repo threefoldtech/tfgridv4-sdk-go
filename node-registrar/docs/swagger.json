@@ -687,7 +687,7 @@
                 }
             }
         },
-        "/nodes/{node_id}/reward": {
+        "/nodes/{node_id}/rewards": {
             "get": {
                 "description": "Retrieves reward calculation for a specific node based on resources and uptime",
                 "consumes": [
@@ -1150,7 +1150,27 @@
                 }
             }
         },
-        "server.UpdateAccountRequest": {
+        "server.Reward": {
+            "type": "object",
+            "properties": {
+                "farmerReward": {
+                    "type": "number"
+                },
+                "fpreward": {
+                    "type": "number"
+                },
+                "tfreward": {
+                    "type": "number"
+                },
+                "total": {
+                    "type": "number"
+                },
+                "upTimePercentage": {
+                    "type": "number"
+                }
+            }
+        },
+        "pkg_server.UpdateAccountRequest": {
             "type": "object",
             "properties": {
                 "relays": {

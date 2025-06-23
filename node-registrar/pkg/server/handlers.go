@@ -327,7 +327,7 @@ func (s Server) getNodeRewardHandler(c *gin.Context) {
 		return
 	}
 
-	rewards, err := CalculateMonthlyReward(node.Resources, upTimePercentage)
+	rewards, err := CalculateCapacityReward(node.Resources, upTimePercentage)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

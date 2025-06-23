@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"math"
 	"testing"
 	"time"
@@ -9,7 +10,7 @@ import (
 	"github.com/threefoldtech/tfgrid4-sdk-go/node-registrar/pkg/db"
 )
 
-func TestCalculateMonthlyReward(t *testing.T) {
+func TestCalculateCapacityReward(t *testing.T) {
 	// Define standard capacity for most tests
 	standardCapacity := db.Resources{
 		CRU: 8,
@@ -66,9 +67,9 @@ func TestCalculateMonthlyReward(t *testing.T) {
 			wantError:        false,
 		},
 		{
-			name:             "uptime at threshold (90%)",
+			name:             fmt.Sprintf("uptime at threshold (%.0f%%)", MinUptimePercentageForReward),
 			capacity:         standardCapacity,
-			upTimePercentage: 90,
+			upTimePercentage: MinUptimePercentageForReward,
 			wantError:        false,
 		},
 		{
@@ -93,7 +94,7 @@ func TestCalculateMonthlyReward(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := CalculateMonthlyReward(tt.capacity, tt.upTimePercentage)
+			got, err := CalculateCapacityReward(tt.capacity, tt.upTimePercentage)
 
 			// Error check
 			if tt.wantError {
@@ -110,15 +111,15 @@ func TestCalculateMonthlyReward(t *testing.T) {
 			}
 
 			// Check reward calculation
-			AssertMonthlyReward(t, tt.capacity, tt.upTimePercentage, got)
+			AssertCapacityReward(t, tt.capacity, tt.upTimePercentage, got)
 		})
 	}
 }
 
-func AssertMonthlyReward(t testing.TB, resources db.Resources, upTimePercentage float64, got Reward) {
+func AssertCapacityReward(t testing.TB, resources db.Resources, upTimePercentage float64, got Reward) {
 	t.Helper()
 
-	if upTimePercentage < 90 {
+	if upTimePercentage < MinUptimePercentageForReward {
 		assert.Equal(t, Reward{
 			UpTimePercentage: upTimePercentage,
 		}, got)
@@ -307,11 +308,11 @@ func TestCalculateUpTimePercentage(t *testing.T) {
 				periodStart: now.Add(-120 * time.Minute),
 				reports: []db.UptimeReport{
 					{Timestamp: now.Add(-40 * time.Minute), Duration: 40 * time.Minute}, // Out of order (should be before the one below)
-					{Timestamp: now.Add(-80 * time.Minute), Duration: 40 * time.Minute}, 
+					{Timestamp: now.Add(-80 * time.Minute), Duration: 40 * time.Minute},
 					{Timestamp: now, Duration: 40 * time.Minute},
 				},
 			},
-			expected: 0.0,
+			expected:  0.0,
 			wantError: true,
 		},
 	}

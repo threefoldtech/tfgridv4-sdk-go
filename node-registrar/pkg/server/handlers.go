@@ -290,6 +290,7 @@ func (s Server) getNodeHandler(c *gin.Context) {
 // @Success 200 {object} Reward "Rewards details with the node uptime percentage"
 // @Failure 400 {object} map[string]any "Invalid node ID"
 // @Failure 404 {object} map[string]any "Node not found"
+// @Failure 422 {object} map[string]any "No uptime reports available for this node"
 // @Router /nodes/{node_id}/rewards [get]
 func (s Server) getNodeRewardHandler(c *gin.Context) {
 	nodeID := c.Param("node_id")
@@ -323,6 +324,14 @@ func (s Server) getNodeRewardHandler(c *gin.Context) {
 
 	upTimePercentage, err := calculateUpTimePercentage(reports, periodStart, now)
 	if err != nil {
+		if err == ErrReportsNotInAscOrder {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		if err == ErrNoReportsAvailable {
+			c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

@@ -211,10 +211,11 @@ func TestCalculateUpTimePercentage(t *testing.T) {
 	}
 	now := time.Now().Truncate(time.Second)
 	tests := []struct {
-		name      string
-		args      args
-		expected  float64
-		wantError bool
+		name          string
+		args          args
+		expected      float64
+		wantError     bool
+		expectedError error
 	}{
 		{
 			name: "All uptime, no downtime (40 min gaps)",
@@ -241,12 +242,14 @@ func TestCalculateUpTimePercentage(t *testing.T) {
 			expected: 50.0,
 		},
 		{
-			name: "0% uptime — no reports received",
+			name: "Empty reports — should return error",
 			args: args{
 				periodStart: now.Add(-160 * time.Minute), // full 160 mins = 9600s
 				reports:     []db.UptimeReport{},
 			},
-			expected: 0.0,
+			expected:      0.0,
+			wantError:     true,
+			expectedError: ErrNoReportsAvailable,
 		},
 		{
 			name: "allowance for only one report received, after 1hour",
@@ -312,8 +315,19 @@ func TestCalculateUpTimePercentage(t *testing.T) {
 					{Timestamp: now, Duration: 40 * time.Minute},
 				},
 			},
-			expected:  0.0,
-			wantError: true,
+			expected:      0.0,
+			wantError:     true,
+			expectedError: ErrReportsNotInAscOrder,
+		},
+		{
+			name: "No reports available",
+			args: args{
+				periodStart: now.Add(-120 * time.Minute),
+				reports:     []db.UptimeReport{}, // Empty reports
+			},
+			expected:      0.0,
+			wantError:     true,
+			expectedError: ErrNoReportsAvailable,
 		},
 	}
 
@@ -325,6 +339,10 @@ func TestCalculateUpTimePercentage(t *testing.T) {
 			if tt.wantError {
 				if err == nil {
 					t.Errorf("calculateUpTimePercentage() expected error, got nil")
+				}
+				// Also check for specific error type
+				if tt.expectedError != nil {
+					assert.Equal(t, tt.expectedError, err, "Expected specific error type")
 				}
 				return
 			}

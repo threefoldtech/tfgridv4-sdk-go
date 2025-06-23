@@ -39,7 +39,11 @@ const (
 )
 
 // Error messages
-var ErrInvalidUptimePercentage = errors.New("invalid uptime percentage")
+var (
+	ErrInvalidUptimePercentage = errors.New("invalid uptime percentage")
+	ErrReportsNotInAscOrder    = errors.New("timestamps are not ordered correctly")
+	ErrNoReportsAvailable      = errors.New("no reports available For this node")
+)
 
 type Reward struct {
 	FarmerReward     float64 //FarmerReward: the reward for the node owner
@@ -147,8 +151,8 @@ func areReportsOrderedCorrectly(reports []db.UptimeReport) bool {
 	return true
 }
 
-// calculateUptimePercentage calculates the percentage of uptime based on total period duration and downtime.
-func calculateUptimePercentage(totalPeriod, downtime time.Duration) float64 {
+// calculatePercentage calculates the percentage of uptime based on total period duration and downtime.
+func calculatePercentage(totalPeriod, downtime time.Duration) float64 {
 	// Calculate actual uptime by subtracting downtime from total period
 	actualUptime := totalPeriod - downtime
 
@@ -185,11 +189,11 @@ func downtimeSinceLastReportTimestamp(lastReportTimestamp time.Time, currentTime
 func calculateUpTimePercentage(reports []db.UptimeReport, periodStart, now time.Time) (float64, error) {
 
 	if len(reports) == 0 {
-		return 0.0, nil
+		return 0.0, ErrNoReportsAvailable
 	}
 
 	if !areReportsOrderedCorrectly(reports) {
-		return 0.0, errors.New("timestamps are not ordered correctly")
+		return 0.0, ErrReportsNotInAscOrder
 	}
 
 	//append starter point
@@ -205,5 +209,5 @@ func calculateUpTimePercentage(reports []db.UptimeReport, periodStart, now time.
 	downtime += downtimeSinceLastReportTimestamp(reports[len(reports)-1].Timestamp, now)
 
 	totalPeriod := now.Sub(periodStart)
-	return calculateUptimePercentage(totalPeriod, downtime), nil
+	return calculatePercentage(totalPeriod, downtime), nil
 }

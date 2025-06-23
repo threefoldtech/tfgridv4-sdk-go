@@ -98,7 +98,7 @@ func (s Server) getFarmHandler(c *gin.Context) {
 // @Produce json
 // @Param X-Auth header string true "Authentication format: Base64(<unix_timestamp>:<twin_id>):Base64(signature)"
 // @Param farm body db.Farm true "Farm creation data"
-// @Success 201 {object} map[string]uint64 "'farm_id': farmID"]
+// @Success 201 {object} map[string]uint64 "'farm_id': farmID"
 // @Failure 400 {object} map[string]any "Invalid request"
 // @Failure 401 {object} map[string]any "Unauthorized"
 // @Failure 409 {object} map[string]any "Farm already exists"
@@ -312,16 +312,20 @@ func (s Server) getNodeRewardHandler(c *gin.Context) {
 	}
 
 	now := time.Now()
-	currentPeriodStart := calculateCurrentPeriodStart(now)
+	periodStart := calculatePeriodStart(now)
 
-	reports, err := s.db.GetUptimeReports(id, currentPeriodStart, now)
+	reports, err := s.db.GetUptimeReports(id, periodStart, now)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	upTimePercentage := calculateUpTimePercentage(reports, currentPeriodStart, now)
+	upTimePercentage, err := calculateUpTimePercentage(reports, periodStart, now)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
 
 	rewards, err := CalculateMonthlyReward(node.Resources, upTimePercentage)
 	if err != nil {

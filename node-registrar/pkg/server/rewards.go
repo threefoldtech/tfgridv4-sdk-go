@@ -9,37 +9,38 @@ import (
 )
 
 const (
+	MemoryRewardPerGB float64 = 8.0  // Certified capacity rewards factor Per GB
+	SsdRewardPerTB    float64 = 31.5 // Certified capacity rewards factor Per TB
+	HddRewardPerTB    float64 = 7.0  // Certified capacity rewards factor Per TB
 
-	// Certified capacity rewards factor
-	MEMORY_REWARD_PER_GB = 8.0  // INCA per GB
-	SSD_REWARD_PER_TB    = 31.5 // INCA per TB
-	HDD_REWARD_PER_TB    = 7.0  // INCA per TB
+	FarmerRewardPercentage float64 = 0.6 // FarmerRewardPercentage is the percentage of the reward that goes to the node owner (60%)
+	TfRewardPercentage     float64 = 0.2 // TfRewardPercentage is the percentage of the reward that goes to the Threefold  (20%)
+	FpRewardPercentage     float64 = 0.2 // FpRewardPercentage is the percentage of the reward that goes to the Farming Pool (20%)
+)
 
-	// Reward distribution
-	FARMER_REWARD_PERCENTAGE = 0.6 // 60% of the reward goes to the node owner
-	TF_REWARD_PERCENTAGE     = 0.2 // 20% of the reward goes to the Threefold Foundation
-	FP_REWARD_PERCENTAGE     = 0.2 // 20% of the reward goes to the Farming Pool
-
+// Time related constants
+const (
 	// TODO update the start timestamp
-	FIRST_PERIOD_START_TIMESTAMP int64 = 1522501000
+	FirstPeriodStartTimestamp int64 = 1522501000
 
-	// uptime events are supposed to happen every 40 minutes.
-	// here we set this to one hour (3600 sec) to allow some room.
-	UPTIME_EVENTS_INTERVAL = 3600
+	// Uptime events are supposed to happen every 40 minutes.
+	// Here we set this to one hour (3600 sec) to allow some room.
+	UptimeEventsInterval = 3600
 
 	// The duration of a standard period, as used by the minting payouts, in seconds.
-	STANDARD_PERIOD_DURATION int64 = 24 * 60 * 60 * (365*3 + 366*2) / 60
+	// Calculated as: 24 hours * 60 minutes * 60 seconds * (365*3 + 366*2) / 60 periods
+	StandardPeriodDuration int64 = 24 * 60 * 60 * (365*3 + 366*2) / 60
 )
 
 // Error messages
 var ErrInvalidUptimePercentage = errors.New("invalid uptime percentage")
 
 type Reward struct {
-	FarmerReward     float64
-	TFReward         float64
-	FPReward         float64
-	Total            float64
-	UpTimePercentage float64
+	FarmerReward     float64 //FarmerReward: the reward for the node owner
+	TfReward         float64 //TfReward: the reward for the Threefold Foundation
+	FpReward         float64 //FpReward: the reward for the Farming Pool
+	Total            float64 //Total: the total reward
+	UpTimePercentage float64 //UpTimePercentage: the uptime percentage of the node
 }
 
 // CalculateMonthlyReward calculates the monthly reward in INCA for a given node capacity.
@@ -56,11 +57,7 @@ type Reward struct {
 //   - Threefold Foundation: 20% of the reward
 //   - Farming Pool: 20% of the reward
 //
-// CalculateMonthlyReward returns the following values:
-//   - FarmerReward: the reward for the node owner
-//   - TFReward: the reward for the Threefold Foundation
-//   - FPReward: the reward for the Farming Pool
-//   - Total: the total reward
+// CalculateMonthlyReward returns @Reward struct
 //
 // CalculateMonthlyReward takes the following parameters:
 //
@@ -77,12 +74,12 @@ func CalculateMonthlyReward(capacity db.Resources, upTimePercentage float64) (Re
 		return Reward{UpTimePercentage: upTimePercentage}, nil
 	}
 
-	total := (bytesToGB(capacity.MRU)*MEMORY_REWARD_PER_GB + bytesToTB(capacity.SRU)*SSD_REWARD_PER_TB + bytesToTB(capacity.HRU)*HDD_REWARD_PER_TB) * (upTimePercentage / 100)
+	total := (bytesToGB(capacity.MRU)*MemoryRewardPerGB + bytesToTB(capacity.SRU)*SsdRewardPerTB + bytesToTB(capacity.HRU)*HddRewardPerTB) * (upTimePercentage / 100)
 
 	return Reward{
-		FarmerReward:     truncateFloat(total*FARMER_REWARD_PERCENTAGE, 3),
-		TFReward:         truncateFloat(total*TF_REWARD_PERCENTAGE, 3),
-		FPReward:         truncateFloat(total*FP_REWARD_PERCENTAGE, 3),
+		FarmerReward:     truncateFloat(total*FarmerRewardPercentage, 3),
+		TfReward:         truncateFloat(total*TfRewardPercentage, 3),
+		FpReward:         truncateFloat(total*FpRewardPercentage, 3),
 		Total:            truncateFloat(total, 3),
 		UpTimePercentage: upTimePercentage,
 	}, nil
@@ -115,10 +112,16 @@ func bytesToTB(bytes uint64) float64 {
 //
 // Returns:
 //   - a float64 representing the uptime percentage
-func calculateUpTimePercentage(reports []db.UptimeReport, periodStart, now time.Time) float64 {
+func calculateUpTimePercentage(reports []db.UptimeReport, periodStart, now time.Time) (float64, error) {
 
 	if len(reports) == 0 {
-		return 0.0
+		return 0.0, nil
+	}
+
+	for i := 0; i < len(reports)-1; i++ {
+		if reports[i].Timestamp.After(reports[i+1].Timestamp) {
+			return 0.0, errors.New("timestamps are not ordered correctly")
+		}
 	}
 
 	//append starter point
@@ -144,25 +147,26 @@ func calculateUpTimePercentage(reports []db.UptimeReport, periodStart, now time.
 			downtime += expected - actual
 		}
 	}
-	// if there is a gap equals or larger than th @UPTIME_EVENTS_INTERVAL between the last report and now, add it to the downtime
+	// if there is a gap equal
+	// s or larger than th @UPTIME_EVENTS_INTERVAL between the last report and now, add it to the downtime
 	elapsedSinceLast := now.Sub(reports[len(reports)-1].Timestamp).Truncate(time.Second)
-	if elapsedSinceLast.Seconds() >= UPTIME_EVENTS_INTERVAL {
+	if elapsedSinceLast.Seconds() >= UptimeEventsInterval {
 		downtime += elapsedSinceLast
 	}
-	return truncateFloat(float64(now.Sub(periodStart)-downtime)/float64(now.Sub(periodStart))*100, 2)
+	return truncateFloat(float64(now.Sub(periodStart)-downtime)/float64(now.Sub(periodStart))*100, 2), nil
 }
 
-// calculateCurrentPeriodStart returns the start of the current period.
+// calculatePeriodStart returns the start of the period that contains the reference time.
 //
-// The function uses the unix timestamp of the first period start (FIRST_PERIOD_START_TIMESTAMP) and the standard period duration (STANDARD_PERIOD_DURATION) to calculate the start of the current period.
+// The function uses the unix timestamp of the first period start (FirstPeriodStartTimestamp) and the standard period duration (StandardPeriodDuration) to calculate the start of the period.
 //
 // Parameter:
-//   - now: the reference time used to calculate the current period start
-func calculateCurrentPeriodStart(now time.Time) time.Time {
-	secondsSinceFirstPeriod := now.Unix() - FIRST_PERIOD_START_TIMESTAMP
-	periodOffset := secondsSinceFirstPeriod % STANDARD_PERIOD_DURATION
-	currentPeriodStart := now.Unix() - periodOffset
-	return time.Unix(currentPeriodStart, 0)
+//   - referenceTime: the reference time used to calculate its period start time
+func calculatePeriodStart(referenceTime time.Time) time.Time {
+	secondsSinceFirstPeriod := referenceTime.Unix() - FirstPeriodStartTimestamp
+	periodOffset := secondsSinceFirstPeriod % StandardPeriodDuration
+	periodStart := referenceTime.Unix() - periodOffset
+	return time.Unix(periodStart, 0)
 }
 
 func truncateFloat(num float64, precision int) float64 {

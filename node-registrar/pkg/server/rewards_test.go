@@ -126,9 +126,9 @@ func AssertMonthlyReward(t testing.TB, resources db.Resources, upTimePercentage 
 	}
 
 	// Calculate rewards
-	memoryReward := bytesToGB(resources.MRU) * MEMORY_REWARD_PER_GB
-	ssdReward := bytesToTB(resources.SRU) * SSD_REWARD_PER_TB
-	hddReward := bytesToTB(resources.HRU) * HDD_REWARD_PER_TB
+	memoryReward := bytesToGB(resources.MRU) * MemoryRewardPerGB
+	ssdReward := bytesToTB(resources.SRU) * SsdRewardPerTB
+	hddReward := bytesToTB(resources.HRU) * HddRewardPerTB
 
 	// Calculate total rewards
 	total := memoryReward + ssdReward + hddReward
@@ -137,9 +137,9 @@ func AssertMonthlyReward(t testing.TB, resources db.Resources, upTimePercentage 
 	total = total * (upTimePercentage / 100)
 
 	expected := Reward{
-		FarmerReward:     total * FARMER_REWARD_PERCENTAGE,
-		TFReward:         total * TF_REWARD_PERCENTAGE,
-		FPReward:         total * FP_REWARD_PERCENTAGE,
+		FarmerReward:     total * FarmerRewardPercentage,
+		TfReward:         total * TfRewardPercentage,
+		FpReward:         total * FpRewardPercentage,
 		Total:            total,
 		UpTimePercentage: upTimePercentage,
 	}
@@ -147,14 +147,14 @@ func AssertMonthlyReward(t testing.TB, resources db.Resources, upTimePercentage 
 	// Use precise floating point comparison
 	const delta = 1e-9 // Very small acceptable difference
 	assert.InDelta(t, expected.FarmerReward, got.FarmerReward, delta)
-	assert.InDelta(t, expected.TFReward, got.TFReward, delta)
-	assert.InDelta(t, expected.FPReward, got.FPReward, delta)
+	assert.InDelta(t, expected.TfReward, got.TfReward, delta)
+	assert.InDelta(t, expected.FpReward, got.FpReward, delta)
 	assert.InDelta(t, expected.Total, got.Total, delta)
 	assert.InDelta(t, expected.UpTimePercentage, got.UpTimePercentage, delta)
 }
 
-// TestCalculateCurrentPeriodStart tests the calculateCurrentPeriodStart function with different inputs
-func TestCalculateCurrentPeriodStart(t *testing.T) {
+// TestCalculatePeriodStart tests the calculatePeriodStart function with different inputs
+func TestCalculatePeriodStart(t *testing.T) {
 	tests := []struct {
 		name         string
 		inputTime    time.Time
@@ -162,42 +162,42 @@ func TestCalculateCurrentPeriodStart(t *testing.T) {
 	}{
 		{
 			name:         "First period start timestamp",
-			inputTime:    time.Unix(FIRST_PERIOD_START_TIMESTAMP, 0),
-			expectedTime: time.Unix(FIRST_PERIOD_START_TIMESTAMP, 0),
+			inputTime:    time.Unix(FirstPeriodStartTimestamp, 0),
+			expectedTime: time.Unix(FirstPeriodStartTimestamp, 0),
 		},
 		{
 			name:         "Exactly at second period start",
-			inputTime:    time.Unix(FIRST_PERIOD_START_TIMESTAMP+STANDARD_PERIOD_DURATION, 0),
-			expectedTime: time.Unix(FIRST_PERIOD_START_TIMESTAMP+STANDARD_PERIOD_DURATION, 0),
+			inputTime:    time.Unix(FirstPeriodStartTimestamp+StandardPeriodDuration, 0),
+			expectedTime: time.Unix(FirstPeriodStartTimestamp+StandardPeriodDuration, 0),
 		},
 		{
 			name:         "Middle of a period",
-			inputTime:    time.Unix(FIRST_PERIOD_START_TIMESTAMP+STANDARD_PERIOD_DURATION/2, 0),
-			expectedTime: time.Unix(FIRST_PERIOD_START_TIMESTAMP, 0),
+			inputTime:    time.Unix(FirstPeriodStartTimestamp+StandardPeriodDuration/2, 0),
+			expectedTime: time.Unix(FirstPeriodStartTimestamp, 0),
 		},
 		{
 			name:         "Near end of a period",
-			inputTime:    time.Unix(FIRST_PERIOD_START_TIMESTAMP+STANDARD_PERIOD_DURATION-1, 0),
-			expectedTime: time.Unix(FIRST_PERIOD_START_TIMESTAMP, 0),
+			inputTime:    time.Unix(FirstPeriodStartTimestamp+StandardPeriodDuration-1, 0),
+			expectedTime: time.Unix(FirstPeriodStartTimestamp, 0),
 		},
 		{
 			name:         "Multiple periods later",
-			inputTime:    time.Unix(FIRST_PERIOD_START_TIMESTAMP+3*STANDARD_PERIOD_DURATION+STANDARD_PERIOD_DURATION/3, 0),
-			expectedTime: time.Unix(FIRST_PERIOD_START_TIMESTAMP+3*STANDARD_PERIOD_DURATION, 0),
+			inputTime:    time.Unix(FirstPeriodStartTimestamp+3*StandardPeriodDuration+StandardPeriodDuration/3, 0),
+			expectedTime: time.Unix(FirstPeriodStartTimestamp+3*StandardPeriodDuration, 0),
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Call the actual function with our test time
-			result := calculateCurrentPeriodStart(tt.inputTime)
+			result := calculatePeriodStart(tt.inputTime)
 
 			// Check that the result equals our expected time
 			assert.Equal(t, tt.expectedTime.Unix(), result.Unix())
 
 			// Additionally, verify that we can manually calculate the same result
-			// secondsSinceCurrentPeriodStart := (tt.inputTime.Unix() - FIRST_PERIOD_START_TIMESTAMP) % STANDARD_PERIOD_DURATION
-			// manualCalculation := time.Unix(FIRST_PERIOD_START_TIMESTAMP+secondsSinceCurrentPeriodStart, 0)
+			// secondsSinceCurrentPeriodStart := (tt.inputTime.Unix() - FirstPeriodStartTimestamp) % StandardPeriodDuration
+			// manualCalculation := time.Unix(FirstPeriodStartTimestamp+secondsSinceCurrentPeriodStart, 0)
 			// assert.Equal(t, manualCalculation.Unix(), result.Unix())
 		})
 	}
@@ -210,9 +210,10 @@ func TestCalculateUpTimePercentage(t *testing.T) {
 	}
 	now := time.Now().Truncate(time.Second)
 	tests := []struct {
-		name     string
-		args     args
-		expected float64
+		name      string
+		args      args
+		expected  float64
+		wantError bool
 	}{
 		{
 			name: "All uptime, no downtime (40 min gaps)",
@@ -283,7 +284,7 @@ func TestCalculateUpTimePercentage(t *testing.T) {
 				reports: []db.UptimeReport{
 					{Timestamp: now.Add(-80 * time.Minute), Duration: 2400}, // 40 min (2400 seconds)
 					{Timestamp: now.Add(-40 * time.Minute), Duration: 1800}, // 30 min (1800 seconds)
-					{Timestamp: now, Duration: 1200},                       // 20 min (1200 seconds)
+					{Timestamp: now, Duration: 1200},                        // 20 min (1200 seconds)
 				},
 			},
 			expected: 75.0,
@@ -295,16 +296,43 @@ func TestCalculateUpTimePercentage(t *testing.T) {
 				reports: []db.UptimeReport{
 					{Timestamp: now.Add(-80 * time.Minute), Duration: 1200}, // 20 min (1200 seconds)
 					{Timestamp: now.Add(-40 * time.Minute), Duration: 1800}, // 30 min (1800 seconds)
-					{Timestamp: now, Duration: 2400},                       // 40 min (2400 seconds)
+					{Timestamp: now, Duration: 2400},                        // 40 min (2400 seconds)
 				},
 			},
 			expected: 75.0,
+		},
+		{
+			name: "Unordered reports - timestamps not in ascending order",
+			args: args{
+				periodStart: now.Add(-120 * time.Minute),
+				reports: []db.UptimeReport{
+					{Timestamp: now.Add(-40 * time.Minute), Duration: 2400}, // Out of order (should be before the one below)
+					{Timestamp: now.Add(-80 * time.Minute), Duration: 2400}, 
+					{Timestamp: now, Duration: 2400},
+				},
+			},
+			expected: 0.0,
+			wantError: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := calculateUpTimePercentage(tt.args.reports, tt.args.periodStart, now)
+			got, err := calculateUpTimePercentage(tt.args.reports, tt.args.periodStart, now)
+
+			// Check for expected error
+			if tt.wantError {
+				if err == nil {
+					t.Errorf("calculateUpTimePercentage() expected error, got nil")
+				}
+				return
+			}
+
+			// No error expected
+			if err != nil {
+				t.Errorf("calculateUpTimePercentage() unexpected error: %v", err)
+				return
+			}
 			if math.Abs(got-tt.expected) > 0.01 {
 				t.Errorf("calculateUpTimePercentage() = %v, want %v", got, tt.expected)
 			}

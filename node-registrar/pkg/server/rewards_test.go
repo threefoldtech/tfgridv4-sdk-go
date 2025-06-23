@@ -220,10 +220,10 @@ func TestCalculateUpTimePercentage(t *testing.T) {
 			args: args{
 				periodStart: now.Add(-160 * time.Minute), // Start 160 min ago (for 4 reports)
 				reports: []db.UptimeReport{
-					{Timestamp: now.Add(-120 * time.Minute), Duration: 2400}, // 40 min (2400 seconds)
-					{Timestamp: now.Add(-80 * time.Minute), Duration: 2400},  // 40 min (2400 seconds)
-					{Timestamp: now.Add(-40 * time.Minute), Duration: 2400},  // 40 min (2400 seconds)
-					{Timestamp: now, Duration: 2400},                         // 40 min (2400 seconds)
+					{Timestamp: now.Add(-120 * time.Minute), Duration: 40 * time.Minute}, // 40 min
+					{Timestamp: now.Add(-80 * time.Minute), Duration: 40 * time.Minute},  // 40 min
+					{Timestamp: now.Add(-40 * time.Minute), Duration: 40 * time.Minute},  // 40 min
+					{Timestamp: now, Duration: 40 * time.Minute},                         // 40 min
 				},
 			},
 			expected: 100.0,
@@ -233,8 +233,8 @@ func TestCalculateUpTimePercentage(t *testing.T) {
 			args: args{
 				periodStart: now.Add(-160 * time.Minute), // full 160 mins = 9600s
 				reports: []db.UptimeReport{
-					{Timestamp: now.Add(-120 * time.Minute), Duration: 2400}, // 40 min (2400 seconds)
-					{Timestamp: now.Add(-80 * time.Minute), Duration: 2400},  // 40 min (2400 seconds)
+					{Timestamp: now.Add(-120 * time.Minute), Duration: 40 * time.Minute}, // 40 min
+					{Timestamp: now.Add(-80 * time.Minute), Duration: 40 * time.Minute},  // 40 min
 				},
 			},
 			expected: 50.0,
@@ -252,7 +252,7 @@ func TestCalculateUpTimePercentage(t *testing.T) {
 			args: args{
 				periodStart: now.Add(-60 * time.Minute), // full 60 mins
 				reports: []db.UptimeReport{
-					{Timestamp: now.Add(-40 * time.Minute), Duration: 2400}, // 40 min (2400 seconds)
+					{Timestamp: now.Add(-40 * time.Minute), Duration: 40 * time.Minute}, // 40 min
 				},
 			},
 			expected: 100.0,
@@ -262,7 +262,7 @@ func TestCalculateUpTimePercentage(t *testing.T) {
 			args: args{
 				periodStart: now.Add(-130 * time.Minute), // full 130 mins = 7800s
 				reports: []db.UptimeReport{
-					{Timestamp: now.Add(-10 * time.Minute), Duration: 7200}, // 120 min (7200 seconds)
+					{Timestamp: now.Add(-10 * time.Minute), Duration: 120 * time.Minute}, // 120 min
 				},
 			},
 			expected: 100.0,
@@ -272,7 +272,7 @@ func TestCalculateUpTimePercentage(t *testing.T) {
 			args: args{
 				periodStart: now.Add(-40 * time.Minute),
 				reports: []db.UptimeReport{
-					{Timestamp: now, Duration: 1200}, // 20 min (1200 seconds)
+					{Timestamp: now, Duration: 20 * time.Minute}, // 20 min
 				},
 			},
 			expected: 50.0,
@@ -282,9 +282,9 @@ func TestCalculateUpTimePercentage(t *testing.T) {
 			args: args{
 				periodStart: now.Add(-120 * time.Minute),
 				reports: []db.UptimeReport{
-					{Timestamp: now.Add(-80 * time.Minute), Duration: 2400}, // 40 min (2400 seconds)
-					{Timestamp: now.Add(-40 * time.Minute), Duration: 1800}, // 30 min (1800 seconds)
-					{Timestamp: now, Duration: 1200},                        // 20 min (1200 seconds)
+					{Timestamp: now.Add(-80 * time.Minute), Duration: 40 * time.Minute}, // 40 min
+					{Timestamp: now.Add(-40 * time.Minute), Duration: 30 * time.Minute}, // 30 min
+					{Timestamp: now, Duration: 20 * time.Minute},                        // 20 min
 				},
 			},
 			expected: 75.0,
@@ -294,9 +294,9 @@ func TestCalculateUpTimePercentage(t *testing.T) {
 			args: args{
 				periodStart: now.Add(-120 * time.Minute),
 				reports: []db.UptimeReport{
-					{Timestamp: now.Add(-80 * time.Minute), Duration: 1200}, // 20 min (1200 seconds)
-					{Timestamp: now.Add(-40 * time.Minute), Duration: 1800}, // 30 min (1800 seconds)
-					{Timestamp: now, Duration: 2400},                        // 40 min (2400 seconds)
+					{Timestamp: now.Add(-80 * time.Minute), Duration: 20 * time.Minute}, // 20 min
+					{Timestamp: now.Add(-40 * time.Minute), Duration: 30 * time.Minute}, // 30 min
+					{Timestamp: now, Duration: 40 * time.Minute},                        // 40 min
 				},
 			},
 			expected: 75.0,
@@ -306,9 +306,9 @@ func TestCalculateUpTimePercentage(t *testing.T) {
 			args: args{
 				periodStart: now.Add(-120 * time.Minute),
 				reports: []db.UptimeReport{
-					{Timestamp: now.Add(-40 * time.Minute), Duration: 2400}, // Out of order (should be before the one below)
-					{Timestamp: now.Add(-80 * time.Minute), Duration: 2400}, 
-					{Timestamp: now, Duration: 2400},
+					{Timestamp: now.Add(-40 * time.Minute), Duration: 40 * time.Minute}, // Out of order (should be before the one below)
+					{Timestamp: now.Add(-80 * time.Minute), Duration: 40 * time.Minute}, 
+					{Timestamp: now, Duration: 40 * time.Minute},
 				},
 			},
 			expected: 0.0,

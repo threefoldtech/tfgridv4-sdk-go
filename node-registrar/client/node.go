@@ -40,6 +40,11 @@ func (c *RegistrarClient) GetNodeByTwinID(id uint64) (node Node, err error) {
 	return c.getNodeByTwinID(id)
 }
 
+// GetNodeCapacityRewards calculates the reward for a node based on its capacity and uptime.
+func (c *RegistrarClient) GetNodeCapacityRewards(nodeID uint64) (reward NodeCapacityReward, err error) {
+	return c.getNodeCapacityRewards(nodeID)
+}
+
 // ListNodes lists registered nodes details using (nodeID, twinID, farmID).
 func (c *RegistrarClient) ListNodes(opts NodeFilter) (nodes []Node, err error) {
 	return c.listNodesWithFilter(opts)
@@ -318,6 +323,38 @@ func (c *RegistrarClient) getNodeByTwinID(id uint64) (node Node, err error) {
 	}
 
 	return nodes[0], nil
+}
+
+func (c *RegistrarClient) getNodeCapacityRewards(nodeID uint64) (reward NodeCapacityReward, err error) {
+
+	url, err := url.JoinPath(c.baseURL, "nodes", fmt.Sprint(nodeID), "rewards")
+	if err != nil {
+		return reward, errors.Wrap(err, "failed to construct rewards url")
+	}
+
+	resp, err := c.httpClient.Get(url)
+	if err != nil {
+		return reward, errors.Wrap(err, "failed to send request to rewards endpoint")
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusNotFound {
+		return reward, ErrorNodeNotFound
+	}
+
+	if resp.StatusCode == http.StatusUnprocessableEntity {
+		return reward, parseResponseError(resp.Body)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		err = parseResponseError(resp.Body)
+		return reward, errors.Wrap(err, "failed to get node rewards")
+	}
+
+	if err = json.NewDecoder(resp.Body).Decode(&reward); err != nil {
+		return reward, errors.Wrap(err, "failed to decode rewards response")
+	}
+
+	return
 }
 
 // NodeFilter represents filtering options for listing nodes

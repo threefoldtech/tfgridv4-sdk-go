@@ -64,3 +64,11 @@ type Location struct {
 	Longitude string `json:"longitude"`
 	Latitude  string `json:"latitude"`
 }
+
+type NodeCapacityReward struct {
+	FarmerReward     float64 `json:"farmerReward"`     // Reward amount for the node owner (60%)
+	TfReward         float64 `json:"tfReward"`         // Reward amount for Threefold Foundation (20%)
+	FpReward         float64 `json:"fpReward"`         // Reward amount for the Farming Pool (20%)
+	Total            float64 `json:"total"`            // Total reward amount
+	UpTimePercentage float64 `json:"uptimePercentage"` // Node's uptime percentage
+}

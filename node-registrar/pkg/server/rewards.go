@@ -53,6 +53,22 @@ type Reward struct {
 	UpTimePercentage float64 //UpTimePercentage: the uptime percentage of the node
 }
 
+// calculateBaseCapacityReward calculates the base reward from node capacity without applying uptime.
+func calculateBaseCapacityReward(capacity db.Resources) float64 {
+	mruReward := bytesToGB(capacity.MRU) * MemoryRewardPerGB
+	sruReward := bytesToTB(capacity.SRU) * SsdRewardPerTB
+	hruReward := bytesToTB(capacity.HRU) * HddRewardPerTB
+
+	return mruReward + sruReward + hruReward
+}
+
+// calculateTotalReward calculates the total reward based on node capacity and uptime percentage.
+// It first calculates the base capacity reward and then applies the uptime percentage.
+func calculateTotalReward(capacity db.Resources, upTimePercentage float64) float64 {
+	baseReward := calculateBaseCapacityReward(capacity)
+	return baseReward * (upTimePercentage / 100)
+}
+
 // CalculateCapacityReward calculates the reward in INCA for a given node capacity.
 //
 // - Note: if the uptime percentage is less than MinUptimePercentageForReward, the node will not receive any rewards.
@@ -64,7 +80,7 @@ func CalculateCapacityReward(capacity db.Resources, upTimePercentage float64) (R
 		return Reward{UpTimePercentage: upTimePercentage}, nil
 	}
 
-	total := (bytesToGB(capacity.MRU)*MemoryRewardPerGB + bytesToTB(capacity.SRU)*SsdRewardPerTB + bytesToTB(capacity.HRU)*HddRewardPerTB) * (upTimePercentage / 100)
+	total := calculateTotalReward(capacity, upTimePercentage)
 
 	return Reward{
 		FarmerReward:     truncateFloat(total*FarmerRewardPercentage, RewardPrecisionDecimalPlaces),

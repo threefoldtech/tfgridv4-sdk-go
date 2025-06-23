@@ -55,27 +55,7 @@ type Reward struct {
 
 // CalculateCapacityReward calculates the reward in INCA for a given node capacity.
 //
-// The rewards are calculated as follows:
-//
-// - Certified capacity rewards factor:
-//   - Memory: 8.0 INCA per GB
-//   - SSD: 31.5 INCA per TB
-//   - HDD: 7.0 INCA per TB
-//
-// - Reward distribution:
-//   - Farmer: 60% of the reward
-//   - Threefold Foundation: 20% of the reward
-//   - Farming Pool: 20% of the reward
-//
-// Parameters:
-//
-// - capacity: the node capacity, in form of a db.Resources Type
-// - upTimePercentage: the uptime percentage of the node, as a float64 value between 0 and 100
-//
-// Returns: a Reward struct containing the distributed rewards and uptime percentage
-//
 // - Note: if the uptime percentage is less than MinUptimePercentageForReward, the node will not receive any rewards.
-
 func CalculateCapacityReward(capacity db.Resources, upTimePercentage float64) (Reward, error) {
 	if upTimePercentage < 0 || upTimePercentage > 100 {
 		return Reward{}, ErrInvalidUptimePercentage
@@ -124,12 +104,12 @@ func truncateFloat(num float64, precision int) float64 {
 // calculateDowntimeFromReports calculates the downtime from a sequence of uptime reports.
 //
 // This function iterates through the reports and calculates downtime by comparing the
-// gap between consecutive timestamps with the reported duration. If the duration is less
-// than the gap or if the current duration is greater than the next duration, the difference
-// is counted as downtime.
+// gap between consecutive timestamps with the reported duration.
+// If the duration is less than the gap or if the current duration is greater than the next duration,
+// the difference is counted as downtime.
 func calculateDowntimeFromReports(reports []db.UptimeReport) time.Duration {
 	var downtime time.Duration
-	for i := 0; i < len(reports)-1; i++ {
+	for i := range len(reports) - 1 {
 		curr := reports[i]
 		next := reports[i+1]
 		gapBetweenTimeStamps := next.Timestamp.Sub(curr.Timestamp)
@@ -143,7 +123,7 @@ func calculateDowntimeFromReports(reports []db.UptimeReport) time.Duration {
 
 // areReportsOrderedCorrectly verifies that uptime reports are ordered chronologically by timestamp.
 func areReportsOrderedCorrectly(reports []db.UptimeReport) bool {
-	for i := 0; i < len(reports)-1; i++ {
+	for i := range len(reports) - 1 {
 		if reports[i].Timestamp.After(reports[i+1].Timestamp) {
 			return false
 		}

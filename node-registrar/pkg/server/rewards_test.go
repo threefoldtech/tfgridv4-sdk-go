@@ -119,7 +119,9 @@ func AssertMonthlyReward(t testing.TB, resources db.Resources, upTimePercentage 
 	t.Helper()
 
 	if upTimePercentage < 90 {
-		assert.Equal(t, Reward{}, got)
+		assert.Equal(t, Reward{
+			UpTimePercentage: upTimePercentage,
+		}, got)
 		return
 	}
 
@@ -135,10 +137,11 @@ func AssertMonthlyReward(t testing.TB, resources db.Resources, upTimePercentage 
 	total = total * (upTimePercentage / 100)
 
 	expected := Reward{
-		FarmerReward: total * FARMER_REWARD_PERCENTAGE,
-		TFReward:     total * TF_REWARD_PERCENTAGE,
-		FPReward:     total * FP_REWARD_PERCENTAGE,
-		Total:        total,
+		FarmerReward:     total * FARMER_REWARD_PERCENTAGE,
+		TFReward:         total * TF_REWARD_PERCENTAGE,
+		FPReward:         total * FP_REWARD_PERCENTAGE,
+		Total:            total,
+		UpTimePercentage: upTimePercentage,
 	}
 
 	// Use precise floating point comparison
@@ -147,6 +150,7 @@ func AssertMonthlyReward(t testing.TB, resources db.Resources, upTimePercentage 
 	assert.InDelta(t, expected.TFReward, got.TFReward, delta)
 	assert.InDelta(t, expected.FPReward, got.FPReward, delta)
 	assert.InDelta(t, expected.Total, got.Total, delta)
+	assert.InDelta(t, expected.UpTimePercentage, got.UpTimePercentage, delta)
 }
 
 // TestCalculateCurrentPeriodStart tests the calculateCurrentPeriodStart function with different inputs

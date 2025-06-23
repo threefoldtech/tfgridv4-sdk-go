@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/threefoldtech/tfgrid4-sdk-go/node-registrar/pkg/db"
 )
 
@@ -202,6 +203,479 @@ func TestCalculatePeriodStart(t *testing.T) {
 			// assert.Equal(t, manualCalculation.Unix(), result.Unix())
 		})
 	}
+}
+
+func TestCalculateTotalReward(t *testing.T) {
+	tests := []struct {
+		name             string
+		capacity         db.Resources
+		upTimePercentage float64
+		expected         float64
+	}{
+		{
+			name: "standard capacity with 100% uptime",
+			capacity: db.Resources{
+				CRU: 8,
+				MRU: 68719476736,    // 64 GB
+				SRU: 1099511627776,  // 1 TB
+				HRU: 10995116277760, // 10 TB
+			},
+			upTimePercentage: 100,
+			expected:         512 + 31.5 + 70, // (64 * 8) + (1 * 31.5) + (10 * 7)
+		},
+		{
+			name: "standard capacity with 50% uptime",
+			capacity: db.Resources{
+				CRU: 8,
+				MRU: 68719476736,    // 64 GB
+				SRU: 1099511627776,  // 1 TB
+				HRU: 10995116277760, // 10 TB
+			},
+			upTimePercentage: 50,
+			expected:         (512 + 31.5 + 70) * 0.5, // 50% of total
+		},
+		{
+			name: "zero capacity with 100% uptime",
+			capacity: db.Resources{
+				CRU: 0,
+				MRU: 0,
+				SRU: 0,
+				HRU: 0,
+			},
+			upTimePercentage: 100,
+			expected:         0,
+		},
+		{
+			name: "small memory only capacity with 95% uptime",
+			capacity: db.Resources{
+				CRU: 0,
+				MRU: 1073741824, // 1 GB
+				SRU: 0,
+				HRU: 0,
+			},
+			upTimePercentage: 95,
+			expected:         8 * 0.95, // (1 * 8) * 0.95
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := calculateTotalReward(tt.capacity, tt.upTimePercentage)
+
+			// Use a small delta for floating point comparison
+			assert.InDelta(t, tt.expected, result, 0.001, "Total reward calculation incorrect")
+		})
+	}
+}
+
+// TestCalculateBaseCapacityReward tests the calculateBaseCapacityReward function
+func TestCalculateBaseCapacityReward(t *testing.T) {
+	tests := []struct {
+		name     string
+		capacity db.Resources
+		expected float64
+	}{
+		{
+			name: "standard capacity",
+			capacity: db.Resources{
+				CRU: 8,
+				MRU: 68719476736,    // 64 GB
+				SRU: 1099511627776,  // 1 TB
+				HRU: 10995116277760, // 10 TB
+			},
+			expected: 512 + 31.5 + 70, // (64 * 8) + (1 * 31.5) + (10 * 7)
+		},
+		{
+			name: "zero capacity",
+			capacity: db.Resources{
+				CRU: 0,
+				MRU: 0,
+				SRU: 0,
+				HRU: 0,
+			},
+			expected: 0,
+		},
+		{
+			name: "memory only",
+			capacity: db.Resources{
+				CRU: 0,
+				MRU: 1073741824, // 1 GB
+				SRU: 0,
+				HRU: 0,
+			},
+			expected: 8, // 1 * 8
+		},
+		{
+			name: "SSD only",
+			capacity: db.Resources{
+				CRU: 0,
+				MRU: 0,
+				SRU: 1099511627776, // 1 TB
+				HRU: 0,
+			},
+			expected: 31.5, // 1 * 31.5
+		},
+		{
+			name: "HDD only",
+			capacity: db.Resources{
+				CRU: 0,
+				MRU: 0,
+				SRU: 0,
+				HRU: 1099511627776, // 1 TB
+			},
+			expected: 7, // 1 * 7
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := calculateBaseCapacityReward(tt.capacity)
+
+			// Use a small delta for floating point comparison
+			assert.InDelta(t, tt.expected, result, 0.001, "Base capacity reward calculation incorrect")
+		})
+	}
+}
+
+// TestRewardFloatingPointPrecision tests that the floating point calculations in CalculateCapacityReward
+// are handled correctly and the percentages are applied as expected
+func TestRewardFloatingPointPrecision(t *testing.T) {
+	// Create a resource with a specific memory size to test floating point precision
+	memoryOnlyCapacity := db.Resources{
+		CRU: 0,
+		MRU: 1073741824, // 1 GB exactly
+		SRU: 0,
+		HRU: 0,
+	}
+
+	// Calculate expected values based on our constants
+	expectedBaseReward := bytesToGB(memoryOnlyCapacity.MRU) * MemoryRewardPerGB // Should be 8.0
+	expectedTotal := expectedBaseReward                                         // 100% uptime
+
+	// Expected distribution based on percentages
+	expectedFarmerReward := expectedTotal * FarmerRewardPercentage // 8.0 * 0.6 = 4.8
+	expectedTfReward := expectedTotal * TfRewardPercentage         // 8.0 * 0.2 = 1.6
+	expectedFpReward := expectedTotal * FpRewardPercentage         // 8.0 * 0.2 = 1.6
+
+	// Get the actual reward calculation
+	reward, err := CalculateCapacityReward(memoryOnlyCapacity, 100)
+	require.NoError(t, err)
+
+	// Test precision and distribution
+	t.Run("base reward calculation", func(t *testing.T) {
+		assert.InDelta(t, expectedBaseReward, calculateBaseCapacityReward(memoryOnlyCapacity), 0.001)
+	})
+
+	t.Run("total reward", func(t *testing.T) {
+		assert.InDelta(t, expectedTotal, reward.Total, 0.001)
+	})
+
+	// Test the distribution percentages
+	t.Run("farmer reward percentage", func(t *testing.T) {
+		assert.InDelta(t, expectedFarmerReward, reward.FarmerReward, 0.001)
+		assert.InDelta(t, 0.6, reward.FarmerReward/reward.Total, 0.001, "Farmer reward should be 60% of total")
+	})
+
+	t.Run("tf reward percentage", func(t *testing.T) {
+		assert.InDelta(t, expectedTfReward, reward.TfReward, 0.001)
+		assert.InDelta(t, 0.2, reward.TfReward/reward.Total, 0.001, "TF reward should be 20% of total")
+	})
+
+	t.Run("fp reward percentage", func(t *testing.T) {
+		assert.InDelta(t, expectedFpReward, reward.FpReward, 0.001)
+		assert.InDelta(t, 0.2, reward.FpReward/reward.Total, 0.001, "FP reward should be 20% of total")
+	})
+
+	// Test that sum of portions equals total (within rounding error)
+	t.Run("reward portions sum to total", func(t *testing.T) {
+		actualSum := reward.FarmerReward + reward.TfReward + reward.FpReward
+		assert.InDelta(t, reward.Total, actualSum, 0.001, "Sum of reward portions should equal total reward")
+	})
+}
+
+// TestAreReportsOrderedCorrectly tests the areReportsOrderedCorrectly function
+func TestAreReportsOrderedCorrectly(t *testing.T) {
+	now := time.Now()
+	tests := []struct {
+		name     string
+		reports  []db.UptimeReport
+		expected bool
+	}{
+		{
+			name:     "empty reports",
+			reports:  []db.UptimeReport{},
+			expected: true, // empty reports are considered properly ordered
+		},
+		{
+			name: "single report",
+			reports: []db.UptimeReport{
+				{Timestamp: now},
+			},
+			expected: true, // single report is always ordered
+		},
+		{
+			name: "ordered reports",
+			reports: []db.UptimeReport{
+				{Timestamp: now.Add(-2 * time.Hour)},
+				{Timestamp: now.Add(-1 * time.Hour)},
+				{Timestamp: now},
+			},
+			expected: true,
+		},
+		{
+			name: "unordered reports",
+			reports: []db.UptimeReport{
+				{Timestamp: now.Add(-1 * time.Hour)},
+				{Timestamp: now.Add(-2 * time.Hour)}, // out of order
+				{Timestamp: now},
+			},
+			expected: false,
+		},
+		{
+			name: "same timestamps",
+			reports: []db.UptimeReport{
+				{Timestamp: now},
+				{Timestamp: now}, // same timestamp
+			},
+			expected: true, // equal timestamps are considered ordered
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := areReportsOrderedCorrectly(tt.reports)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+// TestCalculateDowntimeFromReports tests the calculateDowntimeFromReports function
+func TestCalculateDowntimeFromReports(t *testing.T) {
+	now := time.Now().Truncate(time.Second)
+	tests := []struct {
+		name     string
+		reports  []db.UptimeReport
+		expected time.Duration
+	}{
+		{
+			name:     "empty reports",
+			reports:  []db.UptimeReport{},
+			expected: 0,
+		},
+		{
+			name: "single report",
+			reports: []db.UptimeReport{
+				{Timestamp: now, Duration: time.Hour},
+			},
+			expected: 0, // single report means no gaps to calculate
+		},
+		{
+			name: "no downtime - perfect reports",
+			reports: []db.UptimeReport{
+				{Timestamp: now.Add(-2 * time.Hour), Duration: time.Hour},
+				{Timestamp: now.Add(-1 * time.Hour), Duration: time.Hour},
+			},
+			expected: 0, // no downtime
+		},
+		{
+			name: "partial downtime - gap larger than duration",
+			reports: []db.UptimeReport{
+				{Timestamp: now.Add(-3 * time.Hour), Duration: time.Hour},
+				{Timestamp: now.Add(-1 * time.Hour), Duration: time.Hour}, // 2 hour gap, 1 hour reported
+			},
+			expected: time.Hour, // 1 hour of downtime
+		},
+		{
+			name: "decreasing duration but no downtime due to equal gap and duration",
+			reports: []db.UptimeReport{
+				{Timestamp: now.Add(-2 * time.Hour), Duration: 2 * time.Hour},
+				{Timestamp: now.Add(-1 * time.Hour), Duration: time.Hour}, // duration decreased but gap == duration
+			},
+			expected: 0, // No downtime since gap == duration
+		},
+		{
+			name: "decreasing duration with actual downtime",
+			reports: []db.UptimeReport{
+				{Timestamp: now.Add(-3 * time.Hour), Duration: 2 * time.Hour},
+				{Timestamp: now.Add(-1 * time.Hour), Duration: time.Hour}, // duration decreased and gap > duration
+			},
+			expected: time.Hour, // 1 hour of downtime (2 hour gap - 1 hour duration)
+		},
+		{
+			name: "multiple downtime periods",
+			reports: []db.UptimeReport{
+				{Timestamp: now.Add(-4 * time.Hour), Duration: time.Hour},
+				{Timestamp: now.Add(-3 * time.Hour), Duration: 30 * time.Minute}, // 30 min downtime
+				{Timestamp: now.Add(-1 * time.Hour), Duration: 30 * time.Minute}, // 90 min downtime (2h - 30min)
+			},
+			expected: 30*time.Minute + 90*time.Minute, // total 2 hours of downtime
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := calculateDowntimeFromReports(tt.reports)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+// TestCalculatePercentage tests the calculatePercentage function
+func TestCalculatePercentage(t *testing.T) {
+	tests := []struct {
+		name        string
+		totalPeriod time.Duration
+		downtime    time.Duration
+		expected    float64
+	}{
+		{
+			name:        "no downtime",
+			totalPeriod: 24 * time.Hour,
+			downtime:    0,
+			expected:    100.0,
+		},
+		{
+			name:        "50% downtime",
+			totalPeriod: 24 * time.Hour,
+			downtime:    12 * time.Hour,
+			expected:    50.0,
+		},
+		{
+			name:        "total downtime",
+			totalPeriod: 24 * time.Hour,
+			downtime:    24 * time.Hour,
+			expected:    0.0,
+		},
+		{
+			name:        "25% downtime",
+			totalPeriod: 24 * time.Hour,
+			downtime:    6 * time.Hour,
+			expected:    75.0,
+		},
+		{
+			name:        "small percentage downtime",
+			totalPeriod: 1000 * time.Hour,
+			downtime:    1 * time.Hour,
+			expected:    99.9, // truncated to 2 decimal places
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := calculatePercentage(tt.totalPeriod, tt.downtime)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+// TestDowntimeSinceLastReportTimestamp tests the downtimeSinceLastReportTimestamp function
+func TestDowntimeSinceLastReportTimestamp(t *testing.T) {
+	now := time.Now().Truncate(time.Second)
+	tests := []struct {
+		name                string
+		lastReportTimestamp time.Time
+		currentTime         time.Time
+		expected            time.Duration
+	}{
+		{
+			name:                "recent report, no downtime",
+			lastReportTimestamp: now.Add(-time.Duration(UptimeEventsInterval-100) * time.Second),
+			currentTime:         now,
+			expected:            0,
+		},
+		{
+			name:                "exactly at threshold",
+			lastReportTimestamp: now.Add(-time.Duration(UptimeEventsInterval) * time.Second),
+			currentTime:         now,
+			expected:            time.Duration(UptimeEventsInterval) * time.Second,
+		},
+		{
+			name:                "over threshold",
+			lastReportTimestamp: now.Add(-2 * time.Duration(UptimeEventsInterval) * time.Second),
+			currentTime:         now,
+			expected:            2 * time.Duration(UptimeEventsInterval) * time.Second,
+		},
+		{
+			name:                "future timestamp, no downtime",
+			lastReportTimestamp: now.Add(time.Hour),
+			currentTime:         now,
+			expected:            0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := downtimeSinceLastReportTimestamp(tt.lastReportTimestamp, tt.currentTime)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+// TestHelper functions tests the various helper functions used in reward calculations
+func TestHelperFunctions(t *testing.T) {
+	// Test bytesToGB
+	t.Run("bytesToGB conversion", func(t *testing.T) {
+		t.Run("zero bytes", func(t *testing.T) {
+			result := bytesToGB(0)
+			assert.Equal(t, 0.0, result, "0 bytes should convert to 0 GB")
+		})
+
+		t.Run("1 GB", func(t *testing.T) {
+			result := bytesToGB(1073741824) // 1 GB in bytes (2^30)
+			assert.InDelta(t, 1.0, result, 0.001, "1073741824 bytes should convert to 1 GB")
+		})
+
+		t.Run("1.5 GB", func(t *testing.T) {
+			result := bytesToGB(1610612736) // 1.5 GB in bytes
+			assert.InDelta(t, 1.5, result, 0.001, "1610612736 bytes should convert to 1.5 GB")
+		})
+	})
+
+	// Test bytesToTB
+	t.Run("bytesToTB conversion", func(t *testing.T) {
+		t.Run("zero bytes", func(t *testing.T) {
+			result := bytesToTB(0)
+			assert.Equal(t, 0.0, result, "0 bytes should convert to 0 TB")
+		})
+
+		t.Run("1 TB", func(t *testing.T) {
+			result := bytesToTB(1099511627776) // 1 TB in bytes (2^40)
+			assert.InDelta(t, 1.0, result, 0.001, "1099511627776 bytes should convert to 1 TB")
+		})
+
+		t.Run("2.5 TB", func(t *testing.T) {
+			result := bytesToTB(2748779069440) // 2.5 TB in bytes
+			assert.InDelta(t, 2.5, result, 0.001, "2748779069440 bytes should convert to 2.5 TB")
+		})
+	})
+
+	// Test truncateFloat
+	t.Run("truncateFloat", func(t *testing.T) {
+		t.Run("truncate to 2 places", func(t *testing.T) {
+			result := truncateFloat(123.456789, 2)
+			assert.Equal(t, 123.45, result, "123.456789 truncated to 2 decimal places should be 123.45")
+		})
+		
+		t.Run("truncate 124", func(t *testing.T) {
+			result := truncateFloat(124, 0)
+			assert.Equal(t, 124.0, result, "124 truncated to 0 decimal places should be 124.0")
+		})
+		
+		t.Run("truncate to 0 places", func(t *testing.T) {
+			result := truncateFloat(123.456789, 0)
+			assert.Equal(t, 123.0, result, "123.456789 truncated to 0 decimal places should be 123.0")
+		})
+
+		t.Run("truncate to 3 places", func(t *testing.T) {
+			result := truncateFloat(123.456789, 3)
+			assert.Equal(t, 123.456, result, "123.456789 truncated to 3 decimal places should be 123.456")
+		})
+
+		t.Run("truncate negative number", func(t *testing.T) {
+			result := truncateFloat(-123.456789, 2)
+			assert.Equal(t, -123.45, result, "-123.456789 truncated to 2 decimal places should be -123.45")
+		})
+	})
 }
 
 func TestCalculateUpTimePercentage(t *testing.T) {

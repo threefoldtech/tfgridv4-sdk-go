@@ -175,13 +175,9 @@ func downtimeSinceLastReportTimestamp(lastReportTimestamp time.Time, currentTime
 
 // calculateUpTimePercentage calculates the uptime percentage for a given node within a specific period.
 //
-// This function takes a slice of UptimeReport, a period start time and a current time as parameters.
-// It calculates the uptime percentage by comparing the expected uptime (calculated by subtracting the timestamp of the previous report from the current report)
-// with the actual uptime (calculated from the duration the current report).
-// If the actual uptime is less than the expected uptime, the difference is counted as downtime.
-// Additionally, if there is a gap equals or larger than the @UPTIME_EVENTS_INTERVAL between the last report and now, add it to the downtime.
-// The uptime percentage is then calculated by subtracting the total downtime from the total elapsed time since the period start and dividing the result by the total elapsed time.
-// The result is then multiplied by 100 to get the percentage.
+// This function calculates the node's uptime percentage based on a series of UptimeReports.
+// It computes downtime by analyzing gaps between reports and by checking if there's been significant downtime since the last report. 
+// The uptime percentage is calculated as: (totalPeriod - downtime) / totalPeriod * 100.
 func calculateUpTimePercentage(reports []db.UptimeReport, periodStart, now time.Time) (float64, error) {
 
 	if len(reports) == 0 {

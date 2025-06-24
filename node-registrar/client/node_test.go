@@ -2,6 +2,7 @@ package client
 
 import (
 	"encoding/base64"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -162,6 +163,7 @@ func TestGetNode(t *testing.T) {
 		count = 0
 		request = getNodeWithTwinID
 		result, err := c.GetNodeByTwinID(twinID)
+		fmt.Println(result)
 		require.NoError(err)
 		require.Equal(node, result)
 	})
@@ -173,5 +175,48 @@ func TestGetNode(t *testing.T) {
 		result, err := c.ListNodes(NodeFilter{FarmID: &id})
 		require.NoError(err)
 		require.Equal([]Node{node}, result)
+	})
+}
+
+func TestGetNodeCapacityRewards(t *testing.T) {
+	var request int
+	var count int
+	require := require.New(t)
+
+	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		statusCode, body := serverHandler(r, request, count, require)
+		w.WriteHeader(statusCode)
+		_, err := w.Write(body)
+		require.NoError(err)
+		count++
+	}))
+	defer testServer.Close()
+
+	baseURL, err := url.JoinPath(testServer.URL, "v1")
+	require.NoError(err)
+	request = newClientWithNoAccount
+	c, err := NewRegistrarClient(baseURL)
+	require.NoError(err)
+
+	t.Run("test get node capacity rewards, status ok", func(t *testing.T) {
+		request = getNodeCapacityRewardsWithStatusOK
+		resp, err := c.GetNodeCapacityRewards(nodeID)
+		require.NoError(err)
+		require.Equal(resp, NodeCapacityReward{})
+	})
+
+	t.Run("get node rewards for non-existing node", func(t *testing.T) {
+		request = getNodeCapacityRewardsWithStatusNotFound
+		_, err := c.GetNodeCapacityRewards(nodeID)
+		require.Error(err)
+	})
+
+	t.Run("No reports available, status UnprocessableEntity", func(t *testing.T) {
+		request = getNodeCapacityRewardsWithStatusUnprocessableEntity
+		res, err := c.GetNodeCapacityRewards(1)
+		fmt.Println(res)
+		fmt.Println(err.Error())
+		require.Error(err)
+		require.Equal(res, NodeCapacityReward{TfReward: 323})
 	})
 }

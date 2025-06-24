@@ -11,7 +11,7 @@ import (
 var (
 	account = Account{TwinID: 1, Relays: []string{}, RMBEncKey: ""}
 	farm    = Farm{FarmID: 1, FarmName: "freeFarm", TwinID: 1}
-	node    = Node{NodeID: 1, FarmID: farmID, TwinID: twinID}
+	node    = Node{NodeID: 1, FarmID: farmID, TwinID: twinID, Resources: Resources{CRU: 2342}}
 )
 
 const (
@@ -43,6 +43,10 @@ const (
 	getNodeWithIDStatusNotFound
 	getNodeWithTwinID
 	listNodesInFarm
+
+	getNodeCapacityRewardsWithStatusOK
+	getNodeCapacityRewardsWithStatusNotFound
+	getNodeCapacityRewardsWithStatusUnprocessableEntity
 
 	testMnemonic = "bottom drive obey lake curtain smoke basket hold race lonely fit walk"
 
@@ -220,6 +224,24 @@ func serverHandler(r *http.Request, request, count int, require *require.Asserti
 		require.NoError(err)
 		return http.StatusOK, resp
 
+	case getNodeCapacityRewardsWithStatusOK:
+		require.Equal("/v1/nodes/1/rewards", r.URL.Path)
+		require.Equal(http.MethodGet, r.Method)
+		resp, err := json.Marshal(NodeCapacityReward{})
+		require.NoError(err)
+		return http.StatusOK, resp
+
+	case getNodeCapacityRewardsWithStatusNotFound:
+		require.Equal("/v1/nodes/1/rewards", r.URL.Path)
+		require.Equal(http.MethodGet, r.Method)
+		return http.StatusNotFound, nil
+
+	case getNodeCapacityRewardsWithStatusUnprocessableEntity:
+		require.Equal("/v1/nodes/90/rewards", r.URL.Path)
+		require.Equal(http.MethodGet, r.Method)
+		resp, err := json.Marshal(NodeCapacityReward{TfReward: 239843})
+		require.NoError(err)
+		return http.StatusUnprocessableEntity, resp
 	// unauthorized requests
 	case newClientWithNoAccount,
 		getAccountWithPKStatusNotFount,
@@ -230,7 +252,6 @@ func serverHandler(r *http.Request, request, count int, require *require.Asserti
 		require.Equal(account.PublicKey, r.URL.Query().Get("public_key"))
 		require.Equal(http.MethodGet, r.Method)
 		return http.StatusNotFound, nil
-
 	}
 
 	return http.StatusNotAcceptable, nil

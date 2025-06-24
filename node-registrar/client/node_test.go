@@ -1,6 +1,7 @@
 package client
 
 import (
+	"encoding/base64"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -19,6 +20,10 @@ func TestRegistarNode(t *testing.T) {
 		TwinID: twinID,
 		FarmID: farmID,
 	}
+
+	keyPair, err := parseKeysFromMnemonicOrSeed(testMnemonic)
+	require.NoError(err)
+	account.PublicKey = base64.StdEncoding.EncodeToString(keyPair.Public())
 
 	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		statusCode, body := serverHandler(r, request, count, require)
@@ -73,10 +78,10 @@ func TestUpdateNode(t *testing.T) {
 	var count int
 	require := require.New(t)
 
-	// publicKey, privateKey, err := aliceKeys()
-	// require.NoError(err)
-	// account.PublicKey = base64.StdEncoding.EncodeToString(publicKey)
-	//
+	keyPair, err := parseKeysFromMnemonicOrSeed(testMnemonic)
+	require.NoError(err)
+	account.PublicKey = base64.StdEncoding.EncodeToString(keyPair.Public())
+
 	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		statusCode, body := serverHandler(r, request, count, require)
 		w.WriteHeader(statusCode)
@@ -118,9 +123,9 @@ func TestGetNode(t *testing.T) {
 	var count int
 	require := require.New(t)
 
-	// publicKey, privateKey, err := aliceKeys()
-	// require.NoError(err)
-	// account.PublicKey = base64.StdEncoding.EncodeToString(publicKey)
+	keyPair, err := parseKeysFromMnemonicOrSeed(testMnemonic)
+	require.NoError(err)
+	account.PublicKey = base64.StdEncoding.EncodeToString(keyPair.Public())
 
 	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		statusCode, body := serverHandler(r, request, count, require)
@@ -139,12 +144,14 @@ func TestGetNode(t *testing.T) {
 	require.NoError(err)
 
 	t.Run("test get node status not found", func(t *testing.T) {
+		count = 0
 		request = getNodeWithIDStatusNotFound
 		_, err = c.GetNode(nodeID)
 		require.Error(err)
 	})
 
 	t.Run("test get node, status ok", func(t *testing.T) {
+		count = 0
 		request = getNodeWithIDStatusOK
 		result, err := c.GetNode(nodeID)
 		require.NoError(err)
@@ -152,6 +159,7 @@ func TestGetNode(t *testing.T) {
 	})
 
 	t.Run("test get node with twin id", func(t *testing.T) {
+		count = 0
 		request = getNodeWithTwinID
 		result, err := c.GetNodeByTwinID(twinID)
 		require.NoError(err)
@@ -159,6 +167,7 @@ func TestGetNode(t *testing.T) {
 	})
 
 	t.Run("test list nodes of specific farm", func(t *testing.T) {
+		count = 0
 		request = listNodesInFarm
 		id := farmID
 		result, err := c.ListNodes(NodeFilter{FarmID: &id})

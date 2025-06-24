@@ -326,7 +326,6 @@ func (c *RegistrarClient) getNodeByTwinID(id uint64) (node Node, err error) {
 }
 
 func (c *RegistrarClient) getNodeCapacityRewards(nodeID uint64) (reward NodeCapacityReward, err error) {
-
 	url, err := url.JoinPath(c.baseURL, "nodes", fmt.Sprint(nodeID), "rewards")
 	if err != nil {
 		return reward, errors.Wrap(err, "failed to construct rewards url")

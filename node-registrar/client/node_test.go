@@ -2,7 +2,6 @@ package client
 
 import (
 	"encoding/base64"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -160,7 +159,6 @@ func TestGetNode(t *testing.T) {
 	t.Run("test get node with twin id", func(t *testing.T) {
 		request = getNodeWithTwinID
 		result, err := c.GetNodeByTwinID(twinID)
-		fmt.Println(result)
 		require.NoError(err)
 		require.Equal(node, result)
 	})
@@ -190,6 +188,7 @@ func TestGetNodeCapacityRewards(t *testing.T) {
 
 	baseURL, err := url.JoinPath(testServer.URL, "v1")
 	require.NoError(err)
+
 	request = newClientWithNoAccount
 	c, err := NewRegistrarClient(baseURL)
 	require.NoError(err)
@@ -207,12 +206,10 @@ func TestGetNodeCapacityRewards(t *testing.T) {
 		require.Error(err)
 	})
 
-	t.Run("No reports available, status UnprocessableEntity", func(t *testing.T) {
+	t.Run("no reports available, status UnprocessableEntity", func(t *testing.T) {
 		request = getNodeCapacityRewardsWithStatusUnprocessableEntity
 		res, err := c.GetNodeCapacityRewards(1)
-		fmt.Println(res)
-		fmt.Println(err.Error())
 		require.Error(err)
-		require.Equal(res, NodeCapacityReward{TfReward: 323})
+		require.Equal(res, NodeCapacityReward{})
 	})
 }

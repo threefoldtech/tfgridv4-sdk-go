@@ -237,11 +237,12 @@ func serverHandler(r *http.Request, request, count int, require *require.Asserti
 		return http.StatusNotFound, nil
 
 	case getNodeCapacityRewardsWithStatusUnprocessableEntity:
-		require.Equal("/v1/nodes/90/rewards", r.URL.Path)
+		require.Equal("/v1/nodes/1/rewards", r.URL.Path)
 		require.Equal(http.MethodGet, r.Method)
 		resp, err := json.Marshal(NodeCapacityReward{TfReward: 239843})
 		require.NoError(err)
 		return http.StatusUnprocessableEntity, resp
+
 	// unauthorized requests
 	case newClientWithNoAccount,
 		getAccountWithPKStatusNotFount,

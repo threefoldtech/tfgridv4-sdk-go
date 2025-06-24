@@ -224,16 +224,16 @@ func TestGetNodeCapacityRewards(t *testing.T) {
 		require.NoError(err)
 		expected := NodeCapacityReward{
 			FarmerReward:     60.0,
-			TfReward:         20.0,
-			FpReward:         20.0,
+			TFReward:         20.0,
+			FPReward:         20.0,
 			Total:            100.0,
 			UpTimePercentage: 75.0,
 		}
 		require.Equal(expected, res)
 		// Verify reward distribution percentages are correct
 		require.InDelta(0.6, res.FarmerReward/res.Total, 0.001)
-		require.InDelta(0.2, res.TfReward/res.Total, 0.001)
-		require.InDelta(0.2, res.FpReward/res.Total, 0.001)
+		require.InDelta(0.2, res.TFReward/res.Total, 0.001)
+		require.InDelta(0.2, res.FPReward/res.Total, 0.001)
 	})
 
 	t.Run("bad request due to invalid node ID format", func(t *testing.T) {

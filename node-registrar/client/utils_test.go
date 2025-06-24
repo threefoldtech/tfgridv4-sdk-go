@@ -249,8 +249,8 @@ func serverHandler(r *http.Request, request, count int, require *require.Asserti
 		require.Equal(http.MethodGet, r.Method)
 		resp, err := json.Marshal(NodeCapacityReward{
 			FarmerReward:     60.0,
-			TfReward:         20.0,
-			FpReward:         20.0,
+			TFReward:         20.0,
+			FPReward:         20.0,
 			Total:            100.0,
 			UpTimePercentage: 75.0,
 		})

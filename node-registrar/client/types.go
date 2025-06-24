@@ -66,9 +66,9 @@ type Location struct {
 }
 
 type NodeCapacityReward struct {
-	FarmerReward     float64 `json:"farmerReward"`     // Reward amount for the node owner (60%)
-	TfReward         float64 `json:"tfReward"`         // Reward amount for Threefold Foundation (20%)
-	FpReward         float64 `json:"fpReward"`         // Reward amount for the Farming Pool (20%)
-	Total            float64 `json:"total"`            // Total reward amount
-	UpTimePercentage float64 `json:"uptimePercentage"` // Node's uptime percentage
+	FarmerReward     float64 `json:"FarmerReward"`     // Reward amount for the node owner (60%)
+	TFReward         float64 `json:"TFReward"`         // Reward amount for Threefold Foundation (20%)
+	FPReward         float64 `json:"FPReward"`         // Reward amount for the Farming Pool (20%)
+	Total            float64 `json:"Total"`            // Total reward amount
+	UpTimePercentage float64 `json:"UptimePercentage"` // Node's uptime percentage
 }

@@ -47,6 +47,9 @@ const (
 	getNodeCapacityRewardsWithStatusOK
 	getNodeCapacityRewardsWithStatusNotFound
 	getNodeCapacityRewardsWithStatusUnprocessableEntity
+	getNodeCapacityRewardsWithPartialUptime
+	getNodeCapacityRewardsWithBadRequest
+	getNodeCapacityRewardsWithServerError
 
 	testMnemonic = "bottom drive obey lake curtain smoke basket hold race lonely fit walk"
 
@@ -239,9 +242,31 @@ func serverHandler(r *http.Request, request, count int, require *require.Asserti
 	case getNodeCapacityRewardsWithStatusUnprocessableEntity:
 		require.Equal("/v1/nodes/1/rewards", r.URL.Path)
 		require.Equal(http.MethodGet, r.Method)
-		resp, err := json.Marshal(NodeCapacityReward{TfReward: 239843})
+		return http.StatusUnprocessableEntity, nil
+
+	case getNodeCapacityRewardsWithPartialUptime:
+		require.Equal("/v1/nodes/1/rewards", r.URL.Path)
+		require.Equal(http.MethodGet, r.Method)
+		resp, err := json.Marshal(NodeCapacityReward{
+			FarmerReward:     60.0,
+			TfReward:         20.0,
+			FpReward:         20.0,
+			Total:            100.0,
+			UpTimePercentage: 75.0,
+		})
 		require.NoError(err)
-		return http.StatusUnprocessableEntity, resp
+		return http.StatusOK, resp
+
+	case getNodeCapacityRewardsWithBadRequest:
+		require.Equal("/v1/nodes/1/rewards", r.URL.Path)
+		require.Equal(http.MethodGet, r.Method)
+
+		return http.StatusBadRequest, nil
+
+	case getNodeCapacityRewardsWithServerError:
+		require.Equal("/v1/nodes/1/rewards", r.URL.Path)
+		require.Equal(http.MethodGet, r.Method)
+		return http.StatusInternalServerError, nil
 
 	// unauthorized requests
 	case newClientWithNoAccount,

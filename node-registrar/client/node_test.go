@@ -197,7 +197,7 @@ func TestGetNodeCapacityRewards(t *testing.T) {
 		request = getNodeCapacityRewardsWithStatusOK
 		resp, err := c.GetNodeCapacityRewards(nodeID)
 		require.NoError(err)
-		require.Equal(resp, NodeCapacityReward{})
+		require.Equal(NodeCapacityReward{}, resp)
 	})
 
 	t.Run("get node rewards for non-existing node", func(t *testing.T) {
@@ -208,8 +208,41 @@ func TestGetNodeCapacityRewards(t *testing.T) {
 
 	t.Run("no reports available, status UnprocessableEntity", func(t *testing.T) {
 		request = getNodeCapacityRewardsWithStatusUnprocessableEntity
-		res, err := c.GetNodeCapacityRewards(1)
+		res, err := c.GetNodeCapacityRewards(nodeID)
 		require.Error(err)
-		require.Equal(res, NodeCapacityReward{})
+		require.Equal(NodeCapacityReward{}, res)
+
+	})
+
+	t.Run("node with partial uptime rewards calculation", func(t *testing.T) {
+		request = getNodeCapacityRewardsWithPartialUptime
+		res, err := c.GetNodeCapacityRewards(nodeID)
+		require.NoError(err)
+		expected := NodeCapacityReward{
+			FarmerReward:     60.0,
+			TfReward:         20.0,
+			FpReward:         20.0,
+			Total:            100.0,
+			UpTimePercentage: 75.0,
+		}
+		require.Equal(expected, res)
+		// Verify reward distribution percentages are correct
+		require.InDelta(0.6, res.FarmerReward/res.Total, 0.001)
+		require.InDelta(0.2, res.TfReward/res.Total, 0.001)
+		require.InDelta(0.2, res.FpReward/res.Total, 0.001)
+	})
+
+	t.Run("bad request due to invalid node ID format", func(t *testing.T) {
+		request = getNodeCapacityRewardsWithBadRequest
+		res, err := c.GetNodeCapacityRewards(nodeID)
+		require.Error(err)
+		require.Equal(NodeCapacityReward{}, res)
+	})
+
+	t.Run("internal server error when calculating rewards", func(t *testing.T) {
+		request = getNodeCapacityRewardsWithServerError
+		res, err := c.GetNodeCapacityRewards(nodeID)
+		require.Error(err)
+		require.Equal(NodeCapacityReward{}, res)
 	})
 }

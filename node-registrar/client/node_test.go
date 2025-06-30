@@ -231,9 +231,9 @@ func TestGetNodeCapacityRewards(t *testing.T) {
 		}
 		require.Equal(expected, res)
 		// Verify reward distribution percentages are correct
-		require.InDelta(0.6, res.FarmerReward/res.Total, 0.001)
-		require.InDelta(0.2, res.TFReward/res.Total, 0.001)
-		require.InDelta(0.2, res.FPReward/res.Total, 0.001)
+		require.Equal(0.6, res.FarmerReward/res.Total)
+		require.Equal(0.2, res.TFReward/res.Total)
+		require.Equal(0.2, res.FPReward/res.Total)
 	})
 
 	t.Run("bad request due to invalid node ID format", func(t *testing.T) {

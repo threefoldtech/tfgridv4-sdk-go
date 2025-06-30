@@ -344,10 +344,6 @@ func (c *RegistrarClient) getNodeCapacityRewards(nodeID uint64) (reward NodeCapa
 		return reward, ErrorNodeNotFound
 	}
 
-	if resp.StatusCode == http.StatusUnprocessableEntity {
-		return reward, parseResponseError(resp.Body)
-	}
-
 	if resp.StatusCode != http.StatusOK {
 		err = parseResponseError(resp.Body)
 		return reward, errors.Wrap(err, "failed to get node rewards")

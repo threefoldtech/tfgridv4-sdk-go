@@ -324,10 +324,6 @@ func (s Server) getNodeRewardHandler(c *gin.Context) {
 
 	upTimePercentage, err := calculateUpTimePercentage(reports, periodStart, now)
 	if err != nil {
-		if errors.Is(err, ErrReportsNotInAscOrder) {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
 		if errors.Is(err, ErrNoReportsAvailable) {
 			c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
 			return

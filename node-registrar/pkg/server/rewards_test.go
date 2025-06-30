@@ -138,21 +138,20 @@ func AssertCapacityReward(t testing.TB, resources db.Resources, upTimePercentage
 	// Apply uptime percentage
 	total = total * (upTimePercentage / 100)
 
+	// Apply truncation to match the implementation
 	expected := Reward{
-		FarmerReward:     total * FarmerRewardPercentage,
-		TfReward:         total * TfRewardPercentage,
-		FpReward:         total * FpRewardPercentage,
-		Total:            total,
+		FarmerReward:     truncateFloat(total*FarmerRewardPercentage, RewardPrecisionDecimalPlaces),
+		TfReward:         truncateFloat(total*TfRewardPercentage, RewardPrecisionDecimalPlaces),
+		FpReward:         truncateFloat(total*FpRewardPercentage, RewardPrecisionDecimalPlaces),
+		Total:            truncateFloat(total, RewardPrecisionDecimalPlaces),
 		UpTimePercentage: upTimePercentage,
 	}
 
-	// Use precise floating point comparison
-	const delta = 1e-9 // Very small acceptable difference
-	assert.InDelta(t, expected.FarmerReward, got.FarmerReward, delta)
-	assert.InDelta(t, expected.TfReward, got.TfReward, delta)
-	assert.InDelta(t, expected.FpReward, got.FpReward, delta)
-	assert.InDelta(t, expected.Total, got.Total, delta)
-	assert.InDelta(t, expected.UpTimePercentage, got.UpTimePercentage, delta)
+	assert.Equal(t, expected.FarmerReward, got.FarmerReward)
+	assert.Equal(t, expected.TfReward, got.TfReward)
+	assert.Equal(t, expected.FpReward, got.FpReward)
+	assert.Equal(t, expected.Total, got.Total)
+	assert.Equal(t, expected.UpTimePercentage, got.UpTimePercentage)
 }
 
 // TestCalculatePeriodStart tests the calculatePeriodStart function with different inputs
@@ -262,8 +261,8 @@ func TestCalculateTotalReward(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := calculateTotalReward(tt.capacity, tt.upTimePercentage)
 
-			// Use a small delta for floating point comparison
-			assert.InDelta(t, tt.expected, result, 0.001, "Total reward calculation incorrect")
+			truncatedExpected := truncateFloat(tt.expected, RewardPrecisionDecimalPlaces)
+			assert.Equal(t, truncatedExpected, result, "Total reward calculation incorrect")
 		})
 	}
 }
@@ -331,8 +330,8 @@ func TestCalculateBaseCapacityReward(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := calculateBaseCapacityReward(tt.capacity)
 
-			// Use a small delta for floating point comparison
-			assert.InDelta(t, tt.expected, result, 0.001, "Base capacity reward calculation incorrect")
+			truncatedExpected := truncateFloat(tt.expected, RewardPrecisionDecimalPlaces)
+			assert.Equal(t, truncatedExpected, result, "Base capacity reward calculation incorrect")
 		})
 	}
 }
@@ -363,33 +362,40 @@ func TestRewardFloatingPointPrecision(t *testing.T) {
 
 	// Test precision and distribution
 	t.Run("base reward calculation", func(t *testing.T) {
-		assert.InDelta(t, expectedBaseReward, calculateBaseCapacityReward(memoryOnlyCapacity), 0.001)
+		expectedTruncated := truncateFloat(expectedBaseReward, RewardPrecisionDecimalPlaces)
+		actualResult := calculateBaseCapacityReward(memoryOnlyCapacity)
+		assert.Equal(t, expectedTruncated, actualResult)
 	})
 
 	t.Run("total reward", func(t *testing.T) {
-		assert.InDelta(t, expectedTotal, reward.Total, 0.001)
+		assert.Equal(t, truncateFloat(expectedTotal, RewardPrecisionDecimalPlaces), reward.Total)
 	})
 
 	// Test the distribution percentages
 	t.Run("farmer reward percentage", func(t *testing.T) {
-		assert.InDelta(t, expectedFarmerReward, reward.FarmerReward, 0.001)
-		assert.InDelta(t, 0.6, reward.FarmerReward/reward.Total, 0.001, "Farmer reward should be 60% of total")
+		assert.Equal(t, truncateFloat(expectedFarmerReward, RewardPrecisionDecimalPlaces), reward.FarmerReward)
+		ratio := truncateFloat(reward.FarmerReward/reward.Total, 3)
+		assert.Equal(t, 0.6, ratio, "Farmer reward should be 60% of total")
 	})
 
 	t.Run("tf reward percentage", func(t *testing.T) {
-		assert.InDelta(t, expectedTfReward, reward.TfReward, 0.001)
-		assert.InDelta(t, 0.2, reward.TfReward/reward.Total, 0.001, "TF reward should be 20% of total")
+		assert.Equal(t, truncateFloat(expectedTfReward, RewardPrecisionDecimalPlaces), reward.TfReward)
+		ratio := truncateFloat(reward.TfReward/reward.Total, 3)
+		assert.Equal(t, 0.2, ratio, "TF reward should be 20% of total")
 	})
 
 	t.Run("fp reward percentage", func(t *testing.T) {
-		assert.InDelta(t, expectedFpReward, reward.FpReward, 0.001)
-		assert.InDelta(t, 0.2, reward.FpReward/reward.Total, 0.001, "FP reward should be 20% of total")
+		assert.Equal(t, truncateFloat(expectedFpReward, RewardPrecisionDecimalPlaces), reward.FpReward)
+		ratio := truncateFloat(reward.FpReward/reward.Total, 3)
+		assert.Equal(t, 0.2, ratio, "FP reward should be 20% of total")
 	})
 
 	// Test that sum of portions equals total (within rounding error)
 	t.Run("reward portions sum to total", func(t *testing.T) {
 		actualSum := reward.FarmerReward + reward.TfReward + reward.FpReward
-		assert.InDelta(t, reward.Total, actualSum, 0.001, "Sum of reward portions should equal total reward")
+		totalTruncated := truncateFloat(reward.Total, RewardPrecisionDecimalPlaces)
+		sumTruncated := truncateFloat(actualSum, RewardPrecisionDecimalPlaces)
+		assert.Equal(t, totalTruncated, sumTruncated, "Sum of reward portions should equal total reward")
 	})
 }
 
@@ -622,12 +628,14 @@ func TestHelperFunctions(t *testing.T) {
 
 		t.Run("1 GB", func(t *testing.T) {
 			result := bytesToGB(1073741824) // 1 GB in bytes (2^30)
-			assert.InDelta(t, 1.0, result, 0.001, "1073741824 bytes should convert to 1 GB")
+			truncatedResult := truncateFloat(result, 3)
+			assert.Equal(t, 1.0, truncatedResult, "1073741824 bytes should convert to 1 GB")
 		})
 
 		t.Run("1.5 GB", func(t *testing.T) {
 			result := bytesToGB(1610612736) // 1.5 GB in bytes
-			assert.InDelta(t, 1.5, result, 0.001, "1610612736 bytes should convert to 1.5 GB")
+			truncatedResult := truncateFloat(result, 3)
+			assert.Equal(t, 1.5, truncatedResult, "1610612736 bytes should convert to 1.5 GB")
 		})
 	})
 
@@ -640,12 +648,14 @@ func TestHelperFunctions(t *testing.T) {
 
 		t.Run("1 TB", func(t *testing.T) {
 			result := bytesToTB(1099511627776) // 1 TB in bytes (2^40)
-			assert.InDelta(t, 1.0, result, 0.001, "1099511627776 bytes should convert to 1 TB")
+			truncatedResult := truncateFloat(result, 3)
+			assert.Equal(t, 1.0, truncatedResult, "1099511627776 bytes should convert to 1 TB")
 		})
 
 		t.Run("2.5 TB", func(t *testing.T) {
 			result := bytesToTB(2748779069440) // 2.5 TB in bytes
-			assert.InDelta(t, 2.5, result, 0.001, "2748779069440 bytes should convert to 2.5 TB")
+			truncatedResult := truncateFloat(result, 3)
+			assert.Equal(t, 2.5, truncatedResult, "2748779069440 bytes should convert to 2.5 TB")
 		})
 	})
 
@@ -655,12 +665,12 @@ func TestHelperFunctions(t *testing.T) {
 			result := truncateFloat(123.456789, 2)
 			assert.Equal(t, 123.45, result, "123.456789 truncated to 2 decimal places should be 123.45")
 		})
-		
+
 		t.Run("truncate 124", func(t *testing.T) {
 			result := truncateFloat(124, 0)
 			assert.Equal(t, 124.0, result, "124 truncated to 0 decimal places should be 124.0")
 		})
-		
+
 		t.Run("truncate to 0 places", func(t *testing.T) {
 			result := truncateFloat(123.456789, 0)
 			assert.Equal(t, 123.0, result, "123.456789 truncated to 0 decimal places should be 123.0")

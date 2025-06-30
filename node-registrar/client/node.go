@@ -335,6 +335,10 @@ func (c *RegistrarClient) getNodeCapacityRewards(nodeID uint64) (reward NodeCapa
 	if err != nil {
 		return reward, errors.Wrap(err, "failed to send request to rewards endpoint")
 	}
+	if resp == nil {
+		return reward, errors.New("no response received")
+	}
+
 	defer resp.Body.Close()
 	if resp.StatusCode == http.StatusNotFound {
 		return reward, ErrorNodeNotFound

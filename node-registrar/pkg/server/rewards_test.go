@@ -2,7 +2,6 @@ package server
 
 import (
 	"fmt"
-	"math"
 	"testing"
 	"time"
 
@@ -99,17 +98,13 @@ func TestCalculateCapacityReward(t *testing.T) {
 
 			// Error check
 			if tt.wantError {
-				if err == nil {
-					t.Fatal("expected error, got nil")
-				}
+				require.Error(t, err)
 				assert.Equal(t, tt.expectedError, err)
 				return
 			}
 
 			// No error expected
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
+			require.NoError(t, err)
 
 			// Check reward calculation
 			AssertCapacityReward(t, tt.capacity, tt.upTimePercentage, got)
@@ -821,24 +816,15 @@ func TestCalculateUpTimePercentage(t *testing.T) {
 
 			// Check for expected error
 			if tt.wantError {
-				if err == nil {
-					t.Errorf("calculateUpTimePercentage() expected error, got nil")
-				}
-				// Also check for specific error type
-				if tt.expectedError != nil {
-					assert.Equal(t, tt.expectedError, err, "Expected specific error type")
-				}
+				require.Error(t, err)
+				require.Equal(t, tt.expectedError, err, "Expected specific error type")
 				return
 			}
 
 			// No error expected
-			if err != nil {
-				t.Errorf("calculateUpTimePercentage() unexpected error: %v", err)
-				return
-			}
-			if math.Abs(got-tt.expected) > 0.01 {
-				t.Errorf("calculateUpTimePercentage() = %v, want %v", got, tt.expected)
-			}
+			require.NoError(t, err)
+
+			assert.Equal(t, tt.expected, got)
 		})
 	}
 }

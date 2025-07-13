@@ -140,7 +140,7 @@ func (f flags) validateHost() error {
 
 	// Check common binding addresses
 	switch host {
-	case "localhost", "0.0.0.0", "127.0.0.1":
+	case "localhost", "0.0.0.0", "127.0.0.1", "::1":
 		return nil
 	}
 

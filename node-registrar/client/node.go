@@ -160,7 +160,7 @@ func (c *RegistrarClient) updateNode(opts NodeUpdate) (err error) {
 		return errors.Wrap(err, "failed to construct registrar url")
 	}
 
-	node = c.parseUpdateNodeOpts(node, opts)
+	node = parseUpdateNodeOpts(node, opts)
 
 	handler := func(body bytes.Buffer) error {
 		req, err := http.NewRequest("PATCH", url, &body)
@@ -437,7 +437,7 @@ func (c *RegistrarClient) ensureNodeID() error {
 	return nil
 }
 
-func (c *RegistrarClient) parseUpdateNodeOpts(node Node, update NodeUpdate) Node {
+func parseUpdateNodeOpts(node Node, update NodeUpdate) Node {
 	if update.FarmID != nil {
 		node.FarmID = *update.FarmID
 	}

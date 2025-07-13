@@ -1,6 +1,7 @@
 package client
 
 import (
+	"encoding/base64"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -20,6 +21,10 @@ func TestRegistarNode(t *testing.T) {
 		FarmID: farmID,
 	}
 
+	keyPair, err := parseKeysFromMnemonicOrSeed(testMnemonic)
+	require.NoError(err)
+	account.PublicKey = base64.StdEncoding.EncodeToString(keyPair.Public())
+
 	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		statusCode, body := serverHandler(r, request, count, require)
 		w.WriteHeader(statusCode)
@@ -29,7 +34,7 @@ func TestRegistarNode(t *testing.T) {
 	}))
 	defer testServer.Close()
 
-	baseURL, err := url.JoinPath(testServer.URL, "v1")
+	baseURL, err := url.JoinPath(testServer.URL, "api", "v1")
 	require.NoError(err)
 
 	t.Run("test registar node no account", func(t *testing.T) {
@@ -73,10 +78,10 @@ func TestUpdateNode(t *testing.T) {
 	var count int
 	require := require.New(t)
 
-	// publicKey, privateKey, err := aliceKeys()
-	// require.NoError(err)
-	// account.PublicKey = base64.StdEncoding.EncodeToString(publicKey)
-	//
+	keyPair, err := parseKeysFromMnemonicOrSeed(testMnemonic)
+	require.NoError(err)
+	account.PublicKey = base64.StdEncoding.EncodeToString(keyPair.Public())
+
 	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		statusCode, body := serverHandler(r, request, count, require)
 		w.WriteHeader(statusCode)
@@ -86,7 +91,7 @@ func TestUpdateNode(t *testing.T) {
 	}))
 	defer testServer.Close()
 
-	baseURL, err := url.JoinPath(testServer.URL, "v1")
+	baseURL, err := url.JoinPath(testServer.URL, "api", "v1")
 	require.NoError(err)
 
 	request = newClientWithAccountAndNode
@@ -118,9 +123,9 @@ func TestGetNode(t *testing.T) {
 	var count int
 	require := require.New(t)
 
-	// publicKey, privateKey, err := aliceKeys()
-	// require.NoError(err)
-	// account.PublicKey = base64.StdEncoding.EncodeToString(publicKey)
+	keyPair, err := parseKeysFromMnemonicOrSeed(testMnemonic)
+	require.NoError(err)
+	account.PublicKey = base64.StdEncoding.EncodeToString(keyPair.Public())
 
 	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		statusCode, body := serverHandler(r, request, count, require)
@@ -131,7 +136,7 @@ func TestGetNode(t *testing.T) {
 	}))
 	defer testServer.Close()
 
-	baseURL, err := url.JoinPath(testServer.URL, "v1")
+	baseURL, err := url.JoinPath(testServer.URL, "api", "v1")
 	require.NoError(err)
 
 	request = newClientWithAccountAndNode
@@ -172,6 +177,10 @@ func TestListUnapprovedNodes(t *testing.T) {
 	var count int
 	require := require.New(t)
 
+	keyPair, err := parseKeysFromMnemonicOrSeed(testMnemonic)
+	require.NoError(err)
+	account.PublicKey = base64.StdEncoding.EncodeToString(keyPair.Public())
+
 	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		statusCode, body := serverHandler(r, request, count, require)
 		w.WriteHeader(statusCode)
@@ -181,7 +190,7 @@ func TestListUnapprovedNodes(t *testing.T) {
 	}))
 	defer testServer.Close()
 
-	baseURL, err := url.JoinPath(testServer.URL, "v1")
+	baseURL, err := url.JoinPath(testServer.URL, "api", "v1")
 	require.NoError(err)
 
 	t.Run("test list unapproved nodes in farm", func(t *testing.T) {

@@ -28,7 +28,7 @@ func TestCreateAccount(t *testing.T) {
 	}))
 	defer testServer.Close()
 
-	baseURL, err := url.JoinPath(testServer.URL, "v1")
+	baseURL, err := url.JoinPath(testServer.URL, "api", "v1")
 	require.NoError(err)
 
 	request = newClientWithNoAccount
@@ -62,7 +62,7 @@ func TestUpdateAccount(t *testing.T) {
 	}))
 	defer testServer.Close()
 
-	baseURL, err := url.JoinPath(testServer.URL, "v1")
+	baseURL, err := url.JoinPath(testServer.URL, "api", "v1")
 	require.NoError(err)
 
 	t.Run("test update account updated successfully", func(t *testing.T) {
@@ -112,7 +112,7 @@ func TestGetAccount(t *testing.T) {
 	}))
 	defer testServer.Close()
 
-	baseURL, err := url.JoinPath(testServer.URL, "v1")
+	baseURL, err := url.JoinPath(testServer.URL, "api", "v1")
 	require.NoError(err)
 
 	count = 0

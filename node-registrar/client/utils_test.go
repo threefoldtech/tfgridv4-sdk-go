@@ -60,14 +60,14 @@ func serverHandler(r *http.Request, request, count int, require *require.Asserti
 	case newClientWithAccountNoNode:
 		switch count {
 		case 0:
-			require.Equal("/v1/accounts", r.URL.Path)
+			require.Equal("/api/v1/accounts", r.URL.Path)
 			require.Equal(account.PublicKey, r.URL.Query().Get("public_key"))
 			require.Equal(http.MethodGet, r.Method)
 			resp, err := json.Marshal(account)
 			require.NoError(err)
 			return http.StatusOK, resp
 		case 1:
-			require.Equal("/v1/nodes", r.URL.Path)
+			require.Equal("/api/v1/nodes", r.URL.Path)
 			require.Equal(fmt.Sprint(account.TwinID), r.URL.Query().Get("twin_id"))
 			require.Equal(http.MethodGet, r.Method)
 			return http.StatusNotFound, nil
@@ -76,14 +76,14 @@ func serverHandler(r *http.Request, request, count int, require *require.Asserti
 	case newClientWithAccountAndNode:
 		switch count {
 		case 0:
-			require.Equal("/v1/accounts", r.URL.Path)
+			require.Equal("/api/v1/accounts", r.URL.Path)
 			require.Equal(account.PublicKey, r.URL.Query().Get("public_key"))
 			require.Equal(http.MethodGet, r.Method)
 			resp, err := json.Marshal(account)
 			require.NoError(err)
 			return http.StatusOK, resp
 		case 1:
-			require.Equal("/v1/nodes", r.URL.Path)
+			require.Equal("/api/v1/nodes", r.URL.Path)
 			require.Equal(fmt.Sprint(account.TwinID), r.URL.Query().Get("twin_id"))
 			require.Equal(http.MethodGet, r.Method)
 			resp, err := json.Marshal([]Node{node})
@@ -93,7 +93,7 @@ func serverHandler(r *http.Request, request, count int, require *require.Asserti
 
 		// Accounts routes handlers
 	case createAccountStatusCreated:
-		require.Equal("/v1/accounts", r.URL.Path)
+		require.Equal("/api/v1/accounts", r.URL.Path)
 		require.Equal(http.MethodPost, r.Method)
 		require.NotEmpty(r.Body)
 		resp, err := json.Marshal(account)
@@ -101,7 +101,7 @@ func serverHandler(r *http.Request, request, count int, require *require.Asserti
 		return http.StatusCreated, resp
 
 	case getAccountWithPKStatusOK:
-		require.Equal("/v1/accounts", r.URL.Path)
+		require.Equal("/api/v1/accounts", r.URL.Path)
 		require.Equal(account.PublicKey, r.URL.Query().Get("public_key"))
 		require.Equal(http.MethodGet, r.Method)
 		resp, err := json.Marshal(account)
@@ -109,13 +109,13 @@ func serverHandler(r *http.Request, request, count int, require *require.Asserti
 		return http.StatusOK, resp
 
 	case getAccountWithIDStatusNotFount:
-		require.Equal("/v1/accounts", r.URL.Path)
+		require.Equal("/api/v1/accounts", r.URL.Path)
 		require.Equal(fmt.Sprint(account.TwinID), r.URL.Query().Get("twin_id"))
 		require.Equal(http.MethodGet, r.Method)
 		return http.StatusNotFound, nil
 
 	case getAccountWithIDStatusOK:
-		require.Equal("/v1/accounts", r.URL.Path)
+		require.Equal("/api/v1/accounts", r.URL.Path)
 		require.Equal(fmt.Sprint(account.TwinID), r.URL.Query().Get("twin_id"))
 		require.Equal(http.MethodGet, r.Method)
 		resp, err := json.Marshal(account)
@@ -123,19 +123,19 @@ func serverHandler(r *http.Request, request, count int, require *require.Asserti
 		return http.StatusOK, resp
 
 	case updateAccountWithStatusOK:
-		require.Equal("/v1/accounts/1", r.URL.Path)
+		require.Equal("/api/v1/accounts/1", r.URL.Path)
 		require.Equal(http.MethodPatch, r.Method)
 		return http.StatusOK, nil
 
 		// Farm routes handlers
 	case createFarmStatusConflict:
-		require.Equal("/v1/farms", r.URL.Path)
+		require.Equal("/api/v1/farms", r.URL.Path)
 		require.Equal(http.MethodPost, r.Method)
 		require.NotEmpty(r.Body)
 		return http.StatusConflict, nil
 
 	case createFarmStatusCreated:
-		require.Equal("/v1/farms", r.URL.Path)
+		require.Equal("/api/v1/farms", r.URL.Path)
 		require.Equal(http.MethodPost, r.Method)
 		require.NotEmpty(r.Body)
 		resp, err := json.Marshal(map[string]uint64{"farm_id": farmID})
@@ -143,31 +143,31 @@ func serverHandler(r *http.Request, request, count int, require *require.Asserti
 		return http.StatusCreated, resp
 
 	case updateFarmWithStatusOK:
-		require.Equal("/v1/farms/1", r.URL.Path)
+		require.Equal("/api/v1/farms/1", r.URL.Path)
 		require.Equal(http.MethodPatch, r.Method)
 		require.NotEmpty(r.Body)
 		return http.StatusOK, nil
 
 	case getFarmWithStatusOK:
-		require.Equal("/v1/farms/1", r.URL.Path)
+		require.Equal("/api/v1/farms/1", r.URL.Path)
 		require.Equal(http.MethodGet, r.Method)
 		resp, err := json.Marshal(farm)
 		require.NoError(err)
 		return http.StatusOK, resp
 
 	case getFarmWithStatusNotfound:
-		require.Equal("/v1/farms/1", r.URL.Path)
+		require.Equal("/api/v1/farms/1", r.URL.Path)
 		require.Equal(http.MethodGet, r.Method)
 		return http.StatusNotFound, nil
 
 		// Node routes handlers
 	case registerNodeStatusConflict:
-		require.Equal("/v1/nodes", r.URL.Path)
+		require.Equal("/api/v1/nodes", r.URL.Path)
 		require.Equal(http.MethodPost, r.Method)
 		return http.StatusConflict, nil
 
 	case registerNodeStatusCreated:
-		require.Equal("/v1/nodes", r.URL.Path)
+		require.Equal("/api/v1/nodes", r.URL.Path)
 		require.Equal(http.MethodPost, r.Method)
 		require.NotEmpty(r.Body)
 		resp, err := json.Marshal(map[string]uint64{"node_id": nodeID})
@@ -177,38 +177,38 @@ func serverHandler(r *http.Request, request, count int, require *require.Asserti
 	case updateNodeStatusOK:
 		switch count {
 		case 0:
-			require.Equal("/v1/nodes/1", r.URL.Path)
+			require.Equal("/api/v1/nodes/1", r.URL.Path)
 			require.Equal(http.MethodGet, r.Method)
 			resp, err := json.Marshal(node)
 			require.NoError(err)
 			return http.StatusOK, resp
 		case 1:
-			require.Equal("/v1/nodes/1", r.URL.Path)
+			require.Equal("/api/v1/nodes/1", r.URL.Path)
 			require.Equal(http.MethodPatch, r.Method)
 			require.NotEmpty(r.Body)
 			return http.StatusOK, nil
 		}
 
 	case updateNodeSendUptimeReport:
-		require.Equal("/v1/nodes/1/uptime", r.URL.Path)
+		require.Equal("/api/v1/nodes/1/uptime", r.URL.Path)
 		require.Equal(http.MethodPost, r.Method)
 		require.NotEmpty(r.Body)
 		return http.StatusCreated, nil
 
 	case getNodeWithIDStatusOK:
-		require.Equal("/v1/nodes/1", r.URL.Path)
+		require.Equal("/api/v1/nodes/1", r.URL.Path)
 		require.Equal(http.MethodGet, r.Method)
 		resp, err := json.Marshal(node)
 		require.NoError(err)
 		return http.StatusOK, resp
 
 	case getNodeWithIDStatusNotFound:
-		require.Equal("/v1/nodes/1", r.URL.Path)
+		require.Equal("/api/v1/nodes/1", r.URL.Path)
 		require.Equal(http.MethodGet, r.Method)
 		return http.StatusNotFound, nil
 
 	case getNodeWithTwinID:
-		require.Equal("/v1/nodes", r.URL.Path)
+		require.Equal("/api/v1/nodes", r.URL.Path)
 		require.Equal(fmt.Sprint(account.TwinID), r.URL.Query().Get("twin_id"))
 		require.Equal(http.MethodGet, r.Method)
 		resp, err := json.Marshal([]Node{node})
@@ -216,7 +216,7 @@ func serverHandler(r *http.Request, request, count int, require *require.Asserti
 		return http.StatusOK, resp
 
 	case listNodesInFarm:
-		require.Equal("/v1/nodes", r.URL.Path)
+		require.Equal("/api/v1/nodes", r.URL.Path)
 		require.Equal(fmt.Sprint(farmID), r.URL.Query().Get("farm_id"))
 		require.Equal(http.MethodGet, r.Method)
 		resp, err := json.Marshal([]Node{node})
@@ -224,7 +224,7 @@ func serverHandler(r *http.Request, request, count int, require *require.Asserti
 		return http.StatusOK, resp
 
 	case approveNodesWithStatusOK:
-		require.Equal("/v1/farms/1/approve", r.URL.Path)
+		require.Equal("/api/v1/farms/1/approve", r.URL.Path)
 		require.Equal(http.MethodPost, r.Method)
 		require.NotEmpty(r.Body)
 		var body struct {
@@ -236,27 +236,19 @@ func serverHandler(r *http.Request, request, count int, require *require.Asserti
 		return http.StatusOK, nil
 
 	case approveNodesWithStatusUnauthorized:
-		switch count {
-		case 0:
-			require.Equal("/v1/accounts", r.URL.Path)
-			require.Equal(account.PublicKey, r.URL.Query().Get("public_key"))
-			require.Equal(http.MethodGet, r.Method)
-			return http.StatusNotFound, nil
-		case 1:
-			require.Equal("/v1/farms/1/approve", r.URL.Path)
-			require.Equal(http.MethodPost, r.Method)
-			require.NotEmpty(r.Body)
-			var body struct {
-				NodeIDs []uint64 `json:"node_ids"`
-			}
-			err := json.NewDecoder(r.Body).Decode(&body)
-			require.NoError(err)
-			require.Equal([]uint64{1, 2, 3}, body.NodeIDs)
-			return http.StatusUnauthorized, nil
+		require.Equal("/api/v1/farms/1/approve", r.URL.Path)
+		require.Equal(http.MethodPost, r.Method)
+		require.NotEmpty(r.Body)
+		var body struct {
+			NodeIDs []uint64 `json:"node_ids"`
 		}
+		err := json.NewDecoder(r.Body).Decode(&body)
+		require.NoError(err)
+		require.Equal([]uint64{1, 2, 3}, body.NodeIDs)
+		return http.StatusUnauthorized, nil
 
 	case listUnapprovedNodesInFarm:
-		require.Equal("/v1/nodes", r.URL.Path)
+		require.Equal("/api/v1/nodes", r.URL.Path)
 		require.Equal(fmt.Sprint(farmID), r.URL.Query().Get("farm_id"))
 		require.Equal("false", r.URL.Query().Get("approved"))
 		require.Equal(http.MethodGet, r.Method)
@@ -270,7 +262,7 @@ func serverHandler(r *http.Request, request, count int, require *require.Asserti
 		updateAccountWithNoAccount,
 		updateFarmWithStatusUnauthorized,
 		registerNodeWithNoAccount:
-		require.Equal("/v1/accounts", r.URL.Path)
+		require.Equal("/api/v1/accounts", r.URL.Path)
 		require.Equal(account.PublicKey, r.URL.Query().Get("public_key"))
 		require.Equal(http.MethodGet, r.Method)
 		return http.StatusNotFound, nil

@@ -28,7 +28,7 @@ func TestCreateFarm(t *testing.T) {
 	}))
 	defer testServer.Close()
 
-	baseURL, err := url.JoinPath(testServer.URL, "v1")
+	baseURL, err := url.JoinPath(testServer.URL, "api", "v1")
 	require.NoError(err)
 
 	request = newClientWithAccountNoNode
@@ -68,7 +68,7 @@ func TestUpdateFarm(t *testing.T) {
 	}))
 	defer testServer.Close()
 
-	baseURL, err := url.JoinPath(testServer.URL, "v1")
+	baseURL, err := url.JoinPath(testServer.URL, "api", "v1")
 	require.NoError(err)
 
 	t.Run("test update farm with status unauthorzed", func(t *testing.T) {
@@ -113,7 +113,7 @@ func TestGetFarm(t *testing.T) {
 	}))
 	defer testServer.Close()
 
-	baseURL, err := url.JoinPath(testServer.URL, "v1")
+	baseURL, err := url.JoinPath(testServer.URL, "api", "v1")
 	require.NoError(err)
 
 	count = 0
@@ -153,16 +153,15 @@ func TestApproveNodes(t *testing.T) {
 	}))
 	defer testServer.Close()
 
-	baseURL, err := url.JoinPath(testServer.URL, "v1")
+	baseURL, err := url.JoinPath(testServer.URL, "api", "v1")
 	require.NoError(err)
 
 	t.Run("test approve nodes with status unauthorized", func(t *testing.T) {
 		count = 0
-		request = newClientWithNoAccount
+		request = newClientWithAccountNoNode
 		c, err := NewRegistrarClient(baseURL, testMnemonic)
 		require.NoError(err)
 
-		count = 0
 		request = approveNodesWithStatusUnauthorized
 		err = c.ApproveNodes(farmID, []uint64{1, 2, 3})
 		require.Error(err)
@@ -174,7 +173,6 @@ func TestApproveNodes(t *testing.T) {
 		c, err := NewRegistrarClient(baseURL, testMnemonic)
 		require.NoError(err)
 
-		count = 0
 		request = approveNodesWithStatusOK
 		err = c.ApproveNodes(farmID, []uint64{1, 2, 3})
 		require.NoError(err)

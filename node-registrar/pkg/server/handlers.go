@@ -863,7 +863,7 @@ func (s *Server) approveNodesHandler(c *gin.Context) {
 		return
 	}
 
-	// Ensure the requester owns the farm
+	// Ensure the farmer approving the nodes is the owner of the farm
 	ensureOwner(c, farm.TwinID)
 	if c.IsAborted() {
 		return
@@ -872,6 +872,11 @@ func (s *Server) approveNodesHandler(c *gin.Context) {
 	var req ApproveNodesRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if len(req.NodeIDs) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "could not find any nodes to approve"})
 		return
 	}
 

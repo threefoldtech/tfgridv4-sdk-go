@@ -90,7 +90,7 @@ func (db *Database) ApproveNodes(farmID uint64, nodeIDs []uint64) error {
 		return result.Error
 	}
 
-	// Check if all nodes were found and updated
+	// Check if all nodes were found, belong to the requested farm and updated
 	if int(result.RowsAffected) != len(nodeIDs) {
 		tx.Rollback()
 		return fmt.Errorf("some nodes were not found, do not belong to farm %d, or are already approved", farmID)

@@ -93,12 +93,14 @@ func CalculateCapacityReward(capacity db.Resources, upTimePercentage float64) (R
 
 // bytesToGB converts bytes to gigabytes.
 func bytesToGB(bytes uint64) float64 {
-	return float64(bytes) / math.Pow(1024, 3)
+	const gibibyte = 1024 * 1024 * 1024
+	return float64(bytes) / gibibyte
 }
 
 // bytesToTB converts bytes to terabytes.
 func bytesToTB(bytes uint64) float64 {
-	return float64(bytes) / math.Pow(1024, 4)
+	const terabyte = 1024 * 1024 * 1024 * 1024
+	return float64(bytes) / terabyte
 }
 
 // calculatePeriodStart returns the start of the period that contains the reference time.

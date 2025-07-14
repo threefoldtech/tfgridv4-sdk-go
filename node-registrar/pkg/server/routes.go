@@ -35,6 +35,8 @@ func (s *Server) registerRoutes(r *gin.RouterGroup) {
 	// protected by farmer key
 	protectedFarmRoutes := r.Group("farms", s.AuthMiddleware())
 	protectedFarmRoutes.POST("", s.createFarmHandler)
+	// added to stop redirecting when creating a farm with extra /
+	protectedFarmRoutes.POST("/", s.createFarmHandler)
 	protectedFarmRoutes.PATCH("/:farm_id", s.updateFarmHandler)
 
 	// nodes routes
@@ -50,8 +52,11 @@ func (s *Server) registerRoutes(r *gin.RouterGroup) {
 
 	// Account routes
 	publicAccountRoutes := r.Group("accounts")
+	// added to stop redirecting when creating an account with extra /
 	publicAccountRoutes.POST("", s.createAccountHandler)
+	publicAccountRoutes.POST("/", s.createAccountHandler)
 	publicAccountRoutes.GET("", s.getAccountHandler)
+	publicAccountRoutes.GET("/", s.getAccountHandler)
 	// protected by farmer key
 	protectedAccountRoutes := r.Group("accounts", s.AuthMiddleware())
 	protectedAccountRoutes.PATCH("/:twin_id", s.updateAccountHandler)

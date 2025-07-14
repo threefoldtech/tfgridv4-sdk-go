@@ -116,9 +116,7 @@ func AssertCapacityReward(t testing.TB, resources db.Resources, upTimePercentage
 	t.Helper()
 
 	if upTimePercentage < MinUptimePercentageForReward {
-		assert.Equal(t, Reward{
-			UpTimePercentage: upTimePercentage,
-		}, got)
+		assert.Equal(t, Reward{UpTimePercentage: upTimePercentage}, got)
 		return
 	}
 
@@ -142,11 +140,8 @@ func AssertCapacityReward(t testing.TB, resources db.Resources, upTimePercentage
 		UpTimePercentage: upTimePercentage,
 	}
 
-	assert.Equal(t, expected.FarmerReward, got.FarmerReward)
-	assert.Equal(t, expected.TfReward, got.TfReward)
-	assert.Equal(t, expected.FpReward, got.FpReward)
-	assert.Equal(t, expected.Total, got.Total)
-	assert.Equal(t, expected.UpTimePercentage, got.UpTimePercentage)
+	assert.Equal(t, expected, got)
+
 }
 
 // TestCalculatePeriodStart tests the calculatePeriodStart function with different inputs

@@ -99,7 +99,7 @@ func TestComputeCapacityRewardWithUptime(t *testing.T) {
 			// Error check
 			if tt.wantError {
 				require.Error(t, err)
-				assert.Equal(t, tt.expectedError, err)
+				require.Equal(t, tt.expectedError, err)
 				return
 			}
 

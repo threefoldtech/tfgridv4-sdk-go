@@ -53,6 +53,22 @@ type Reward struct {
 	UpTimePercentage float64 //UpTimePercentage: the uptime percentage of the node
 }
 
+// calculateCapacityReward calculates the reward for a node based on its capacity and uptime, during a specific period.
+func CalculateCapacityReward(capacity db.Resources, reports []db.UptimeReport, periodStart, periodEnd time.Time) (Reward, error) {
+
+	if len(reports) == 0 {
+		return Reward{}, ErrNoReportsAvailable
+	}
+
+	if !areReportsOrderedCorrectly(reports) {
+		return Reward{}, ErrReportsNotInAscOrder
+	}
+
+	upTimePercentage := calculatePercentage(periodEnd.Sub(periodStart), downtimeSinceLastReportTimestamp(reports[len(reports)-1].Timestamp, periodEnd))
+
+	return computeCapacityRewardWithUptime(capacity, upTimePercentage)
+}
+
 // calculateBaseCapacityReward calculates the base reward from node capacity without applying uptime.
 func calculateBaseCapacityReward(capacity db.Resources) float64 {
 	mruReward := bytesToGB(capacity.MRU) * MemoryRewardPerGB
@@ -69,10 +85,10 @@ func calculateTotalReward(capacity db.Resources, upTimePercentage float64) float
 	return baseReward * (upTimePercentage / 100)
 }
 
-// CalculateCapacityReward calculates the reward in INCA for a given node capacity.
+// computeCapacityRewardWithUptime calculates the reward in INCA for a given node capacity and uptime percentage.
 //
 // - Note: if the uptime percentage is less than MinUptimePercentageForReward, the node will not receive any rewards.
-func CalculateCapacityReward(capacity db.Resources, upTimePercentage float64) (Reward, error) {
+func computeCapacityRewardWithUptime(capacity db.Resources, upTimePercentage float64) (Reward, error) {
 	if upTimePercentage < 0 || upTimePercentage > 100 {
 		return Reward{}, ErrInvalidUptimePercentage
 	}

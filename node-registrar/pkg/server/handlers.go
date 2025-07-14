@@ -322,21 +322,12 @@ func (s Server) getNodeRewardHandler(c *gin.Context) {
 		return
 	}
 
-	upTimePercentage, err := calculateUpTimePercentage(reports, periodStart, now)
+	rewards, err := CalculateCapacityReward(node.Resources, reports, periodStart, now)
 	if err != nil {
-		if errors.Is(err, ErrNoReportsAvailable) {
-			c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
-			return
-		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	rewards, err := CalculateCapacityReward(node.Resources, upTimePercentage)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
 	c.JSON(http.StatusOK, rewards)
 }
 

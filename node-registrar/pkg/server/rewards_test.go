@@ -10,7 +10,7 @@ import (
 	"github.com/threefoldtech/tfgrid4-sdk-go/node-registrar/pkg/db"
 )
 
-func TestCalculateCapacityReward(t *testing.T) {
+func TestComputeCapacityRewardWithUptime(t *testing.T) {
 	// Define standard capacity for most tests
 	standardCapacity := db.Resources{
 		CRU: 8,
@@ -94,7 +94,7 @@ func TestCalculateCapacityReward(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := CalculateCapacityReward(tt.capacity, tt.upTimePercentage)
+			got, err := computeCapacityRewardWithUptime(tt.capacity, tt.upTimePercentage)
 
 			// Error check
 			if tt.wantError {
@@ -352,7 +352,7 @@ func TestRewardFloatingPointPrecision(t *testing.T) {
 	expectedFpReward := expectedTotal * FpRewardPercentage         // 8.0 * 0.2 = 1.6
 
 	// Get the actual reward calculation
-	reward, err := CalculateCapacityReward(memoryOnlyCapacity, 100)
+	reward, err := computeCapacityRewardWithUptime(memoryOnlyCapacity, 100)
 	require.NoError(t, err)
 
 	// Test precision and distribution
@@ -395,6 +395,38 @@ func TestRewardFloatingPointPrecision(t *testing.T) {
 }
 
 // TestAreReportsOrderedCorrectly tests the areReportsOrderedCorrectly function
+func TestCalculateCapacityRewardd(t *testing.T) {
+	now := time.Now()
+	periodStart := now.Add(-24 * time.Hour)
+	periodEnd := now
+
+	// Define standard capacity for tests
+	standardCapacity := db.Resources{
+		CRU: 8,
+		MRU: 68719476736,    // 64 GB
+		SRU: 1099511627776,  // 1 TB
+		HRU: 10995116277760, // 10 TB
+	}
+
+	t.Run("Test ErrNoReportsAvailable", func(t *testing.T) {
+		_, err := CalculateCapacityReward(standardCapacity, []db.UptimeReport{}, periodStart, periodEnd)
+		assert.ErrorIs(t, err, ErrNoReportsAvailable)
+	})
+	t.Run("Test ErrReportsNotInAscOrder", func(t *testing.T) {
+		_, err := CalculateCapacityReward(standardCapacity, []db.UptimeReport{
+			{
+				Timestamp: now.Add(-2 * time.Hour),
+				Duration:  2 * time.Hour,
+			},
+			{
+				Timestamp: now.Add(-6 * time.Hour),
+				Duration:  1 * time.Hour,
+			},
+		}, periodStart, periodEnd)
+		assert.ErrorIs(t, err, ErrReportsNotInAscOrder)
+	})
+}
+
 func TestAreReportsOrderedCorrectly(t *testing.T) {
 	now := time.Now()
 	tests := []struct {

@@ -254,6 +254,10 @@ func (s Server) listNodesHandler(c *gin.Context) {
 		c.JSON(http.StatusOK, nodes)
 		return
 	}
+	if *filter.Uptime > 100 || *filter.Uptime < 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "uptime should be within range 1:100"})
+		return
+	}
 
 	// if requested min uptime, filter the found nodes with uptime.
 	var nodesWithUptime []NodeWithUptime

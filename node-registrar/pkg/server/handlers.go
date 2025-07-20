@@ -203,8 +203,13 @@ func (s Server) updateFarmHandler(c *gin.Context) {
 	})
 }
 
+type NodeWithUptime struct {
+	db.Node
+	Uptime float64 `json:"uptime"`
+}
+
 // @Summary List nodes
-// @Description Get a list of nodes with optional filters
+// @Description Get a list of nodes with optional filters. You can also filter by minimum uptime percentage over a given interval using uptime and interval.
 // @Tags nodes
 // @Accept json
 // @Produce json
@@ -215,12 +220,15 @@ func (s Server) updateFarmHandler(c *gin.Context) {
 // @Param healthy query bool false "Filter by health status"
 // @Param online query bool false "Filter by online status (true = online, false = offline)"
 // @Param last_seen query int false "Filter nodes last seen within this many minutes"
+// @Param uptime query float64 false "Minimum uptime percentage (0-100) over the interval_days period"
+// @Param interval query int false "Interval in days to calculate uptime percentage (e.g., 30 for last 30 days)"
 // @Param page query int false "Page number" default(1)
 // @Param size query int false "Results per page" default(10)
-// @Success 200 {object} []db.Node "List of nodes with online status"
+// @Success 200 {object} []db.Node "List of nodes with online status and uptime percentage if requested"
 // @Failure 400 {object} map[string]any "Bad request"
 // @Router /nodes [get]
 func (s Server) listNodesHandler(c *gin.Context) {
+	// fallback to normal filter
 	var filter db.NodeFilter
 	limit := db.DefaultLimit()
 
@@ -242,7 +250,43 @@ func (s Server) listNodesHandler(c *gin.Context) {
 		nodes[i].Online = !nodes[i].LastSeen.IsZero() && nodes[i].LastSeen.After(cutoffTime)
 	}
 
-	c.JSON(http.StatusOK, nodes)
+	if filter.Uptime == nil || filter.Interval == nil {
+		c.JSON(http.StatusOK, nodes)
+		return
+	}
+	if *filter.Uptime > 100 || *filter.Uptime < 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "uptime should be within range 1:100"})
+		return
+	}
+
+	// if requested min uptime, filter the found nodes with uptime.
+	var nodesWithUptime []NodeWithUptime
+
+	start := time.Now().AddDate(0, 0, -(*filter.Interval))
+	now := time.Now()
+
+	for _, node := range nodes {
+		reports, err := s.db.GetUptimeReports(node.NodeID, start, now)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		uptime, err := calculateUpTimePercentage(reports, start, now)
+		if err != nil {
+			if errors.Is(err, ErrNoReportsAvailable) {
+				continue
+			}
+
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		if uptime >= *filter.Uptime {
+			nodesWithUptime = append(nodesWithUptime, NodeWithUptime{Node: node, Uptime: uptime})
+		}
+	}
+
+	c.JSON(http.StatusOK, nodesWithUptime)
 }
 
 // @Summary Get node details
@@ -316,7 +360,6 @@ func (s Server) getNodeRewardHandler(c *gin.Context) {
 	periodStart := calculatePeriodStart(now)
 
 	reports, err := s.db.GetUptimeReports(id, periodStart, now)
-
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

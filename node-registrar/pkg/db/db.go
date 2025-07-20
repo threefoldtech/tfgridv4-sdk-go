@@ -65,7 +65,7 @@ func openDatabase(c Config) (db Database, err error) {
 		Logger: logger.Default.LogMode(c.SqlLogLevel),
 	})
 	if err != nil {
-		return db, errors.Wrapf(err, "Failed to connect to the database: %v", err)
+		return db, errors.Wrap(err, "Failed to connect to the database")
 	}
 
 	return Database{gormDB, dsn}, nil

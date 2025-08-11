@@ -10,9 +10,12 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 	"github.com/lib/pq"
 	"github.com/threefoldtech/tfgrid4-sdk-go/node-registrar/pkg/db"
 )
+
+var validate = validator.New()
 
 const (
 	MaxTimestampDelta                    = 2 * time.Second
@@ -132,8 +135,8 @@ func (s Server) createFarmHandler(c *gin.Context) {
 }
 
 type UpdateFarmRequest struct {
-	FarmName       string `json:"farm_name" binding:"max=40"`
-	StellarAddress string `json:"stellar_address" binding:"startswith=G,len=56,alphanum,uppercase"`
+	FarmName       string `json:"farm_name" validate:"max=40"`
+	StellarAddress string `json:"stellar_address" validate:"startswith=G,len=56,alphanum,uppercase"`
 }
 
 // @Summary Update farm
@@ -282,14 +285,14 @@ func (s Server) getNodeHandler(c *gin.Context) {
 }
 
 type NodeRegistrationRequest struct {
-	TwinID       uint64         `json:"twin_id" binding:"required,min=1"`
-	FarmID       uint64         `json:"farm_id" binding:"required,min=1"`
-	Resources    db.Resources   `json:"resources" binding:"required"`
-	Location     db.Location    `json:"location" binding:"required"`
-	Interfaces   []db.Interface `json:"interfaces" binding:"required"`
+	TwinID       uint64         `json:"twin_id" validate:"required,min=1"`
+	FarmID       uint64         `json:"farm_id" validate:"required,min=1"`
+	Resources    db.Resources   `json:"resources" validate:"required"`
+	Location     db.Location    `json:"location" validate:"required"`
+	Interfaces   []db.Interface `json:"interfaces" validate:"required"`
 	SecureBoot   bool           `json:"secure_boot"`
 	Virtualized  bool           `json:"virtualized"`
-	SerialNumber string         `json:"serial_number" binding:"required"`
+	SerialNumber string         `json:"serial_number" validate:"required"`
 }
 
 // @Summary Register new node
@@ -308,6 +311,10 @@ func (s Server) registerNodeHandler(c *gin.Context) {
 	var req NodeRegistrationRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := validate.Struct(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -345,13 +352,13 @@ func (s Server) registerNodeHandler(c *gin.Context) {
 }
 
 type UpdateNodeRequest struct {
-	FarmID       uint64         `json:"farm_id" binding:"required,min=1"`
-	Resources    db.Resources   `json:"resources" binding:"required"`
-	Location     db.Location    `json:"location" binding:"required"`
-	Interfaces   []db.Interface `json:"interfaces" binding:"required"`
+	FarmID       uint64         `json:"farm_id" validate:"required,min=1"`
+	Resources    db.Resources   `json:"resources" validate:"required"`
+	Location     db.Location    `json:"location" validate:"required"`
+	Interfaces   []db.Interface `json:"interfaces" validate:"required"`
 	SecureBoot   bool           `json:"secure_boot"`
 	Virtualized  bool           `json:"virtualized"`
-	SerialNumber string         `json:"serial_number" binding:"required"`
+	SerialNumber string         `json:"serial_number" validate:"required"`
 }
 
 // @Summary Update node
@@ -394,6 +401,10 @@ func (s *Server) updateNodeHandler(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 		return
 	}
+	if err := validate.Struct(&req); err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 
 	updatedNode := db.Node{
 		FarmID:       req.FarmID,
@@ -422,8 +433,8 @@ func (s *Server) updateNodeHandler(c *gin.Context) {
 }
 
 type UptimeReportRequest struct {
-	Uptime    uint64 `json:"uptime" binding:"required"`
-	Timestamp int64  `json:"timestamp" binding:"required"`
+	Uptime    uint64 `json:"uptime" validate:"required"`
+	Timestamp int64  `json:"timestamp" validate:"required"`
 }
 
 // @Summary Report node uptime
@@ -450,6 +461,10 @@ func (s *Server) uptimeReportHandler(c *gin.Context) {
 
 	var req UptimeReportRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := validate.Struct(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -507,11 +522,11 @@ func parseQueryParams(c *gin.Context, types_ ...interface{}) error {
 
 // AccountRequest represents the request body for account operations
 type AccountCreationRequest struct {
-	Timestamp int64  `json:"timestamp" binding:"required"`
-	PublicKey string `json:"public_key" binding:"required"` // base64 encoded
+	Timestamp int64  `json:"timestamp" validate:"required"`
+	PublicKey string `json:"public_key" validate:"required"` // base64 encoded
 	// the registrar expect a signature of a message with format `timestampStr:publicKeyBase64`
 	// - signature format: base64(ed25519_or_sr22519_signature)
-	Signature string   `json:"signature" binding:"required"`
+	Signature string   `json:"signature" validate:"required"`
 	Relays    []string `json:"relays,omitempty"`
 	RMBEncKey string   `json:"rmb_enc_key,omitempty"`
 }
@@ -529,6 +544,10 @@ type AccountCreationRequest struct {
 func (s *Server) createAccountHandler(c *gin.Context) {
 	var req AccountCreationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := validate.Struct(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -631,6 +650,10 @@ func (s *Server) updateAccountHandler(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 		return
 	}
+	if err := validate.Struct(&req); err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 
 	err = s.db.UpdateAccount(twinID, req.Relays, req.RMBEncKey)
 	if err != nil {
@@ -713,7 +736,7 @@ func (s *Server) getAccountHandler(c *gin.Context) {
 }
 
 type ZOSVersionRequest struct {
-	Version string `json:"version" binding:"required,base64"`
+	Version string `json:"version" validate:"required,base64"`
 }
 
 // @Summary Set ZOS Version
@@ -737,6 +760,10 @@ func (s *Server) setZOSVersionHandler(c *gin.Context) {
 
 	var req ZOSVersionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := validate.Struct(&req); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}

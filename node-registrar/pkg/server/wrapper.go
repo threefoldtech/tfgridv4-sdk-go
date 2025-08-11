@@ -2,7 +2,6 @@ package server
 
 import "github.com/gin-gonic/gin"
 
-
 // ResponseMsg holds messages and needed data
 type ResponseMsg struct {
 	Message string      `json:"msg"`

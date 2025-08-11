@@ -18,15 +18,15 @@ const (
 	MaxTimestampDelta                    = 2 * time.Second
 	UptimeReportTimestampHintDrift int64 = 60
 	OnlineCutoffTime                     = 40 * time.Minute
-	
+
 	// Database field size limits
 	MaxFarmNameLength       = 40
 	MaxStellarAddressLength = 56
 	MaxKeySize              = 50
-	
+
 	// Default pagination
 	DefaultPageSize = 10
-	
+
 	// Time constants
 	DefaultOnlineCutoffMinutes = 40
 )

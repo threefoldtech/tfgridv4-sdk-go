@@ -13,6 +13,13 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	// StellarAddressLength is the expected length of a Stellar address
+	StellarAddressLength = 56
+	// DefaultPageSize is the default number of results per page
+	DefaultPageSize = 50
+)
+
 var ErrorFarmNotFound = fmt.Errorf("failed to get requested farm from node registrar")
 
 // CreateFarm create new farm on the registrar with uniqe name.
@@ -267,7 +274,7 @@ func parseListFarmOpts(filter FarmFilter) map[string]any {
 	}
 	data["page"] = page
 
-	size := uint32(50)
+	size := uint32(DefaultPageSize)
 	if filter.Size != nil {
 		size = *filter.Size
 	}
@@ -297,8 +304,8 @@ func parseUpdateFarmOpts(update FarmUpdate) map[string]any {
 // validateStellarAddress ensures that the address is valid stellar address
 func validateStellarAddress(stellarAddr string) error {
 	stellarAddr = strings.TrimSpace(stellarAddr)
-	if len(stellarAddr) != 56 {
-		return fmt.Errorf("invalid stellar address %s, address length should be 56 characters", stellarAddr)
+	if len(stellarAddr) != StellarAddressLength {
+		return fmt.Errorf("invalid stellar address %s, address length should be %d characters", stellarAddr, StellarAddressLength)
 	}
 	if stellarAddr[0] != 'G' {
 		return fmt.Errorf("invalid stellar address %s, address should should start with 'G'", stellarAddr)

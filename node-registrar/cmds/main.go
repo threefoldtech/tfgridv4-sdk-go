@@ -17,12 +17,14 @@ import (
 
 type flags struct {
 	db.Config
-	debug       bool
-	version     bool
-	domain      string
-	serverPort  uint
-	network     string
-	adminTwinID uint64
+	debug         bool
+	version       bool
+	domain        string
+	serverPort    uint
+	network       string
+	adminTwinID   uint64
+	csrfSecret    string
+	sessionSecret string
 }
 
 // These variables are set during build time using ldflags
@@ -61,6 +63,8 @@ func Run() error {
 	flag.StringVar(&f.domain, "domain", "", "domain on which the server will be served")
 	flag.StringVar(&f.network, "network", "dev", "the registrar network")
 	flag.Uint64Var(&f.adminTwinID, "admin-twin-id", 1, "admin twin ID")
+	flag.StringVar(&f.csrfSecret, "csrf-secret", "", "CSRF protection secret (required)")
+	flag.StringVar(&f.sessionSecret, "session-secret", "", "Session secret for CSRF protection (required)")
 
 	flag.Parse()
 	f.SqlLogLevel = logger.LogLevel(sqlLogLevel)
@@ -92,7 +96,7 @@ func Run() error {
 		}
 	}()
 
-	s := server.NewServer(db, f.network, f.adminTwinID)
+	s := server.NewServer(db, f.network, f.adminTwinID, f.csrfSecret, f.sessionSecret)
 
 	log.Info().Msgf("server is running on port :%d", f.serverPort)
 
@@ -118,6 +122,22 @@ func (f flags) validate() error {
 	}
 	if f.adminTwinID == 0 {
 		return errors.Errorf("invalid admin twin id %d, admin twin id should not be 0", f.adminTwinID)
+	}
+
+	if strings.TrimSpace(f.csrfSecret) == "" {
+		return errors.New("CSRF secret is required for security")
+	}
+
+	if len(f.csrfSecret) < 32 {
+		return errors.New("CSRF secret must be at least 32 characters long")
+	}
+
+	if strings.TrimSpace(f.sessionSecret) == "" {
+		return errors.New("session secret is required for CSRF protection")
+	}
+
+	if len(f.sessionSecret) < 32 {
+		return errors.New("session secret must be at least 32 characters long")
 	}
 
 	if _, err := net.LookupHost(f.domain); err != nil {

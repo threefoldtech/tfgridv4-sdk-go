@@ -14,14 +14,20 @@ import (
 func (s *Server) SetupRoutes() {
 	s.router.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"*"},
-		AllowMethods:     []string{"POST", "OPTIONS", "GET", "PUT", "DELETE"},
-		AllowHeaders:     []string{"*"},
-		ExposeHeaders:    []string{"*"},
+		AllowMethods:     []string{"POST", "OPTIONS", "GET", "PUT", "PATCH", "DELETE"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Auth", "X-CSRF-Token"},
+		ExposeHeaders:    []string{"X-CSRF-Token"},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}))
 
+	s.router.Use(s.SessionMiddleware(s.sessionSecret))
+
+	s.router.Use(s.CSRFMiddleware(s.csrfSecret))
+
 	s.router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
+	s.router.GET("/csrf-token", s.getCSRFTokenHandler)
 
 	s.registerRoutes(s.router.Group("/api/v1"))
 	s.registerRoutes(s.router.Group("/v1"))

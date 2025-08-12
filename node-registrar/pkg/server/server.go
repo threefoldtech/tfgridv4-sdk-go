@@ -16,17 +16,26 @@ import (
 )
 
 type Server struct {
-	router      *gin.Engine
-	db          db.Database
-	network     string
-	adminTwinID uint64
+	router        *gin.Engine
+	db            db.Database
+	network       string
+	adminTwinID   uint64
+	csrfSecret    string
+	sessionSecret string
 }
 
-func NewServer(db db.Database, network string, adminTwinID uint64) Server {
+func NewServer(db db.Database, network string, adminTwinID uint64, csrfSecret, sessionSecret string) Server {
 	router := gin.Default()
 	router.RedirectTrailingSlash = true
 
-	server := Server{router, db, network, adminTwinID}
+	server := Server{
+		router:        router,
+		db:            db,
+		network:       network,
+		adminTwinID:   adminTwinID,
+		csrfSecret:    csrfSecret,
+		sessionSecret: sessionSecret,
+	}
 	server.SetupRoutes()
 
 	return server

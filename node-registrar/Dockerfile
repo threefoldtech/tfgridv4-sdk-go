@@ -2,13 +2,13 @@ FROM golang:1.23-alpine AS builder
 
 WORKDIR /app
 
-COPY /node-registrar/go.mod /node-registrar/go.sum .
+COPY go.mod go.sum ./
 
 RUN go mod download
 
-COPY /node-registrar .
+COPY . ./
 
-RUN go build -o server ./cmds/main.go
+RUN go build -o server ./cmds/
 
 FROM alpine:3.21
 

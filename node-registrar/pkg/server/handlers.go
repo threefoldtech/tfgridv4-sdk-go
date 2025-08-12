@@ -48,12 +48,16 @@ func (s Server) listFarmsHandler(c *gin.Context) {
 		return
 	}
 
+	durationFunc := s.metrics.RecordDuration(s.metrics.DBOperationsDuration, []string{"select", "farms"})
+
 	farms, err := s.db.ListFarms(filter, limit)
+	durationFunc()
+
 	if err != nil {
+		s.metrics.RecordCountVec(s.metrics.DBOperationsErrors, []string{"select", "farms"})
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
 	c.JSON(http.StatusOK, farms)
 }
 
@@ -76,8 +80,14 @@ func (s Server) getFarmHandler(c *gin.Context) {
 		return
 	}
 
+	durationFunc := s.metrics.RecordDuration(s.metrics.DBOperationsDuration, []string{"select", "farms"})
+
 	farm, err := s.db.GetFarm(id)
+	durationFunc()
+
 	if err != nil {
+
+		s.metrics.RecordCountVec(s.metrics.DBOperationsErrors, []string{"select", "farms"})
 		status := http.StatusInternalServerError
 
 		if errors.Is(err, db.ErrRecordNotFound) {
@@ -116,8 +126,11 @@ func (s Server) createFarmHandler(c *gin.Context) {
 		return
 	}
 
+	durationFunc := s.metrics.RecordDuration(s.metrics.DBOperationsDuration, []string{"insert", "farms"})
 	farmID, err := s.db.CreateFarm(farm)
+	durationFunc()
 	if err != nil {
+		s.metrics.RecordCountVec(s.metrics.DBOperationsErrors, []string{"insert", "farms"})
 		status := http.StatusInternalServerError
 
 		if errors.Is(err, db.ErrRecordAlreadyExists) {
@@ -164,8 +177,12 @@ func (s Server) updateFarmHandler(c *gin.Context) {
 		return
 	}
 
+	durationFunc := s.metrics.RecordDuration(s.metrics.DBOperationsDuration, []string{"select", "farms"})
+
 	existingFarm, err := s.db.GetFarm(id)
+	durationFunc()
 	if err != nil {
+		s.metrics.RecordCountVec(s.metrics.DBOperationsErrors, []string{"select", "farms"})
 		if errors.Is(err, db.ErrRecordNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Farm not found"})
 			return
@@ -185,8 +202,11 @@ func (s Server) updateFarmHandler(c *gin.Context) {
 	// No need to hit DB if new farm name is same as the old one
 	if (len(req.FarmName) != 0 && existingFarm.FarmName != req.FarmName) ||
 		(len(req.StellarAddress) != 0 && existingFarm.StellarAddress != req.StellarAddress) {
+		durationFunc = s.metrics.RecordDuration(s.metrics.DBOperationsDuration, []string{"update", "farms"})
 		err = s.db.UpdateFarm(id, req.FarmName, req.StellarAddress)
+		durationFunc()
 		if err != nil {
+			s.metrics.RecordCountVec(s.metrics.DBOperationsErrors, []string{"update", "farms"})
 			status := http.StatusInternalServerError
 
 			if errors.Is(err, db.ErrRecordNotFound) {
@@ -229,9 +249,12 @@ func (s Server) listNodesHandler(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	durationFunc := s.metrics.RecordDuration(s.metrics.DBOperationsDuration, []string{"select", "nodes"})
 
 	nodes, err := s.db.ListNodes(filter, limit)
+	durationFunc()
 	if err != nil {
+		s.metrics.RecordCountVec(s.metrics.DBOperationsErrors, []string{"select", "nodes"})
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -264,8 +287,11 @@ func (s Server) getNodeHandler(c *gin.Context) {
 		return
 	}
 
+	durationFunc := s.metrics.RecordDuration(s.metrics.DBOperationsDuration, []string{"select", "nodes"})
 	node, err := s.db.GetNode(id)
+	durationFunc()
 	if err != nil {
+		s.metrics.RecordCountVec(s.metrics.DBOperationsErrors, []string{"select", "nodes"})
 		if errors.Is(err, db.ErrRecordNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 			return
@@ -329,10 +355,13 @@ func (s Server) registerNodeHandler(c *gin.Context) {
 		Approved:     false, // Default to unapproved awaiting farmer approval
 	}
 
+	durationFunc := s.metrics.RecordDuration(s.metrics.DBOperationsDuration, []string{"insert", "nodes"})
 	nodeID, err := s.db.RegisterNode(node)
+	durationFunc()
 	if err != nil {
 		status := http.StatusInternalServerError
 
+		s.metrics.RecordCountVec(s.metrics.DBOperationsErrors, []string{"insert", "nodes"})
 		if errors.Is(err, db.ErrRecordAlreadyExists) {
 			status = http.StatusConflict
 		}
@@ -374,8 +403,12 @@ func (s *Server) updateNodeHandler(c *gin.Context) {
 		return
 	}
 
+	durationFunc := s.metrics.RecordDuration(s.metrics.DBOperationsDuration, []string{"select", "nodes"})
 	existingNode, err := s.db.GetNode(nodeID)
+
+	durationFunc()
 	if err != nil {
+		s.metrics.RecordCountVec(s.metrics.DBOperationsErrors, []string{"select", "nodes"})
 		if errors.Is(err, db.ErrRecordNotFound) {
 			c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "node not found"})
 			return
@@ -409,7 +442,11 @@ func (s *Server) updateNodeHandler(c *gin.Context) {
 		updatedNode.Approved = false
 	}
 
+	durationFunc = s.metrics.RecordDuration(s.metrics.DBOperationsDuration, []string{"update", "nodes"})
+
 	if err := s.db.UpdateNode(nodeID, updatedNode); err != nil {
+		durationFunc()
+		s.metrics.RecordCountVec(s.metrics.DBOperationsErrors, []string{"update", "nodes"})
 		if errors.Is(err, db.ErrRecordNotFound) {
 			c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "node not found"})
 			return
@@ -417,6 +454,7 @@ func (s *Server) updateNodeHandler(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "failed to update node"})
 		return
 	}
+	durationFunc()
 
 	c.JSON(http.StatusOK, gin.H{"message": "node updated successfully"})
 }
@@ -454,9 +492,13 @@ func (s *Server) uptimeReportHandler(c *gin.Context) {
 		return
 	}
 
+	durationFunc := s.metrics.RecordDuration(s.metrics.DBOperationsDuration, []string{"select", "nodes"})
+
 	// Get node
 	node, err := s.db.GetNode(id)
+	durationFunc()
 	if err != nil {
+		s.metrics.RecordCountVec(s.metrics.DBOperationsErrors, []string{"select", "nodes"})
 		c.JSON(http.StatusNotFound, gin.H{"error": "node not found"})
 		return
 	}
@@ -485,10 +527,14 @@ func (s *Server) uptimeReportHandler(c *gin.Context) {
 		Timestamp: time.Unix(req.Timestamp, 0).UTC(),
 	}
 
+	durationFunc = s.metrics.RecordDuration(s.metrics.DBOperationsDuration, []string{"insert", "uptime_reports"})
+
 	// Create report record and Update node LastSeen(the timestamp of the last report)
 	// It's up to the clients to determine if the node is online based on the reporting interval and allowable window.
 	err = s.db.CreateUptimeReport(report)
+	durationFunc()
 	if err != nil {
+		s.metrics.RecordCountVec(s.metrics.DBOperationsErrors, []string{"insert", "uptime_reports"})
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to process uptime report"})
 		return
 	}
@@ -583,7 +629,11 @@ func (s *Server) createAccountHandler(c *gin.Context) {
 		RMBEncKey: req.RMBEncKey,
 	}
 
+	durationFunc := s.metrics.RecordDuration(s.metrics.DBOperationsDuration, []string{"insert", "accounts"})
 	if err := s.db.CreateAccount(account); err != nil {
+		durationFunc()
+		s.metrics.RecordCountVec(s.metrics.DBOperationsErrors, []string{"insert", "accounts"})
+
 		if errors.Is(err, db.ErrRecordAlreadyExists) {
 			c.JSON(http.StatusConflict, gin.H{"error": "account with this public key already exists"})
 			return
@@ -592,6 +642,7 @@ func (s *Server) createAccountHandler(c *gin.Context) {
 		return
 	}
 
+	durationFunc()
 	c.JSON(http.StatusCreated, account)
 }
 
@@ -632,8 +683,11 @@ func (s *Server) updateAccountHandler(c *gin.Context) {
 		return
 	}
 
+	durationFunc := s.metrics.RecordDuration(s.metrics.DBOperationsDuration, []string{"update", "accounts"})
 	err = s.db.UpdateAccount(twinID, req.Relays, req.RMBEncKey)
+	durationFunc()
 	if err != nil {
+		s.metrics.RecordCountVec(s.metrics.DBOperationsErrors, []string{"update", "accounts"})
 		if errors.Is(err, db.ErrRecordNotFound) {
 			c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "account not found"})
 			return
@@ -683,8 +737,11 @@ func (s *Server) getAccountHandler(c *gin.Context) {
 			return
 		}
 
+		durationFunc := s.metrics.RecordDuration(s.metrics.DBOperationsDuration, []string{"select", "accounts"})
 		account, err := s.db.GetAccount(twinID)
+		durationFunc()
 		if err != nil {
+			s.metrics.RecordCountVec(s.metrics.DBOperationsErrors, []string{"select", "accounts"})
 			if errors.Is(err, db.ErrRecordNotFound) {
 				c.JSON(http.StatusNotFound, gin.H{"error": "account not found"})
 				return
@@ -698,8 +755,11 @@ func (s *Server) getAccountHandler(c *gin.Context) {
 	}
 
 	if publicKeyParam != "" {
+		durationFunc := s.metrics.RecordDuration(s.metrics.DBOperationsDuration, []string{"select", "accounts"})
 		account, err := s.db.GetAccountByPublicKey(publicKeyParam)
+		durationFunc()
 		if err != nil {
+			s.metrics.RecordCountVec(s.metrics.DBOperationsErrors, []string{"select", "accounts"})
 			if errors.Is(err, db.ErrRecordNotFound) {
 				c.JSON(http.StatusNotFound, gin.H{"error": "account not found"})
 				return
@@ -741,7 +801,11 @@ func (s *Server) setZOSVersionHandler(c *gin.Context) {
 		return
 	}
 
+	durationFunc := s.metrics.RecordDuration(s.metrics.DBOperationsDuration, []string{"update", "zos_version"})
+
 	if err := s.db.SetZOSVersion(req.Version); err != nil {
+		durationFunc()
+		s.metrics.RecordCountVec(s.metrics.DBOperationsErrors, []string{"update", "zos_version"})
 		status := http.StatusInternalServerError
 		if err.Error() == "version already set" {
 			status = http.StatusConflict
@@ -749,7 +813,7 @@ func (s *Server) setZOSVersionHandler(c *gin.Context) {
 		c.AbortWithStatusJSON(status, gin.H{"error": err.Error()})
 		return
 	}
-
+	durationFunc()
 	c.Status(http.StatusOK)
 }
 

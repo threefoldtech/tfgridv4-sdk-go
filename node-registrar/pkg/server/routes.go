@@ -22,7 +22,8 @@ func (s *Server) SetupRoutes() {
 	}))
 
 	s.router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-
+	s.router.GET("/metrics", gin.WrapH(s.metrics.MetricsHandler()))
+	s.router.Use(s.MetricsMiddleware())
 	s.registerRoutes(s.router.Group("/api/v1"))
 	s.registerRoutes(s.router.Group("/v1"))
 }

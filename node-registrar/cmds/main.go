@@ -88,7 +88,7 @@ func Run() error {
 		return errors.Wrap(err, "failed to register metrics")
 	}
 
-	db, err := db.NewDB(f.Config, metrics)
+	db, err := db.NewDB(f.Config)
 	if err != nil {
 		return errors.Wrap(err, "failed to open database with the specified configurations")
 	}

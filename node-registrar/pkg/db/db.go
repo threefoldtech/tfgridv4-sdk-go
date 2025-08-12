@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/threefoldtech/tfgrid4-sdk-go/node-registrar/pkg/metrics"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -29,7 +28,6 @@ type Config struct {
 type Database struct {
 	gormDB     *gorm.DB
 	connString string
-	metrics    *metrics.Metrics
 }
 
 var (
@@ -37,7 +35,7 @@ var (
 	ErrRecordAlreadyExists = errors.New("record already exists")
 )
 
-func NewDB(c Config, metrics *metrics.Metrics) (Database, error) {
+func NewDB(c Config) (Database, error) {
 	db, err := openDatabase(c)
 	if err != nil {
 		return Database{}, err
@@ -55,7 +53,6 @@ func NewDB(c Config, metrics *metrics.Metrics) (Database, error) {
 	if err != nil {
 		return Database{}, err
 	}
-	db.metrics = metrics
 	return db, sql.Ping()
 }
 
@@ -70,7 +67,7 @@ func openDatabase(c Config) (db Database, err error) {
 		return db, errors.Wrapf(err, "Failed to connect to the database: %v", err)
 	}
 
-	return Database{gormDB, dsn, nil}, nil
+	return Database{gormDB, dsn}, nil
 }
 
 func (c Config) Validate() error {

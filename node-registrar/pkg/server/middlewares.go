@@ -10,9 +10,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gin-contrib/sessions"
+	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
 	"github.com/threefoldtech/tfgrid4-sdk-go/node-registrar/pkg/db"
+	csrf "github.com/utrack/gin-csrf"
 )
 
 // twinKeyID is where the twin key is stored
@@ -116,6 +119,42 @@ func (s *Server) AuthMiddleware() gin.HandlerFunc {
 		c.Request = c.Request.WithContext(context.WithValue(c.Request.Context(), twinIDKey{}, twinID))
 		c.Next()
 	}
+}
+
+// CSRFMiddleware creates and configures CSRF protection middleware
+// It requires sessions to be configured before this middleware
+func (s *Server) CSRFMiddleware(secret string) gin.HandlerFunc {
+	return csrf.Middleware(csrf.Options{
+		Secret: secret,
+		ErrorFunc: func(c *gin.Context) {
+			log.Warn().
+				Str("method", c.Request.Method).
+				Str("path", c.Request.URL.Path).
+				Str("remote_addr", c.ClientIP()).
+				Msg("CSRF token validation failed")
+
+			c.JSON(http.StatusForbidden, gin.H{
+				"error": "CSRF token validation failed",
+				"code":  "CSRF_TOKEN_INVALID",
+			})
+			c.Abort()
+		},
+		// Only check CSRF for state-changing methods
+		IgnoreMethods: []string{"GET", "HEAD", "OPTIONS"},
+	})
+}
+
+// SessionMiddleware configures session management required for CSRF protection
+func (s *Server) SessionMiddleware(sessionSecret string) gin.HandlerFunc {
+	store := cookie.NewStore([]byte(sessionSecret))
+	store.Options(sessions.Options{
+		Path:     "/",
+		MaxAge:   86400 * 7, // 7 days
+		HttpOnly: true,
+		Secure:   false,
+		SameSite: http.SameSiteLaxMode,
+	})
+	return sessions.Sessions("node-registrar-session", store)
 }
 
 // Helper functions

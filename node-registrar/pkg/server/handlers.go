@@ -12,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/lib/pq"
 	"github.com/threefoldtech/tfgrid4-sdk-go/node-registrar/pkg/db"
+	csrf "github.com/utrack/gin-csrf"
 )
 
 const (
@@ -24,6 +25,20 @@ const (
 // @version 1.0
 // @description API for managing TFGrid node registration
 // @BasePath /api/v1
+
+// @Summary Get CSRF token
+// @Description Retrieve a CSRF token for authenticated requests
+// @Tags security
+// @Accept json
+// @Produce json
+// @Success 200 {object} map[string]string "CSRF token"
+// @Router /csrf-token [get]
+func (s Server) getCSRFTokenHandler(c *gin.Context) {
+	token := csrf.GetToken(c)
+	c.JSON(http.StatusOK, gin.H{
+		"csrf_token": token,
+	})
+}
 
 // @Summary List farms
 // @Description Get a list of farms with optional filters

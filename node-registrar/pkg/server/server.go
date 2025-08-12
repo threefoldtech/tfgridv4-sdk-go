@@ -13,6 +13,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"github.com/threefoldtech/tfgrid4-sdk-go/node-registrar/pkg/db"
+	"github.com/threefoldtech/tfgrid4-sdk-go/node-registrar/pkg/metrics"
 )
 
 type Server struct {
@@ -20,13 +21,14 @@ type Server struct {
 	db          db.Database
 	network     string
 	adminTwinID uint64
+	metrics     *metrics.Metrics
 }
 
-func NewServer(db db.Database, network string, adminTwinID uint64) Server {
+func NewServer(db db.Database, metrics *metrics.Metrics, network string, adminTwinID uint64) Server {
 	router := gin.Default()
 	router.RedirectTrailingSlash = true
 
-	server := Server{router, db, network, adminTwinID}
+	server := Server{router, db, network, adminTwinID, metrics}
 	server.SetupRoutes()
 
 	return server

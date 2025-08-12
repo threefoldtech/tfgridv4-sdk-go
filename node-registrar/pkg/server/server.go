@@ -16,17 +16,18 @@ import (
 )
 
 type Server struct {
-	router      *gin.Engine
-	db          db.Database
-	network     string
-	adminTwinID uint64
+	router            *gin.Engine
+	db                db.Database
+	network           string
+	adminTwinID       uint64
+	rateLimiterConfig RateLimiterConfig
 }
 
-func NewServer(db db.Database, network string, adminTwinID uint64) Server {
+func NewServer(db db.Database, network string, adminTwinID uint64, rateLimiterConfig RateLimiterConfig) Server {
 	router := gin.Default()
 	router.RedirectTrailingSlash = true
 
-	server := Server{router, db, network, adminTwinID}
+	server := Server{router, db, network, adminTwinID, rateLimiterConfig}
 	server.SetupRoutes()
 
 	return server

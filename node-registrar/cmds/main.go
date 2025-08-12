@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
@@ -23,6 +24,11 @@ type flags struct {
 	serverPort  uint
 	network     string
 	adminTwinID uint64
+
+	// Rate limiter configuration
+	rateLimitEnabled    bool
+	rateLimitRequests   int64
+	rateLimitPeriodSecs int64
 }
 
 // These variables are set during build time using ldflags
@@ -62,6 +68,10 @@ func Run() error {
 	flag.StringVar(&f.network, "network", "dev", "the registrar network")
 	flag.Uint64Var(&f.adminTwinID, "admin-twin-id", 1, "admin twin ID")
 
+	flag.BoolVar(&f.rateLimitEnabled, "rate-limit-enabled", true, "enable rate limiting")
+	flag.Int64Var(&f.rateLimitRequests, "rate-limit-requests", 100, "number of requests allowed per period")
+	flag.Int64Var(&f.rateLimitPeriodSecs, "rate-limit-period", 1, "rate limit period in seconds")
+
 	flag.Parse()
 	f.SqlLogLevel = logger.LogLevel(sqlLogLevel)
 
@@ -92,9 +102,20 @@ func Run() error {
 		}
 	}()
 
-	s := server.NewServer(db, f.network, f.adminTwinID)
+	// Create rate limiter configuration from flags
+	rateLimiterConfig := server.RateLimiterConfig{
+		Enabled:  f.rateLimitEnabled,
+		Requests: f.rateLimitRequests,
+		Period:   time.Duration(f.rateLimitPeriodSecs) * time.Second,
+	}
 
-	log.Info().Msgf("server is running on port :%d", f.serverPort)
+	s := server.NewServer(db, f.network, f.adminTwinID, rateLimiterConfig)
+
+	log.Info().
+		Bool("rate_limit_enabled", f.rateLimitEnabled).
+		Int64("rate_limit_requests", f.rateLimitRequests).
+		Int64("rate_limit_period_secs", f.rateLimitPeriodSecs).
+		Msgf("server is running on port :%d", f.serverPort)
 
 	err = s.Run(fmt.Sprintf("%s:%d", f.domain, f.serverPort))
 	if err != nil {
@@ -118,6 +139,15 @@ func (f flags) validate() error {
 	}
 	if f.adminTwinID == 0 {
 		return errors.Errorf("invalid admin twin id %d, admin twin id should not be 0", f.adminTwinID)
+	}
+
+	// Validate rate limiter configuration
+	if f.rateLimitRequests <= 0 {
+		return errors.Errorf("invalid rate limit requests %d, rate limit requests should be greater than 0", f.rateLimitRequests)
+	}
+
+	if f.rateLimitPeriodSecs <= 0 {
+		return errors.Errorf("invalid rate limit period %d, rate limit period should be greater than 0", f.rateLimitPeriodSecs)
 	}
 
 	if _, err := net.LookupHost(f.domain); err != nil {

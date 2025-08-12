@@ -1,5 +1,5 @@
 run:
-	go run cmds/main.go --postgres-host localhost --postgres-port 5432 --postgres-db postgres --postgres-user postgres --postgres-password password --domain localhost --server-port 8080
+	go run cmds/main.go --postgres-host localhost --postgres-port 5432 --postgres-db postgres --postgres-user postgres --postgres-password password --host localhost --server-port 8080
 
 start-postgres:
 	docker run --name postgres -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=password -e POSTGRES_DB=postgres -p 5432:5432 -d postgres
@@ -14,7 +14,7 @@ server-start:
 	@go run cmds/main.go \
 		--server-port 8080 \
 		--debug \
-		--domain localhost \
+		--host localhost \
 		--sql-log-level 4 \
 		--postgres-host localhost \
 		--postgres-port 5432 \

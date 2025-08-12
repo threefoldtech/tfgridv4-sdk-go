@@ -19,8 +19,8 @@ type flags struct {
 	db.Config
 	debug       bool
 	version     bool
-	domain      string
-	serverPort  uint
+	host        string
+	port        uint
 	network     string
 	adminTwinID uint64
 }
@@ -57,8 +57,16 @@ func Run() error {
 
 	flag.BoolVar(&f.version, "v", false, "shows the package version")
 	flag.BoolVar(&f.debug, "debug", false, "allow debug logs")
-	flag.UintVar(&f.serverPort, "server-port", 8080, "server port")
-	flag.StringVar(&f.domain, "domain", "", "domain on which the server will be served")
+	flag.UintVar(&f.port, "server-port", 8080, "server port")
+	flag.StringVar(&f.host, "host", "", "host on which the server will be served")
+
+	// Deprecated flag handling
+	flag.Func("domain", "deprecated: use --host instead", func(val string) error {
+		log.Warn().Msg("Warning: --domain flag is deprecated, please use --host instead")
+		f.host = val
+		return nil
+	})
+
 	flag.StringVar(&f.network, "network", "dev", "the registrar network")
 	flag.Uint64Var(&f.adminTwinID, "admin-twin-id", 1, "admin twin ID")
 
@@ -94,9 +102,9 @@ func Run() error {
 
 	s := server.NewServer(db, f.network, f.adminTwinID)
 
-	log.Info().Msgf("server is running on port :%d", f.serverPort)
+	log.Info().Msgf("server is running on port :%d", f.port)
 
-	err = s.Run(fmt.Sprintf("%s:%d", f.domain, f.serverPort))
+	err = s.Run(fmt.Sprintf("%s:%d", f.host, f.port))
 	if err != nil {
 		return errors.Wrap(err, "failed to run gin server")
 	}
@@ -105,24 +113,46 @@ func Run() error {
 }
 
 func (f flags) validate() error {
-	if f.serverPort < 1 || f.serverPort > 65535 {
-		return errors.Errorf("invalid port %d, server port should be in the valid port range 1–65535", f.serverPort)
-	}
-
-	if strings.TrimSpace(f.domain) == "" {
-		return errors.New("invalid domain name, domain name should not be empty")
+	if f.port < 1 || f.port > 65535 {
+		return errors.Errorf("invalid port %d, server port should be in the valid port range 1–65535", f.port)
 	}
 
 	if f.SqlLogLevel < 1 || f.SqlLogLevel > 4 {
 		return errors.Errorf("invalid sql log level %d, sql log level should be in the range 1-4", f.SqlLogLevel)
 	}
+
 	if f.adminTwinID == 0 {
 		return errors.Errorf("invalid admin twin id %d, admin twin id should not be 0", f.adminTwinID)
 	}
 
-	if _, err := net.LookupHost(f.domain); err != nil {
-		return errors.Wrapf(err, "invalid domain %s", f.domain)
+	if err := f.validateHost(); err != nil {
+		return err
 	}
 
 	return f.Validate()
+}
+
+func (f flags) validateHost() error {
+	host := strings.TrimSpace(f.host)
+	if host == "" {
+		return errors.New("host cannot be empty")
+	}
+
+	// Check common binding addresses
+	switch host {
+	case "localhost", "0.0.0.0", "127.0.0.1", "::1":
+		return nil
+	}
+
+	// Check if valid IP address
+	if ip := net.ParseIP(host); ip != nil {
+		return nil
+	}
+
+	// Check if valid hostname
+	if _, err := net.LookupHost(host); err != nil {
+		return errors.Wrapf(err, "invalid host %q: must be a valid IP address, hostname, or domain name", host)
+	}
+
+	return nil
 }

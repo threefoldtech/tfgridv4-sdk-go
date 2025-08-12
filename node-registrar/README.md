@@ -1,4 +1,3 @@
-
 # Node Registrar Service
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/threefoldtech/tfgrid-sdk-go/node-registrar)](https://goreportcard.com/report/github.com/threefoldtech/tfgrid-sdk-go/node-registrar)
@@ -76,10 +75,10 @@ It offers operations like registring, listing, and updating farms and nodes, as 
 Once the server is running, Swagger documentation can be accessed at:
 
 ```bash
-http://<domain>:<port>/swagger/index.html
+http://<host>:<port>/swagger/index.html
 ```
 
-Replace `<domain>` and `<port>` with the appropriate values.
+Replace `<host>` and `<port>` with the appropriate values.
 
 ## How to Use the Server
 
@@ -112,7 +111,7 @@ docker build -t registrar:latest -f node-registrar/Dockerfile .
    --max-open-conn=10 \
    --max-idle-conn=5 \
    --server-port=8080 \
-   --<domain=your-domain> \
+   --host=<your-host> \
    --network=main\
    --admin_twin_id=1
    --debug

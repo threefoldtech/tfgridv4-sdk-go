@@ -28,7 +28,7 @@ const (
 
 type RateLimiterConfig struct {
 	Enabled  bool
-	Requests int64
+	Requests uint64
 	Period   time.Duration
 }
 
@@ -44,7 +44,7 @@ func (s *Server) RateLimitMiddleware(config RateLimiterConfig) gin.HandlerFunc {
 
 	rate := limiter.Rate{
 		Period: config.Period,
-		Limit:  config.Requests,
+		Limit:  (int64)(config.Requests),
 	}
 
 	instance := limiter.New(store, rate)

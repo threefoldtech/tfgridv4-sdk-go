@@ -92,7 +92,7 @@ func Run() error {
 		}
 	}()
 
-	s := server.NewServer(db, f.network, f.adminTwinID)
+	s := server.NewServer(db, f.network, f.adminTwinID, true)
 
 	log.Info().Msgf("server is running on port :%d", f.serverPort)
 

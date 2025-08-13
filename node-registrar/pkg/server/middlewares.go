@@ -5,12 +5,14 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 	"github.com/threefoldtech/tfgrid4-sdk-go/node-registrar/pkg/db"
 )
@@ -21,6 +23,7 @@ type twinIDKey struct{}
 const (
 	AuthHeader        = "X-Auth"
 	ChallengeValidity = 1 * time.Minute
+	maxBodySize       = 1024
 )
 
 // AuthMiddleware is a middleware function that authenticates incoming requests based on the X-Auth header.
@@ -129,4 +132,82 @@ func handleDatabaseError(c *gin.Context, err error) {
 	} else {
 		abortWithError(c, http.StatusInternalServerError, "Database error")
 	}
+}
+
+// AuditLogMiddleware logs HTTP requests with optional details.
+func (s *Server) AuditLogMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		start := time.Now()
+
+		// Generate correlation ID for request tracking
+		correlationID := generateCorrelationID()
+		c.Set("correlation_id", correlationID)
+
+		clientIP := c.ClientIP()
+		if clientIP == "" {
+			clientIP = "unknown"
+		}
+
+		userAgent := c.GetHeader("User-Agent")
+		if userAgent == "" {
+			userAgent = "unknown"
+		}
+
+		var twinID uint64
+		if twinIDValue := c.Request.Context().Value(twinIDKey{}); twinIDValue != nil {
+			if id, ok := twinIDValue.(uint64); ok {
+				twinID = id
+			}
+		}
+
+		var requestBody string
+		if s.auditConfig.EnableDetailedLogging && c.Request.ContentLength > 0 {
+			if bodyBytes, err := c.GetRawData(); err == nil {
+				if len(bodyBytes) > maxBodySize {
+					requestBody = string(bodyBytes[:maxBodySize]) + "...[truncated]"
+				} else {
+					requestBody = string(bodyBytes)
+				}
+				c.Request.Body = io.NopCloser(strings.NewReader(requestBody))
+			}
+		}
+
+		c.Next()
+
+		logger := log.Info().
+			Str("correlation_id", correlationID).
+			Str("timestamp", start.Format(time.RFC3339)).
+			Str("method", c.Request.Method).
+			Str("path", c.Request.URL.Path).
+			Str("query", c.Request.URL.RawQuery).
+			Int("status", c.Writer.Status()).
+			Dur("duration", time.Since(start)).
+			Str("client_ip", clientIP).
+			Str("user_agent", userAgent).
+			Str("remote_addr", c.Request.RemoteAddr)
+
+		if twinID > 0 {
+			logger = logger.Uint64("twin_id", twinID)
+		}
+
+		if s.auditConfig.EnableDetailedLogging && requestBody != "" {
+			logger = logger.Str("request_body", requestBody)
+			if authHeader := c.GetHeader(AuthHeader); authHeader != "" {
+				logger = logger.Str("auth_header", maskToken(authHeader))
+			}
+		}
+
+		logger.Msg("HTTP Request")
+	}
+}
+
+func generateCorrelationID() string {
+	return uuid.NewString()
+}
+
+func maskToken(token string) string {
+	if len(token) <= 8 {
+		return "****"
+	}
+	return token[:4] + "****" + token[len(token)-4:]
 }

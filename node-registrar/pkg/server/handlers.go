@@ -212,7 +212,6 @@ func (s Server) updateFarmHandler(c *gin.Context) {
 // @Param farm_id query int false "Filter by farm ID"
 // @Param twin_id query int false "Filter by twin ID"
 // @Param status query string false "Filter by status"
-// @Param healthy query bool false "Filter by health status"
 // @Param online query bool false "Filter by online status (true = online, false = offline)"
 // @Param last_seen query int false "Filter nodes last seen within this many minutes"
 // @Param page query int false "Page number" default(1)

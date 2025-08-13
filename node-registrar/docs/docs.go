@@ -466,12 +466,6 @@ const docTemplate = `{
                     },
                     {
                         "type": "boolean",
-                        "description": "Filter by health status",
-                        "name": "healthy",
-                        "in": "query"
-                    },
-                    {
-                        "type": "boolean",
                         "description": "Filter by online status (true = online, false = offline)",
                         "name": "online",
                         "in": "query"

@@ -537,10 +537,6 @@ paths:
         in: query
         name: status
         type: string
-      - description: Filter by health status
-        in: query
-        name: healthy
-        type: boolean
       - description: Filter by online status (true = online, false = offline)
         in: query
         name: online

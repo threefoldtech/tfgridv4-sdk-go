@@ -50,7 +50,7 @@ func (s Server) listFarmsHandler(c *gin.Context) {
 
 	farms, err := s.db.ListFarms(filter, limit)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -73,6 +73,11 @@ func (s Server) getFarmHandler(c *gin.Context) {
 	id, err := strconv.ParseUint(farmID, 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid farm_id: %v", err.Error())})
+		return
+	}
+
+	if id == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid farm_id: farm_id cannot be zero"})
 		return
 	}
 

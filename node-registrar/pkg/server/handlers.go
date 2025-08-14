@@ -621,7 +621,7 @@ type UpdateAccountRequest struct {
 // @Router /accounts/{twin_id} [patch]
 func (s *Server) updateAccountHandler(c *gin.Context) {
 	twinID, err := strconv.ParseUint(c.Param("twin_id"), 10, 64)
-	if err != nil {
+	if err != nil || twinID == 0 {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid twin ID"})
 		return
 	}
@@ -683,7 +683,7 @@ func (s *Server) getAccountHandler(c *gin.Context) {
 
 	if twinIDParam != "" {
 		twinID, err := strconv.ParseUint(twinIDParam, 10, 64)
-		if err != nil {
+		if err != nil || twinID == 0 {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid twin ID"})
 			return
 		}

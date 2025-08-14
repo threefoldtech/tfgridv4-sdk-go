@@ -3,6 +3,9 @@ package server
 import (
 	"bytes"
 	"context"
+	"crypto/ed25519"
+	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -12,141 +15,65 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
 	"github.com/threefoldtech/tfgrid4-sdk-go/node-registrar/pkg/db"
 	"github.com/threefoldtech/tfgrid4-sdk-go/node-registrar/pkg/mocks"
 	"go.uber.org/mock/gomock"
 )
 
-func setupTestServer(mockDB *mocks.MockDB) Server {
-	gin.SetMode(gin.TestMode)
-	return NewServer(mockDB, "test", 1)
-}
-
-func createTestContext(method, url string, body interface{}) (*gin.Context, *httptest.ResponseRecorder) {
-	w := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(w)
-
-	var bodyBytes []byte
-	if body != nil {
-		bodyBytes, _ = json.Marshal(body)
-	}
-
-	req := httptest.NewRequest(method, url, bytes.NewReader(bodyBytes))
-	req.Header.Set("Content-Type", "application/json")
-	c.Request = req
-
-	return c, w
-}
-
-func setAuthContext(c *gin.Context, twinID uint64) {
-	ctx := context.WithValue(c.Request.Context(), twinIDKey{}, twinID)
-	c.Request = c.Request.WithContext(ctx)
-}
-
-// Test data factories
-func createTestFarm(id uint64, name string, twinID uint64) db.Farm {
-	return db.Farm{
-		FarmID:         id,
-		FarmName:       name,
-		TwinID:         twinID,
-		StellarAddress: "G" + strings.Repeat("D", 55),
-		Dedicated:      false,
-	}
-}
-
-func createTestNode(nodeID, farmID, twinID uint64, lastSeen time.Time) db.Node {
-	return db.Node{
-		NodeID:       nodeID,
-		FarmID:       farmID,
-		TwinID:       twinID,
-		LastSeen:     lastSeen,
-		Online:       false,
-		Approved:     true,
-		SecureBoot:   true,
-		Virtualized:  false,
-		SerialNumber: fmt.Sprintf("SN%d", nodeID),
-		Resources:    db.Resources{HRU: 1000, SRU: 500, CRU: 8, MRU: 16},
-		Location:     db.Location{Country: "US", City: "NYC", Longitude: "-74.0", Latitude: "40.7"},
-		Interfaces:   []db.Interface{{Name: "eth0", Mac: "00:11:22:33:44:55", IPs: []string{"192.168.1.10"}}},
-	}
-}
-
 func TestListFarmsHandler(t *testing.T) {
-	tests := []struct {
-		name           string
-		setupMock      func(*mocks.MockDB)
-		expectedStatus int
-		expectedBody   func([]db.Farm) interface{}
-		expectError    bool
-		errorMessage   string
-	}{
-		{
-			name: "successful farms listing",
-			setupMock: func(mockDB *mocks.MockDB) {
-				expectedFarms := []db.Farm{
-					createTestFarm(1, "TestFarm1", 100),
-					createTestFarm(2, "TestFarm2", 200),
-				}
-				mockDB.EXPECT().
-					ListFarms(gomock.Any(), gomock.Any()).
-					Return(expectedFarms, nil).
-					Times(1)
-			},
-			expectedStatus: http.StatusOK,
-			expectedBody: func(farms []db.Farm) interface{} {
-				return farms
-			},
-		},
-		{
-			name: "empty farms list",
-			setupMock: func(mockDB *mocks.MockDB) {
-				mockDB.EXPECT().
-					ListFarms(gomock.Any(), gomock.Any()).
-					Return([]db.Farm{}, nil).
-					Times(1)
-			},
-			expectedStatus: http.StatusOK,
-			expectedBody: func(farms []db.Farm) interface{} {
-				return []db.Farm{}
-			},
-		},
-	}
+	t.Run("successful farms listing", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
+		mockDB := mocks.NewMockDB(ctrl)
+		expectedFarms := []db.Farm{
+			createTestFarm(1, "TestFarm1", 100),
+			createTestFarm(2, "TestFarm2", 200),
+		}
+		mockDB.EXPECT().
+			ListFarms(gomock.Any(), gomock.Any()).
+			Return(expectedFarms, nil).
+			Times(1)
 
-			mockDB := mocks.NewMockDB(ctrl)
-			if tt.setupMock != nil {
-				tt.setupMock(mockDB)
-			}
+		server := setupTestServer(mockDB)
+		c, w := createTestContext("GET", "/farms", nil)
 
-			server := setupTestServer(mockDB)
-			c, w := createTestContext("GET", "/farms", nil)
+		server.listFarmsHandler(c)
 
-			server.listFarmsHandler(c)
+		assert.Equal(t, http.StatusOK, w.Code)
 
-			assert.Equal(t, tt.expectedStatus, w.Code)
+		var farms []db.Farm
+		err := json.Unmarshal(w.Body.Bytes(), &farms)
+		assert.NoError(t, err)
+		actualBodyBytes, _ := json.Marshal(farms)
+		expectedBodyBytes, _ := json.Marshal(expectedFarms)
+		assert.JSONEq(t, string(expectedBodyBytes), string(actualBodyBytes))
+	})
 
-			if tt.expectError {
-				var errorResponse map[string]interface{}
-				err := json.Unmarshal(w.Body.Bytes(), &errorResponse)
-				assert.NoError(t, err)
-				assert.Contains(t, errorResponse["error"], tt.errorMessage)
-				return
-			}
+	t.Run("empty farms list", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
 
-			var farms []db.Farm
-			err := json.Unmarshal(w.Body.Bytes(), &farms)
-			assert.NoError(t, err)
-			expectedBody := tt.expectedBody(farms)
-			actualBodyBytes, _ := json.Marshal(farms)
-			expectedBodyBytes, _ := json.Marshal(expectedBody)
-			assert.JSONEq(t, string(expectedBodyBytes), string(actualBodyBytes))
-		})
-	}
+		mockDB := mocks.NewMockDB(ctrl)
+		mockDB.EXPECT().
+			ListFarms(gomock.Any(), gomock.Any()).
+			Return([]db.Farm{}, nil).
+			Times(1)
+
+		server := setupTestServer(mockDB)
+		c, w := createTestContext("GET", "/farms", nil)
+
+		server.listFarmsHandler(c)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		var farms []db.Farm
+		err := json.Unmarshal(w.Body.Bytes(), &farms)
+		assert.NoError(t, err)
+		assert.Empty(t, farms)
+	})
 }
 
 func TestGetFarmHandler(t *testing.T) {
@@ -529,113 +456,61 @@ func TestListNodesHandler(t *testing.T) {
 	onlineTime := now.Add(-30 * time.Minute)
 	offlineTime := now.Add(-50 * time.Minute)
 
-	tests := []struct {
-		name           string
-		queryParams    string
-		setupMock      func(*mocks.MockDB)
-		expectedStatus int
-		expectedBody   func([]db.Node) interface{}
-		expectError    bool
-		errorMessage   string
-		validateOnline func([]db.Node)
-	}{
-		{
-			name:        "successful nodes listing",
-			queryParams: "",
-			setupMock: func(mockDB *mocks.MockDB) {
-				expectedNodes := []db.Node{
-					createTestNode(1, 1, 100, onlineTime),
-					createTestNode(2, 1, 200, offlineTime),
-				}
-				mockDB.EXPECT().
-					ListNodes(gomock.Any(), gomock.Any()).
-					Return(expectedNodes, nil).
-					Times(1)
-			},
-			expectedStatus: http.StatusOK,
-			expectedBody: func(nodes []db.Node) interface{} {
-				return nodes
-			},
-			validateOnline: func(nodes []db.Node) {
-				assert.True(t, nodes[0].Online, "First node should be online (within cutoff)")
-				assert.False(t, nodes[1].Online, "Second node should be offline (beyond cutoff)")
-			},
-		},
-		{
-			name:        "empty nodes list",
-			queryParams: "",
-			setupMock: func(mockDB *mocks.MockDB) {
-				mockDB.EXPECT().
-					ListNodes(gomock.Any(), gomock.Any()).
-					Return([]db.Node{}, nil).
-					Times(1)
-			},
-			expectedStatus: http.StatusOK,
-			expectedBody: func(nodes []db.Node) interface{} {
-				return []db.Node{}
-			},
-		},
-		{
-			name:        "nodes with zero LastSeen (never seen)",
-			queryParams: "",
-			setupMock: func(mockDB *mocks.MockDB) {
-				expectedNodes := []db.Node{
-					createTestNode(3, 2, 300, time.Time{}),
-				}
-				mockDB.EXPECT().
-					ListNodes(gomock.Any(), gomock.Any()).
-					Return(expectedNodes, nil).
-					Times(1)
-			},
-			expectedStatus: http.StatusOK,
-			expectedBody: func(nodes []db.Node) interface{} {
-				return nodes
-			},
-			validateOnline: func(nodes []db.Node) {
-				assert.False(t, nodes[0].Online, "Node with zero LastSeen should be offline")
-			},
-		},
-	}
+	t.Run("successful nodes listing", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
+		mockDB := mocks.NewMockDB(ctrl)
+		expectedNodes := []db.Node{
+			createTestNode(1, 1, 100, onlineTime),
+			createTestNode(2, 1, 200, offlineTime),
+		}
+		mockDB.EXPECT().
+			ListNodes(gomock.Any(), gomock.Any()).
+			Return(expectedNodes, nil).
+			Times(1)
 
-			mockDB := mocks.NewMockDB(ctrl)
-			if tt.setupMock != nil {
-				tt.setupMock(mockDB)
-			}
+		server := setupTestServer(mockDB)
+		c, w := createTestContext("GET", "/nodes", nil)
 
-			server := setupTestServer(mockDB)
-			c, w := createTestContext("GET", "/nodes"+tt.queryParams, nil)
+		server.listNodesHandler(c)
 
-			server.listNodesHandler(c)
+		assert.Equal(t, http.StatusOK, w.Code)
 
-			assert.Equal(t, tt.expectedStatus, w.Code)
+		var nodes []db.Node
+		err := json.Unmarshal(w.Body.Bytes(), &nodes)
+		assert.NoError(t, err)
 
-			if tt.expectError {
-				var errorResponse map[string]interface{}
-				err := json.Unmarshal(w.Body.Bytes(), &errorResponse)
-				assert.NoError(t, err)
-				assert.Contains(t, errorResponse["error"], tt.errorMessage)
-				return
-			}
+		assert.True(t, nodes[0].Online, "First node should be online (within cutoff)")
+		assert.False(t, nodes[1].Online, "Second node should be offline (beyond cutoff)")
+	})
 
-			var nodes []db.Node
-			err := json.Unmarshal(w.Body.Bytes(), &nodes)
-			assert.NoError(t, err)
+	t.Run("nodes with zero LastSeen (never seen)", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
 
-			expectedBody := tt.expectedBody(nodes)
-			actualBodyBytes, _ := json.Marshal(nodes)
-			expectedBodyBytes, _ := json.Marshal(expectedBody)
-			assert.JSONEq(t, string(expectedBodyBytes), string(actualBodyBytes))
+		mockDB := mocks.NewMockDB(ctrl)
+		expectedNodes := []db.Node{
+			createTestNode(3, 2, 300, time.Time{}),
+		}
+		mockDB.EXPECT().
+			ListNodes(gomock.Any(), gomock.Any()).
+			Return(expectedNodes, nil).
+			Times(1)
 
-			if tt.validateOnline != nil {
-				tt.validateOnline(nodes)
-			}
-		})
-	}
+		server := setupTestServer(mockDB)
+		c, w := createTestContext("GET", "/nodes", nil)
+
+		server.listNodesHandler(c)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		var nodes []db.Node
+		err := json.Unmarshal(w.Body.Bytes(), &nodes)
+		assert.NoError(t, err)
+
+		assert.False(t, nodes[0].Online, "Node with zero LastSeen should be offline")
+	})
 }
 
 func TestGetNodeHandler(t *testing.T) {
@@ -1075,7 +950,7 @@ func TestUptimeReportHandler(t *testing.T) {
 					Times(1)
 			},
 			setupContext: func(c *gin.Context) {
-				setAuthContext(c, 200) 
+				setAuthContext(c, 200)
 			},
 			expectedStatus: http.StatusUnauthorized,
 			expectError:    true,
@@ -1140,5 +1015,576 @@ func TestUptimeReportHandler(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, "uptime reported successfully", response["message"])
 		})
+	}
+}
+
+func TestCreateAccountHandler(t *testing.T) {
+
+	publicKey, privateKey, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatalf("Failed to generate key pair: %v", err)
+	}
+
+	createValidAccountRequest := func() AccountCreationRequest {
+		timestamp := time.Now().Unix()
+		publicKeyB64 := base64.StdEncoding.EncodeToString(publicKey)
+
+		challenge := []byte(fmt.Sprintf("%d:%s", timestamp, publicKeyB64))
+
+		signature := ed25519.Sign(privateKey, challenge)
+
+		return AccountCreationRequest{
+			Timestamp: timestamp,
+			PublicKey: publicKeyB64,
+			Signature: base64.StdEncoding.EncodeToString(signature),
+			Relays:    []string{"relay1", "relay2"},
+			RMBEncKey: "rmb_enc_key",
+		}
+	}
+
+	tests := []struct {
+		name           string
+		requestBody    interface{}
+		setupMock      func(*mocks.MockDB)
+		expectedStatus int
+		expectError    bool
+		errorMessage   string
+	}{
+		{
+			name:        "successful account creation",
+			requestBody: createValidAccountRequest(),
+			setupMock: func(mockDB *mocks.MockDB) {
+				mockDB.EXPECT().
+					CreateAccount(gomock.Any()).
+					Return(nil).
+					Times(1)
+			},
+			expectedStatus: http.StatusCreated,
+		},
+		{
+			name: "invalid public key format",
+			requestBody: func() AccountCreationRequest {
+				req := createValidAccountRequest()
+				shortKey := make([]byte, 16)
+				req.PublicKey = base64.StdEncoding.EncodeToString(shortKey)
+				return req
+			}(),
+			expectedStatus: http.StatusBadRequest,
+			expectError:    true,
+			errorMessage:   "invalid public key format",
+		},
+		{
+			name: "timestamp outside acceptable window",
+			requestBody: func() AccountCreationRequest {
+				req := createValidAccountRequest()
+				req.Timestamp = time.Now().Add(-10 * time.Minute).Unix()
+				return req
+			}(),
+			expectedStatus: http.StatusBadRequest,
+			expectError:    true,
+			errorMessage:   "timestamp outside acceptable window",
+		},
+		{
+			name: "signature verification failure",
+			requestBody: func() AccountCreationRequest {
+				req := createValidAccountRequest()
+				_, wrongPrivateKey, _ := ed25519.GenerateKey(rand.Reader)
+				challenge := []byte(fmt.Sprintf("%d:%s", req.Timestamp, req.PublicKey))
+				wrongSignature := ed25519.Sign(wrongPrivateKey, challenge)
+				req.Signature = base64.StdEncoding.EncodeToString(wrongSignature)
+				return req
+			}(),
+			expectedStatus: http.StatusUnauthorized,
+			expectError:    true,
+			errorMessage:   "signature verification error",
+		},
+		{
+			name:        "account already exists",
+			requestBody: createValidAccountRequest(),
+			setupMock: func(mockDB *mocks.MockDB) {
+				mockDB.EXPECT().
+					CreateAccount(gomock.Any()).
+					Return(db.ErrRecordAlreadyExists).
+					Times(1)
+			},
+			expectedStatus: http.StatusConflict,
+			expectError:    true,
+			errorMessage:   "account with this public key already exists",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockDB := mocks.NewMockDB(ctrl)
+			server := setupTestServer(mockDB)
+
+			if tt.setupMock != nil {
+				tt.setupMock(mockDB)
+			}
+
+			c, w := createTestContext("POST", "/accounts", tt.requestBody)
+			server.createAccountHandler(c)
+
+			assert.Equal(t, tt.expectedStatus, w.Code)
+
+			if tt.expectError {
+				var errorResponse map[string]interface{}
+				err := json.Unmarshal(w.Body.Bytes(), &errorResponse)
+				assert.NoError(t, err)
+				assert.Contains(t, errorResponse["error"], tt.errorMessage)
+				return
+			}
+
+			var account db.Account
+			err := json.Unmarshal(w.Body.Bytes(), &account)
+			assert.NoError(t, err)
+			assert.NotEmpty(t, account.PublicKey)
+			assert.Equal(t, base64.StdEncoding.EncodeToString(publicKey), account.PublicKey)
+		})
+	}
+}
+
+func TestUpdateAccountHandler(t *testing.T) {
+	tests := []struct {
+		name           string
+		twinID         string
+		requestBody    interface{}
+		setupMock      func(*mocks.MockDB)
+		setupContext   func(*gin.Context)
+		expectedStatus int
+		expectError    bool
+		errorMessage   string
+	}{
+		{
+			name:   "successful account update",
+			twinID: "123",
+			requestBody: UpdateAccountRequest{
+				Relays:    pq.StringArray{"relay1", "relay2"},
+				RMBEncKey: "new_rmb_key",
+			},
+			setupMock: func(mockDB *mocks.MockDB) {
+				mockDB.EXPECT().
+					UpdateAccount(uint64(123), pq.StringArray{"relay1", "relay2"}, "new_rmb_key").
+					Return(nil).
+					Times(1)
+			},
+			setupContext: func(c *gin.Context) {
+				setAuthContext(c, 123)
+			},
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:   "unauthorized attempt",
+			twinID: "123",
+			requestBody: UpdateAccountRequest{
+				Relays:    pq.StringArray{"relay1"},
+				RMBEncKey: "key",
+			},
+			setupContext: func(c *gin.Context) {
+				setAuthContext(c, 456)
+			},
+			expectedStatus: http.StatusUnauthorized,
+			expectError:    true,
+			errorMessage:   "not authorized",
+		},
+		{
+			name:   "account not found",
+			twinID: "123",
+			requestBody: UpdateAccountRequest{
+				Relays:    pq.StringArray{"relay1"},
+				RMBEncKey: "key",
+			},
+			setupMock: func(mockDB *mocks.MockDB) {
+				mockDB.EXPECT().
+					UpdateAccount(uint64(123), pq.StringArray{"relay1"}, "key").
+					Return(db.ErrRecordNotFound).
+					Times(1)
+			},
+			setupContext: func(c *gin.Context) {
+				setAuthContext(c, 123)
+			},
+			expectedStatus: http.StatusNotFound,
+			expectError:    true,
+			errorMessage:   "account not found",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockDB := mocks.NewMockDB(ctrl)
+			server := setupTestServer(mockDB)
+
+			if tt.setupMock != nil {
+				tt.setupMock(mockDB)
+			}
+
+			c, w := createTestContext("PATCH", "/accounts/"+tt.twinID, tt.requestBody)
+			c.Params = []gin.Param{{Key: "twin_id", Value: tt.twinID}}
+
+			if tt.setupContext != nil {
+				tt.setupContext(c)
+			}
+
+			server.updateAccountHandler(c)
+
+			assert.Equal(t, tt.expectedStatus, w.Code)
+
+			if tt.expectError {
+				var errorResponse map[string]interface{}
+				err := json.Unmarshal(w.Body.Bytes(), &errorResponse)
+				assert.NoError(t, err)
+				assert.Contains(t, errorResponse["error"], tt.errorMessage)
+				return
+			}
+
+			var response map[string]interface{}
+			err := json.Unmarshal(w.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "account updated successfully", response["message"])
+		})
+	}
+}
+
+func TestGetAccountHandler(t *testing.T) {
+	// Helper to create test account
+	createTestAccount := func(twinID uint64, publicKey string) db.Account {
+		return db.Account{
+			TwinID:    twinID,
+			PublicKey: publicKey,
+			Relays:    pq.StringArray{"relay1", "relay2"},
+			RMBEncKey: "test_rmb_key",
+		}
+	}
+
+	tests := []struct {
+		name           string
+		queryParams    string
+		setupMock      func(*mocks.MockDB)
+		expectedStatus int
+		expectError    bool
+		errorMessage   string
+		validateResult func(*db.Account)
+	}{
+		{
+			name:        "successful retrieval by twin_id",
+			queryParams: "?twin_id=123",
+			setupMock: func(mockDB *mocks.MockDB) {
+				expectedAccount := createTestAccount(123, "test_public_key")
+				mockDB.EXPECT().
+					GetAccount(uint64(123)).
+					Return(expectedAccount, nil).
+					Times(1)
+			},
+			expectedStatus: http.StatusOK,
+			validateResult: func(account *db.Account) {
+				assert.Equal(t, uint64(123), account.TwinID)
+				assert.Equal(t, "test_public_key", account.PublicKey)
+				assert.Equal(t, pq.StringArray{"relay1", "relay2"}, account.Relays)
+				assert.Equal(t, "test_rmb_key", account.RMBEncKey)
+			},
+		},
+		{
+			name:        "successful retrieval by public_key",
+			queryParams: "?public_key=test_public_key",
+			setupMock: func(mockDB *mocks.MockDB) {
+				expectedAccount := createTestAccount(456, "test_public_key")
+				mockDB.EXPECT().
+					GetAccountByPublicKey("test_public_key").
+					Return(expectedAccount, nil).
+					Times(1)
+			},
+			expectedStatus: http.StatusOK,
+			validateResult: func(account *db.Account) {
+				assert.Equal(t, uint64(456), account.TwinID)
+				assert.Equal(t, "test_public_key", account.PublicKey)
+			},
+		},
+		{
+			name:           "both parameters provided",
+			queryParams:    "?twin_id=123&public_key=test_key",
+			setupMock:      nil,
+			expectedStatus: http.StatusBadRequest,
+			expectError:    true,
+			errorMessage:   "provide either twin_id or public_key, not both",
+		},
+		{
+			name:           "no parameters provided",
+			queryParams:    "",
+			setupMock:      nil,
+			expectedStatus: http.StatusBadRequest,
+			expectError:    true,
+			errorMessage:   "must provide either twin_id or public_key parameter",
+		},
+		{
+			name:        "account not found by twin_id",
+			queryParams: "?twin_id=999",
+			setupMock: func(mockDB *mocks.MockDB) {
+				mockDB.EXPECT().
+					GetAccount(uint64(999)).
+					Return(db.Account{}, db.ErrRecordNotFound).
+					Times(1)
+			},
+			expectedStatus: http.StatusNotFound,
+			expectError:    true,
+			errorMessage:   "account not found",
+		},
+		{
+			name:        "account not found by public_key",
+			queryParams: "?public_key=nonexistent_key",
+			setupMock: func(mockDB *mocks.MockDB) {
+				mockDB.EXPECT().
+					GetAccountByPublicKey("nonexistent_key").
+					Return(db.Account{}, db.ErrRecordNotFound).
+					Times(1)
+			},
+			expectedStatus: http.StatusNotFound,
+			expectError:    true,
+			errorMessage:   "account not found",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockDB := mocks.NewMockDB(ctrl)
+			server := setupTestServer(mockDB)
+
+			if tt.setupMock != nil {
+				tt.setupMock(mockDB)
+			}
+
+			c, w := createTestContext("GET", "/accounts"+tt.queryParams, nil)
+			server.getAccountHandler(c)
+
+			assert.Equal(t, tt.expectedStatus, w.Code)
+
+			if tt.expectError {
+				var errorResponse map[string]interface{}
+				err := json.Unmarshal(w.Body.Bytes(), &errorResponse)
+				assert.NoError(t, err)
+				assert.Contains(t, errorResponse["error"], tt.errorMessage)
+				return
+			}
+
+			var account db.Account
+			err := json.Unmarshal(w.Body.Bytes(), &account)
+			assert.NoError(t, err)
+
+			if tt.validateResult != nil {
+				tt.validateResult(&account)
+			}
+		})
+	}
+}
+
+func TestSetZOSVersionHandler(t *testing.T) {
+	tests := []struct {
+		name           string
+		adminTwinID    uint64
+		requestBody    interface{}
+		setupMock      func(*mocks.MockDB)
+		setupAuth      func(*gin.Context)
+		expectedStatus int
+		expectError    bool
+		errorMessage   string
+	}{
+		{
+			name:        "successful version set",
+			adminTwinID: 1,
+			requestBody: map[string]string{"version": "dGVzdF92ZXJzaW9u"},
+			setupMock: func(mockDB *mocks.MockDB) {
+				mockDB.EXPECT().
+					SetZOSVersion("dGVzdF92ZXJzaW9u").
+					Return(nil).
+					Times(1)
+			},
+			setupAuth: func(c *gin.Context) {
+				setAuthContext(c, 1)
+			},
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:        "unauthorized",
+			adminTwinID: 1,
+			requestBody: map[string]string{"version": "dGVzdF92ZXJzaW9u"},
+			setupMock:   nil,
+			setupAuth: func(c *gin.Context) {
+				setAuthContext(c, 2)
+			},
+			expectedStatus: http.StatusUnauthorized,
+			expectError:    true,
+			errorMessage:   "not authorized",
+		},
+		{
+			name:        "missing version field",
+			adminTwinID: 1,
+			requestBody: map[string]string{},
+			setupMock:   nil,
+			setupAuth: func(c *gin.Context) {
+				setAuthContext(c, 1)
+			},
+			expectedStatus: http.StatusBadRequest,
+			expectError:    true,
+			errorMessage:   "Field validation for 'Version' failed on the 'required' tag",
+		},
+		{
+			name:        "version already set conflict",
+			adminTwinID: 1,
+			requestBody: map[string]string{"version": "dGVzdF92ZXJzaW9u"},
+			setupMock: func(mockDB *mocks.MockDB) {
+				mockDB.EXPECT().
+					SetZOSVersion("dGVzdF92ZXJzaW9u").
+					Return(fmt.Errorf("version already set")).
+					Times(1)
+			},
+			setupAuth: func(c *gin.Context) {
+				setAuthContext(c, 1)
+			},
+			expectedStatus: http.StatusConflict,
+			expectError:    true,
+			errorMessage:   "version already set",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockDB := mocks.NewMockDB(ctrl)
+			server := setupTestServer(mockDB)
+
+			if tt.setupMock != nil {
+				tt.setupMock(mockDB)
+			}
+
+			c, w := createTestContext("PUT", "/zos/version", tt.requestBody)
+
+			if tt.setupAuth != nil {
+				tt.setupAuth(c)
+			}
+
+			server.setZOSVersionHandler(c)
+
+			assert.Equal(t, tt.expectedStatus, w.Code)
+
+			if tt.expectError {
+				var errorResponse map[string]interface{}
+				err := json.Unmarshal(w.Body.Bytes(), &errorResponse)
+				assert.NoError(t, err)
+				assert.Contains(t, errorResponse["error"], tt.errorMessage)
+				return
+			}
+
+			assert.Empty(t, w.Body.String())
+		})
+	}
+}
+
+func TestGetZOSVersionHandler(t *testing.T) {
+	t.Run("successful version retrieval", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockDB := mocks.NewMockDB(ctrl)
+		server := setupTestServer(mockDB)
+
+		mockDB.EXPECT().
+			GetZOSVersion().
+			Return("dGVzdF92ZXJzaW9u", nil).
+			Times(1)
+
+		c, w := createTestContext("GET", "/zos/version", nil)
+		server.getZOSVersionHandler(c)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		var version string
+		err := json.Unmarshal(w.Body.Bytes(), &version)
+		assert.NoError(t, err)
+		assert.Equal(t, "dGVzdF92ZXJzaW9u", version)
+	})
+	t.Run("version not found", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockDB := mocks.NewMockDB(ctrl)
+		server := setupTestServer(mockDB)
+
+		mockDB.EXPECT().
+			GetZOSVersion().
+			Return("", db.ErrRecordNotFound).
+			Times(1)
+
+		c, w := createTestContext("GET", "/zos/version", nil)
+		server.getZOSVersionHandler(c)
+
+		assert.Equal(t, http.StatusNotFound, w.Code)
+
+		var errorResponse map[string]interface{}
+		err := json.Unmarshal(w.Body.Bytes(), &errorResponse)
+		assert.NoError(t, err)
+		assert.Contains(t, errorResponse["error"], "zos version not set")
+	})
+}
+
+func setupTestServer(mockDB *mocks.MockDB) Server {
+	gin.SetMode(gin.TestMode)
+	return NewServer(mockDB, "test", 1)
+}
+
+func createTestContext(method, url string, body interface{}) (*gin.Context, *httptest.ResponseRecorder) {
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+
+	var bodyBytes []byte
+	if body != nil {
+		bodyBytes, _ = json.Marshal(body)
+	}
+
+	req := httptest.NewRequest(method, url, bytes.NewReader(bodyBytes))
+	req.Header.Set("Content-Type", "application/json")
+	c.Request = req
+
+	return c, w
+}
+
+func setAuthContext(c *gin.Context, twinID uint64) {
+	ctx := context.WithValue(c.Request.Context(), twinIDKey{}, twinID)
+	c.Request = c.Request.WithContext(ctx)
+}
+
+func createTestFarm(id uint64, name string, twinID uint64) db.Farm {
+	return db.Farm{
+		FarmID:         id,
+		FarmName:       name,
+		TwinID:         twinID,
+		StellarAddress: "G" + strings.Repeat("D", 55),
+		Dedicated:      false,
+	}
+}
+
+func createTestNode(nodeID, farmID, twinID uint64, lastSeen time.Time) db.Node {
+	return db.Node{
+		NodeID:       nodeID,
+		FarmID:       farmID,
+		TwinID:       twinID,
+		LastSeen:     lastSeen,
+		Online:       false,
+		Approved:     true,
+		SecureBoot:   true,
+		Virtualized:  false,
+		SerialNumber: fmt.Sprintf("SN%d", nodeID),
+		Resources:    db.Resources{HRU: 1000, SRU: 500, CRU: 8, MRU: 16},
+		Location:     db.Location{Country: "US", City: "NYC", Longitude: "-74.0", Latitude: "40.7"},
+		Interfaces:   []db.Interface{{Name: "eth0", Mac: "00:11:22:33:44:55", IPs: []string{"192.168.1.10"}}},
 	}
 }

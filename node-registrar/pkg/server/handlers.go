@@ -264,7 +264,7 @@ func (s Server) getNodeHandler(c *gin.Context) {
 	nodeID := c.Param("node_id")
 
 	id, err := strconv.ParseUint(nodeID, 10, 64)
-	if err != nil {
+	if err != nil || id == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid node id"})
 		return
 	}
@@ -374,7 +374,7 @@ type UpdateNodeRequest struct {
 // @Router /nodes/{node_id} [patch]
 func (s *Server) updateNodeHandler(c *gin.Context) {
 	nodeID, err := strconv.ParseUint(c.Param("node_id"), 10, 64)
-	if err != nil {
+	if err != nil || nodeID == 0 {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid node ID"})
 		return
 	}
@@ -448,7 +448,7 @@ func (s *Server) uptimeReportHandler(c *gin.Context) {
 	nodeID := c.Param("node_id")
 
 	id, err := strconv.ParseUint(nodeID, 10, 64)
-	if err != nil {
+	if err != nil || id == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid node id"})
 		return
 	}

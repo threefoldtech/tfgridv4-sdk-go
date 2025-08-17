@@ -2,6 +2,7 @@ package db
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/lib/pq"
 	"gorm.io/gorm"
@@ -9,6 +10,10 @@ import (
 
 // CreateAccount creates a new account in the database
 func (db *Database) CreateAccount(account *Account) error {
+	if strings.TrimSpace(account.PublicKey) == "" {
+		return errors.New("public key cannot be empty")
+	}
+
 	err := db.gormDB.Create(account).Error
 	if errors.Is(err, gorm.ErrDuplicatedKey) {
 		return ErrRecordAlreadyExists

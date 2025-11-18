@@ -71,7 +71,7 @@ func (c *RegistrarClient) registerNode(node Node) (nodeID uint64, err error) {
 
 		resp, err := c.httpClient.Do(req)
 		if err != nil {
-			return nodeID, errors.Wrap(err, "failed to send request to registrer the node")
+			return nodeID, errors.Wrap(err, "failed to send request to registrar the node")
 		}
 
 		if resp == nil {

@@ -1,7 +1,9 @@
 package db
 
 import (
+	"encoding/json"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/lib/pq"
@@ -82,6 +84,49 @@ type Interface struct {
 	Name string   `json:"name"`
 	Mac  string   `json:"mac"`
 	IPs  []string `json:"ips" gorm:"not null,type:text[];default:'{}'"`
+}
+
+// UnmarshalJSON implements custom unmarshaling to handle both old format (ips as string)
+// and new format (ips as []string) for backward compatibility
+func (i *Interface) UnmarshalJSON(data []byte) error {
+	type Alias Interface
+	aux := &struct {
+		IPs interface{} `json:"ips"`
+		*Alias
+	}{
+		Alias: (*Alias)(i),
+	}
+
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+
+	// Handle different types for IPs field
+	switch v := aux.IPs.(type) {
+	case string:
+		// Old format: "ip1/ip2/ip3"
+		if v == "" {
+			i.IPs = []string{}
+		} else {
+			i.IPs = strings.Split(v, "/")
+		}
+	case []interface{}:
+		// New format from JSON: ["ip1", "ip2", "ip3"]
+		i.IPs = make([]string, 0, len(v))
+		for _, ip := range v {
+			if str, ok := ip.(string); ok {
+				i.IPs = append(i.IPs, str)
+			}
+		}
+	case []string:
+		// New format: already in correct format
+		i.IPs = v
+	default:
+		// Handle nil or any other unexpected type
+		i.IPs = []string{}
+	}
+
+	return nil
 }
 
 type Resources struct {

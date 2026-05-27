@@ -29,7 +29,7 @@ func main() {
 
 	flag.StringVar(&seed, "seed", "", "seed")
 	flag.StringVar(&network, "network", "", "network (dev, qa, test, main)")
-	flag.StringVar(&name, "farm_name", "", "farm name")
+	flag.StringVar(&name, "farm-name", "", "farm name")
 	flag.Parse()
 
 	u, ok := urls[network]

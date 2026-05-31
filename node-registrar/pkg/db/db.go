@@ -53,7 +53,6 @@ func NewDB(c Config) (Database, error) {
 	if err != nil {
 		return Database{}, err
 	}
-
 	return db, sql.Ping()
 }
 

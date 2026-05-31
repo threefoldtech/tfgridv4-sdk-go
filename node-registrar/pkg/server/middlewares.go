@@ -130,3 +130,16 @@ func handleDatabaseError(c *gin.Context, err error) {
 		abortWithError(c, http.StatusInternalServerError, "Database error")
 	}
 }
+
+func (s *Server) MetricsMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		stop := s.metrics.RecordDuration(s.metrics.HTTPRequestProcessingDuration, []string{c.Request.Method, c.Request.URL.Path})
+		c.Next()
+
+		stop()
+		if c.Writer.Status() >= 500 {
+			s.metrics.InternalErrors.Inc()
+		}
+		s.metrics.RecordCountVec(s.metrics.HTTPRequestsReceived, []string{c.Request.Method, c.Request.URL.Path, strconv.Itoa(c.Writer.Status())})
+	}
+}

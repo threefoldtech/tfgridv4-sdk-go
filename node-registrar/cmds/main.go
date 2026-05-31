@@ -11,6 +11,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/threefoldtech/tfgrid4-sdk-go/node-registrar/pkg/db"
+	"github.com/threefoldtech/tfgrid4-sdk-go/node-registrar/pkg/metrics"
 	"github.com/threefoldtech/tfgrid4-sdk-go/node-registrar/pkg/server"
 	"gorm.io/gorm/logger"
 )
@@ -80,6 +81,13 @@ func Run() error {
 	}
 	log.Logger = zerolog.New(zerolog.ConsoleWriter{Out: os.Stderr}).Level(logLevel).With().Timestamp().Logger()
 
+	metrics := metrics.NewMetrics()
+
+	err := metrics.Register()
+	if err != nil {
+		return errors.Wrap(err, "failed to register metrics")
+	}
+
 	db, err := db.NewDB(f.Config)
 	if err != nil {
 		return errors.Wrap(err, "failed to open database with the specified configurations")
@@ -92,7 +100,7 @@ func Run() error {
 		}
 	}()
 
-	s := server.NewServer(db, f.network, f.adminTwinID)
+	s := server.NewServer(db, metrics, f.network, f.adminTwinID)
 
 	log.Info().Msgf("server is running on port :%d", f.serverPort)
 

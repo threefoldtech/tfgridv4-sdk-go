@@ -12,6 +12,7 @@ import (
 )
 
 func (s *Server) SetupRoutes() {
+
 	s.router.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"*"},
 		AllowMethods:     []string{"POST", "OPTIONS", "GET", "PUT", "DELETE"},
@@ -22,7 +23,7 @@ func (s *Server) SetupRoutes() {
 	}))
 
 	s.router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-
+	s.router.Use(s.RateLimitMiddleware(s.rateLimiterConfig))
 	s.registerRoutes(s.router.Group("/api/v1"))
 	s.registerRoutes(s.router.Group("/v1"))
 }

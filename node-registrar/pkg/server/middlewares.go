@@ -13,6 +13,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
 	"github.com/threefoldtech/tfgrid4-sdk-go/node-registrar/pkg/db"
+	"github.com/ulule/limiter/v3"
+	ginlimiter "github.com/ulule/limiter/v3/drivers/middleware/gin"
+	"github.com/ulule/limiter/v3/drivers/store/memory"
 )
 
 // twinKeyID is where the twin key is stored
@@ -22,6 +25,31 @@ const (
 	AuthHeader        = "X-Auth"
 	ChallengeValidity = 1 * time.Minute
 )
+
+type RateLimiterConfig struct {
+	Enabled  bool
+	Requests uint64
+	Period   time.Duration
+}
+
+// RateLimitMiddleware creates a rate limiting middleware with configuration
+func (s *Server) RateLimitMiddleware(config RateLimiterConfig) gin.HandlerFunc {
+	if !config.Enabled {
+		return gin.HandlerFunc(func(c *gin.Context) {
+			c.Next()
+		})
+	}
+
+	store := memory.NewStore()
+
+	rate := limiter.Rate{
+		Period: config.Period,
+		Limit:  (int64)(config.Requests),
+	}
+
+	instance := limiter.New(store, rate)
+	return ginlimiter.NewMiddleware(instance)
+}
 
 // AuthMiddleware is a middleware function that authenticates incoming requests based on the X-Auth header.
 // It verifies the challenge and signature provided in the header against the account's public key stored in the database.

@@ -17,12 +17,12 @@ import (
 
 type Server struct {
 	router      *gin.Engine
-	db          db.Database
+	db          db.DB
 	network     string
 	adminTwinID uint64
 }
 
-func NewServer(db db.Database, network string, adminTwinID uint64) Server {
+func NewServer(db db.DB, network string, adminTwinID uint64) Server {
 	router := gin.Default()
 	router.RedirectTrailingSlash = true
 

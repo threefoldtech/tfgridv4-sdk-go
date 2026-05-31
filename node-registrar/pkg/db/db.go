@@ -5,11 +5,18 @@ import (
 	"net"
 	"slices"
 	"strings"
+	"time"
 
+	"github.com/lib/pq"
 	"github.com/pkg/errors"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
+)
+
+var (
+	ErrRecordNotFound      = errors.New("could not find any records")
+	ErrRecordAlreadyExists = errors.New("record already exists")
 )
 
 type Config struct {
@@ -24,26 +31,49 @@ type Config struct {
 	MaxIdleConns     uint64
 }
 
+type DB interface {
+	Transaction(fn func(tx *gorm.DB) error) error
+	Close() error
+
+	MigrateNodeLastSeen() error
+
+	CreateAccount(account *Account) error
+	UpdateAccount(twinID uint64, relays pq.StringArray, rmbEncKey string) error
+	GetAccount(twinID uint64) (Account, error)
+	GetAccountByPublicKey(publicKey string) (Account, error)
+
+	CreateFarm(farm Farm) (uint64, error)
+	UpdateFarm(farmID uint64, name string, stellarAddr string) error
+	ListFarms(filter FarmFilter, limit Limit) ([]Farm, error)
+	GetFarm(farmID uint64) (Farm, error)
+
+	RegisterNode(node Node) (uint64, error)
+	UpdateNode(nodeID uint64, node Node) error
+	ListNodes(filter NodeFilter, limit Limit) ([]Node, error)
+	GetNode(nodeID uint64) (Node, error)
+
+	GetUptimeReports(nodeID uint64, start, end time.Time) ([]UptimeReport, error)
+	CreateUptimeReport(report *UptimeReport) error
+
+	SetZOSVersion(version string) error
+	GetZOSVersion() (string, error)
+}
+
 // PostgresDatabase postgres db client
 type Database struct {
 	gormDB     *gorm.DB
 	connString string
 }
 
-var (
-	ErrRecordNotFound      = errors.New("could not find any records")
-	ErrRecordAlreadyExists = errors.New("record already exists")
-)
-
-func NewDB(c Config) (Database, error) {
+func NewDB(c Config) (*Database, error) {
 	db, err := openDatabase(c)
 	if err != nil {
-		return Database{}, err
+		return &Database{}, err
 	}
 
 	sql, err := db.gormDB.DB()
 	if err != nil {
-		return Database{}, errors.Wrap(err, "failed to configure DB connection")
+		return &Database{}, errors.Wrap(err, "failed to configure DB connection")
 	}
 
 	sql.SetMaxIdleConns(int(c.MaxIdleConns))
@@ -51,10 +81,10 @@ func NewDB(c Config) (Database, error) {
 
 	err = db.autoMigrate()
 	if err != nil {
-		return Database{}, err
+		return &Database{}, err
 	}
 
-	return db, sql.Ping()
+	return &db, sql.Ping()
 }
 
 func openDatabase(c Config) (db Database, err error) {

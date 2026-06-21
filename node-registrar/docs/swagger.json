@@ -687,6 +687,52 @@
                 }
             }
         },
+        "/nodes/{node_id}/rewards": {
+            "get": {
+                "description": "Retrieves reward calculation for a specific node based on resources and uptime",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "nodes"
+                ],
+                "summary": "Get node monthly reward information",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Node ID",
+                        "name": "node_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Rewards details with the node uptime percentage",
+                        "schema": {
+                            "$ref": "#/definitions/server.Reward"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid node ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Node not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/nodes/{node_id}/uptime": {
             "post": {
                 "description": "Submit uptime report for a node",
@@ -1104,7 +1150,27 @@
                 }
             }
         },
-        "server.UpdateAccountRequest": {
+        "server.Reward": {
+            "type": "object",
+            "properties": {
+                "farmerReward": {
+                    "type": "number"
+                },
+                "fpreward": {
+                    "type": "number"
+                },
+                "tfreward": {
+                    "type": "number"
+                },
+                "total": {
+                    "type": "number"
+                },
+                "upTimePercentage": {
+                    "type": "number"
+                }
+            }
+        },
+        "pkg_server.UpdateAccountRequest": {
             "type": "object",
             "properties": {
                 "relays": {

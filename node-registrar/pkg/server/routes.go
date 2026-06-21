@@ -43,6 +43,7 @@ func (s *Server) registerRoutes(r *gin.RouterGroup) {
 	publicNodeRoutes := r.Group("nodes")
 	publicNodeRoutes.GET("", s.listNodesHandler)
 	publicNodeRoutes.GET("/:node_id", s.getNodeHandler)
+	publicNodeRoutes.GET("/:node_id/rewards", s.getNodeRewardHandler)
 	// protected by node key
 	protectedNodeRoutes := r.Group("nodes", s.AuthMiddleware())
 	protectedNodeRoutes.POST("", s.registerNodeHandler)

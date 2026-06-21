@@ -98,7 +98,7 @@ func (s Server) getFarmHandler(c *gin.Context) {
 // @Produce json
 // @Param X-Auth header string true "Authentication format: Base64(<unix_timestamp>:<twin_id>):Base64(signature)"
 // @Param farm body db.Farm true "Farm creation data"
-// @Success 201 {object} map[string]uint64 "'farm_id': farmID"]
+// @Success 201 {object} map[string]uint64 "'farm_id': farmID"
 // @Failure 400 {object} map[string]any "Invalid request"
 // @Failure 401 {object} map[string]any "Unauthorized"
 // @Failure 409 {object} map[string]any "Farm already exists"
@@ -281,6 +281,56 @@ func (s Server) getNodeHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, node)
 }
 
+// @Summary Get node monthly reward information
+// @Description Retrieves reward calculation for a specific node based on resources and uptime
+// @Tags nodes
+// @Accept json
+// @Produce json
+// @Param node_id path int true "Node ID"
+// @Success 200 {object} Reward "Rewards details with the node uptime percentage"
+// @Failure 400 {object} map[string]any "Invalid node ID"
+// @Failure 404 {object} map[string]any "Node not found"
+// @Failure 422 {object} map[string]any "No uptime reports available for this node"
+// @Router /nodes/{node_id}/rewards [get]
+func (s Server) getNodeRewardHandler(c *gin.Context) {
+	nodeID := c.Param("node_id")
+
+	id, err := strconv.ParseUint(nodeID, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid node id"})
+		return
+	}
+
+	node, err := s.db.GetNode(id)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	now := time.Now()
+	periodStart := calculatePeriodStart(now)
+
+	reports, err := s.db.GetUptimeReports(id, periodStart, now)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	rewards, err := CalculateCapacityReward(node.Resources, reports, periodStart, now)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, rewards)
+}
+
 type NodeRegistrationRequest struct {
 	TwinID       uint64         `json:"twin_id" binding:"required,min=1"`
 	FarmID       uint64         `json:"farm_id" binding:"required,min=1"`
@@ -422,7 +472,7 @@ func (s *Server) updateNodeHandler(c *gin.Context) {
 }
 
 type UptimeReportRequest struct {
-	Uptime    uint64 `json:"uptime" binding:"required"`
+	Uptime    uint64 `json:"uptime" binding:"required"` // in seconds
 	Timestamp int64  `json:"timestamp" binding:"required"`
 }
 

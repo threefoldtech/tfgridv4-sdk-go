@@ -170,6 +170,19 @@ definitions:
     - serial_number
     - twin_id
     type: object
+  server.Reward:
+    properties:
+      farmerReward:
+        type: number
+      fpreward:
+        type: number
+      tfreward:
+        type: number
+      total:
+        type: number
+      upTimePercentage:
+        type: number
+    type: object
   server.UpdateAccountRequest:
     properties:
       relays:
@@ -695,6 +708,38 @@ paths:
             additionalProperties: true
             type: object
       summary: Update node
+      tags:
+      - nodes
+  /nodes/{node_id}/rewards:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves reward calculation for a specific node based on resources
+        and uptime
+      parameters:
+      - description: Node ID
+        in: path
+        name: node_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Rewards details with the node uptime percentage
+          schema:
+            $ref: '#/definitions/server.Reward'
+        "400":
+          description: Invalid node ID
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Node not found
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get node monthly reward information
       tags:
       - nodes
   /nodes/{node_id}/uptime:

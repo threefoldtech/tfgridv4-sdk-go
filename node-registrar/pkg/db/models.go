@@ -26,9 +26,9 @@ type Account struct {
 
 type Farm struct {
 	FarmID         uint64    `gorm:"primaryKey;autoIncrement" json:"farm_id"`
-	FarmName       string    `gorm:"size:40;not null;unique;check:farm_name <> ''" json:"farm_name" binding:"alphanum,required"`
-	TwinID         uint64    `json:"twin_id" binding:"required" gorm:"not null;check:twin_id > 0"` // Farmer account reference
-	StellarAddress string    `json:"stellar_address" binding:"required,startswith=G,len=56,alphanum,uppercase"`
+	FarmName       string    `gorm:"size:40;not null;unique;check:farm_name <> ''" json:"farm_name" validate:"alphanum,required"`
+	TwinID         uint64    `json:"twin_id" validate:"required" gorm:"not null;check:twin_id > 0"` // Farmer account reference
+	StellarAddress string    `json:"stellar_address" validate:"required,startswith=G,len=56,alphanum,uppercase"`
 	Dedicated      bool      `json:"dedicated"`
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`

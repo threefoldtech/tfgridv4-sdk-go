@@ -1,6 +1,6 @@
 module github.com/threefoldtech/tfgrid-sdk-go/rmb-sdk-go
 
-go 1.23.0
+go 1.24.0
 
 toolchain go1.24.2
 
@@ -18,7 +18,7 @@ require (
 	github.com/rs/zerolog v1.34.0
 	github.com/stretchr/testify v1.10.0
 	github.com/threefoldtech/tfchain/clients/tfchain-client-go v0.0.0-20241007205731-5e76664a3cc4
-	gonum.org/v1/gonum v0.16.0
+	gonum.org/v1/gonum v0.17.0
 	google.golang.org/protobuf v1.36.6
 )
 

@@ -18,6 +18,17 @@ const (
 	MaxTimestampDelta                    = 2 * time.Second
 	UptimeReportTimestampHintDrift int64 = 60
 	OnlineCutoffTime                     = 40 * time.Minute
+
+	// Database field size limits
+	MaxFarmNameLength       = 40
+	MaxStellarAddressLength = 56
+	MaxKeySize              = 50
+
+	// Default pagination
+	DefaultPageSize = 10
+
+	// Time constants
+	DefaultOnlineCutoffMinutes = 40
 )
 
 // @title Node Registrar API
@@ -44,17 +55,18 @@ func (s Server) listFarmsHandler(c *gin.Context) {
 
 	err := parseQueryParams(c, &limit, &filter)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		Response(c, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
 	farms, err := s.db.ListFarms(filter, limit)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		Response(c, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusOK, farms)
+	Response(c, http.StatusOK, "Farms are listed successfully", farms)
+
 }
 
 // @Summary Get farm details
@@ -72,23 +84,22 @@ func (s Server) getFarmHandler(c *gin.Context) {
 
 	id, err := strconv.ParseUint(farmID, 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid farm_id: %v", err.Error())})
+		Response(c, http.StatusBadRequest, fmt.Sprintf("Invalid farm_id: %v", err.Error()), nil)
 		return
 	}
 
 	farm, err := s.db.GetFarm(id)
 	if err != nil {
-		status := http.StatusInternalServerError
-
 		if errors.Is(err, db.ErrRecordNotFound) {
-			status = http.StatusNotFound
+			Response(c, http.StatusNotFound, err.Error(), nil)
+			return
 		}
 
-		c.JSON(status, gin.H{"error": err.Error()})
+		Response(c, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusOK, farm)
+	Response(c, http.StatusOK, "Farm retrieved successfully", farm)
 }
 
 // @Summary Create new farm
@@ -107,7 +118,7 @@ func (s Server) createFarmHandler(c *gin.Context) {
 	var farm db.Farm
 
 	if err := c.ShouldBindJSON(&farm); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("failed to parse farm info: %v", err.Error())})
+		Response(c, http.StatusBadRequest, fmt.Sprintf("failed to parse farm info: %v", err.Error()), nil)
 		return
 	}
 
@@ -118,17 +129,16 @@ func (s Server) createFarmHandler(c *gin.Context) {
 
 	farmID, err := s.db.CreateFarm(farm)
 	if err != nil {
-		status := http.StatusInternalServerError
-
 		if errors.Is(err, db.ErrRecordAlreadyExists) {
-			status = http.StatusConflict
+			Response(c, http.StatusConflict, err.Error(), nil)
+			return
 		}
 
-		c.JSON(status, gin.H{"error": err.Error()})
+		Response(c, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"farm_id": farmID})
+	Response(c, http.StatusCreated, "Farm created successfully", gin.H{"farm_id": farmID})
 }
 
 type UpdateFarmRequest struct {
@@ -155,22 +165,22 @@ func (s Server) updateFarmHandler(c *gin.Context) {
 
 	id, err := strconv.ParseUint(farmID, 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid farm_id: %v", err.Error())})
+		Response(c, http.StatusBadRequest, fmt.Sprintf("Invalid farm_id: %v", err.Error()), nil)
 		return
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("failed to parse farm info: %v", err.Error())})
+		Response(c, http.StatusBadRequest, fmt.Sprintf("failed to parse farm info: %v", err.Error()), nil)
 		return
 	}
 
 	existingFarm, err := s.db.GetFarm(id)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Farm not found"})
+			Response(c, http.StatusNotFound, "Farm not found", nil)
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
+		Response(c, http.StatusInternalServerError, "Database error", nil)
 		return
 	}
 
@@ -187,20 +197,17 @@ func (s Server) updateFarmHandler(c *gin.Context) {
 		(len(req.StellarAddress) != 0 && existingFarm.StellarAddress != req.StellarAddress) {
 		err = s.db.UpdateFarm(id, req.FarmName, req.StellarAddress)
 		if err != nil {
-			status := http.StatusInternalServerError
-
 			if errors.Is(err, db.ErrRecordNotFound) {
-				status = http.StatusNotFound
+				Response(c, http.StatusNotFound, err.Error(), nil)
+				return
 			}
 
-			c.JSON(status, gin.H{"error": err.Error()})
+			Response(c, http.StatusInternalServerError, err.Error(), nil)
 			return
 		}
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Farm was updated successfully",
-	})
+	Response(c, http.StatusOK, "Farm was updated successfully", nil)
 }
 
 // @Summary List nodes
@@ -226,13 +233,13 @@ func (s Server) listNodesHandler(c *gin.Context) {
 
 	err := parseQueryParams(c, &limit, &filter)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		Response(c, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
 	nodes, err := s.db.ListNodes(filter, limit)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		Response(c, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
@@ -242,7 +249,7 @@ func (s Server) listNodesHandler(c *gin.Context) {
 		nodes[i].Online = !nodes[i].LastSeen.IsZero() && nodes[i].LastSeen.After(cutoffTime)
 	}
 
-	c.JSON(http.StatusOK, nodes)
+	Response(c, http.StatusOK, "Nodes are listed successfully", nodes)
 }
 
 // @Summary Get node details
@@ -260,25 +267,25 @@ func (s Server) getNodeHandler(c *gin.Context) {
 
 	id, err := strconv.ParseUint(nodeID, 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid node id"})
+		Response(c, http.StatusBadRequest, "Invalid node id", nil)
 		return
 	}
 
 	node, err := s.db.GetNode(id)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			Response(c, http.StatusNotFound, err.Error(), nil)
 			return
 		}
 
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		Response(c, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 	// Determine if the node is online (has sent an uptime report in the last 30 minutes)
 	cutoffTime := time.Now().Add(-OnlineCutoffTime)
 	node.Online = !node.LastSeen.IsZero() && node.LastSeen.After(cutoffTime)
 
-	c.JSON(http.StatusOK, node)
+	Response(c, http.StatusOK, "Node retrieved successfully", node)
 }
 
 type NodeRegistrationRequest struct {
@@ -308,7 +315,7 @@ func (s Server) registerNodeHandler(c *gin.Context) {
 	var req NodeRegistrationRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		Response(c, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
@@ -331,17 +338,16 @@ func (s Server) registerNodeHandler(c *gin.Context) {
 
 	nodeID, err := s.db.RegisterNode(node)
 	if err != nil {
-		status := http.StatusInternalServerError
-
 		if errors.Is(err, db.ErrRecordAlreadyExists) {
-			status = http.StatusConflict
+			Response(c, http.StatusConflict, err.Error(), nil)
+			return
 		}
 
-		c.JSON(status, gin.H{"error": err.Error()})
+		Response(c, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"node_id": nodeID})
+	Response(c, http.StatusCreated, "Node registered successfully", gin.H{"node_id": nodeID})
 }
 
 type UpdateNodeRequest struct {
@@ -370,17 +376,17 @@ type UpdateNodeRequest struct {
 func (s *Server) updateNodeHandler(c *gin.Context) {
 	nodeID, err := strconv.ParseUint(c.Param("node_id"), 10, 64)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid node ID"})
+		AbortResponse(c, http.StatusBadRequest, "invalid node ID", nil)
 		return
 	}
 
 	existingNode, err := s.db.GetNode(nodeID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "node not found"})
+			AbortResponse(c, http.StatusNotFound, "node not found", nil)
 			return
 		}
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "database error"})
+		AbortResponse(c, http.StatusInternalServerError, "database error", nil)
 		return
 	}
 
@@ -391,7 +397,7 @@ func (s *Server) updateNodeHandler(c *gin.Context) {
 
 	var req UpdateNodeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		AbortResponse(c, http.StatusBadRequest, "invalid request body", nil)
 		return
 	}
 
@@ -411,14 +417,14 @@ func (s *Server) updateNodeHandler(c *gin.Context) {
 
 	if err := s.db.UpdateNode(nodeID, updatedNode); err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "node not found"})
+			AbortResponse(c, http.StatusNotFound, "node not found", nil)
 			return
 		}
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "failed to update node"})
+		AbortResponse(c, http.StatusInternalServerError, "failed to update node", nil)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "node updated successfully"})
+	Response(c, http.StatusOK, "node updated successfully", nil)
 }
 
 type UptimeReportRequest struct {
@@ -444,20 +450,20 @@ func (s *Server) uptimeReportHandler(c *gin.Context) {
 
 	id, err := strconv.ParseUint(nodeID, 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid node id"})
+		Response(c, http.StatusBadRequest, "Invalid node id", nil)
 		return
 	}
 
 	var req UptimeReportRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		Response(c, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
 	// Get node
 	node, err := s.db.GetNode(id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "node not found"})
+		Response(c, http.StatusNotFound, "node not found", nil)
 		return
 	}
 
@@ -474,7 +480,7 @@ func (s *Server) uptimeReportHandler(c *gin.Context) {
 	err = validateTimestampHint(req.Timestamp)
 	if err != nil {
 		// include the error message
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		Response(c, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
@@ -489,11 +495,11 @@ func (s *Server) uptimeReportHandler(c *gin.Context) {
 	// It's up to the clients to determine if the node is online based on the reporting interval and allowable window.
 	err = s.db.CreateUptimeReport(report)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to process uptime report"})
+		Response(c, http.StatusInternalServerError, "failed to process uptime report", nil)
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"message": "uptime reported successfully"})
+	Response(c, http.StatusCreated, "uptime reported successfully", nil)
 }
 
 func parseQueryParams(c *gin.Context, types_ ...interface{}) error {
@@ -529,13 +535,13 @@ type AccountCreationRequest struct {
 func (s *Server) createAccountHandler(c *gin.Context) {
 	var req AccountCreationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		Response(c, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
 	// Validate public key format
 	if !isValidPublicKey(req.PublicKey) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid public key format"})
+		Response(c, http.StatusBadRequest, "invalid public key format", nil)
 		return
 	}
 
@@ -545,8 +551,7 @@ func (s *Server) createAccountHandler(c *gin.Context) {
 	delta := now.Sub(requestTime)
 
 	if delta < -MaxTimestampDelta || delta > MaxTimestampDelta {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":       "timestamp outside acceptable window",
+		Response(c, http.StatusBadRequest, "timestamp outside acceptable window", gin.H{
 			"server_time": now.Unix(),
 		})
 		return
@@ -560,19 +565,19 @@ func (s *Server) createAccountHandler(c *gin.Context) {
 	// Decode public key from base64
 	publicKeyBytes, err := base64.StdEncoding.DecodeString(req.PublicKey)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid public key format"})
+		Response(c, http.StatusBadRequest, "invalid public key format", nil)
 		return
 	}
 	// Decode signature from base64
 	signatureBytes, err := base64.StdEncoding.DecodeString(req.Signature)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("invalid signature format: %v", err)})
+		Response(c, http.StatusBadRequest, fmt.Sprintf("invalid signature format: %v", err), nil)
 		return
 	}
 	// Verify signature of the challenge
 	err = verifySignature(publicKeyBytes, challenge, signatureBytes)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": fmt.Sprintf("signature verification error: %v", err)})
+		Response(c, http.StatusUnauthorized, fmt.Sprintf("signature verification error: %v", err), nil)
 		return
 	}
 
@@ -585,14 +590,14 @@ func (s *Server) createAccountHandler(c *gin.Context) {
 
 	if err := s.db.CreateAccount(account); err != nil {
 		if errors.Is(err, db.ErrRecordAlreadyExists) {
-			c.JSON(http.StatusConflict, gin.H{"error": "account with this public key already exists"})
+			Response(c, http.StatusConflict, "account with this public key already exists", nil)
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create account"})
+		Response(c, http.StatusInternalServerError, "failed to create account", nil)
 		return
 	}
 
-	c.JSON(http.StatusCreated, account)
+	Response(c, http.StatusCreated, "Account created successfully", account)
 }
 
 type UpdateAccountRequest struct {
@@ -617,7 +622,7 @@ type UpdateAccountRequest struct {
 func (s *Server) updateAccountHandler(c *gin.Context) {
 	twinID, err := strconv.ParseUint(c.Param("twin_id"), 10, 64)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid twin ID"})
+		AbortResponse(c, http.StatusBadRequest, "invalid twin ID", nil)
 		return
 	}
 
@@ -628,21 +633,21 @@ func (s *Server) updateAccountHandler(c *gin.Context) {
 
 	var req UpdateAccountRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		AbortResponse(c, http.StatusBadRequest, "invalid request body", nil)
 		return
 	}
 
 	err = s.db.UpdateAccount(twinID, req.Relays, req.RMBEncKey)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "account not found"})
+			AbortResponse(c, http.StatusNotFound, "account not found", nil)
 			return
 		}
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "failed to update account"})
+		AbortResponse(c, http.StatusInternalServerError, "failed to update account", nil)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "account updated successfully"})
+	Response(c, http.StatusOK, "account updated successfully", nil)
 }
 
 // getAccountHandler retrieves an account by twin ID or public key
@@ -663,37 +668,33 @@ func (s *Server) getAccountHandler(c *gin.Context) {
 
 	// Validate only one parameter is provided
 	if twinIDParam != "" && publicKeyParam != "" {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
-			"error": "provide either twin_id or public_key, not both",
-		})
+		AbortResponse(c, http.StatusBadRequest, "provide either twin_id or public_key, not both", nil)
 		return
 	}
 
 	if twinIDParam == "" && publicKeyParam == "" {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
-			"error": "must provide either twin_id or public_key parameter",
-		})
+		AbortResponse(c, http.StatusBadRequest, "must provide either twin_id or public_key parameter", nil)
 		return
 	}
 
 	if twinIDParam != "" {
 		twinID, err := strconv.ParseUint(twinIDParam, 10, 64)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid twin ID"})
+			Response(c, http.StatusBadRequest, "invalid twin ID", nil)
 			return
 		}
 
 		account, err := s.db.GetAccount(twinID)
 		if err != nil {
 			if errors.Is(err, db.ErrRecordNotFound) {
-				c.JSON(http.StatusNotFound, gin.H{"error": "account not found"})
+				Response(c, http.StatusNotFound, "account not found", nil)
 				return
 			}
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get account"})
+			Response(c, http.StatusInternalServerError, "failed to get account", nil)
 			return
 		}
 
-		c.JSON(http.StatusOK, account)
+		Response(c, http.StatusOK, "Account retrieved successfully", account)
 		return
 	}
 
@@ -701,13 +702,13 @@ func (s *Server) getAccountHandler(c *gin.Context) {
 		account, err := s.db.GetAccountByPublicKey(publicKeyParam)
 		if err != nil {
 			if errors.Is(err, db.ErrRecordNotFound) {
-				c.JSON(http.StatusNotFound, gin.H{"error": "account not found"})
+				Response(c, http.StatusNotFound, "account not found", nil)
 				return
 			}
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get account"})
+			Response(c, http.StatusInternalServerError, "failed to get account", nil)
 			return
 		}
-		c.JSON(http.StatusOK, account)
+		Response(c, http.StatusOK, "Account retrieved successfully", account)
 		return
 	}
 }
@@ -737,20 +738,20 @@ func (s *Server) setZOSVersionHandler(c *gin.Context) {
 
 	var req ZOSVersionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		AbortResponse(c, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
 	if err := s.db.SetZOSVersion(req.Version); err != nil {
-		status := http.StatusInternalServerError
-		if err.Error() == "version already set" {
-			status = http.StatusConflict
+		if errors.Is(err, db.ErrVersionAlreadySet) {
+			AbortResponse(c, http.StatusConflict, err.Error(), nil)
+			return
 		}
-		c.AbortWithStatusJSON(status, gin.H{"error": err.Error()})
+		AbortResponse(c, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
-	c.Status(http.StatusOK)
+	Response(c, http.StatusOK, "ZOS version set successfully", nil)
 }
 
 // @Summary Get ZOS Version
@@ -765,14 +766,14 @@ func (s *Server) getZOSVersionHandler(c *gin.Context) {
 	version, err := s.db.GetZOSVersion()
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "zos version not set"})
+			AbortResponse(c, http.StatusNotFound, "zos version not set", nil)
 			return
 		}
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "database error"})
+		AbortResponse(c, http.StatusInternalServerError, "database error", nil)
 		return
 	}
 
-	c.JSON(http.StatusOK, version)
+	Response(c, http.StatusOK, "ZOS version retrieved successfully", version)
 }
 
 // Helper function to validate public key length
@@ -789,20 +790,20 @@ func ensureOwner(c *gin.Context, twinID uint64) {
 	// Retrieve twinID set by the authMiddleware
 	authTwinID := c.Request.Context().Value(twinIDKey{})
 	if authTwinID == nil {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "not authorized"})
+		AbortResponse(c, http.StatusUnauthorized, "not authorized", nil)
 		return
 	}
 
 	// Safe type assertion
 	authID, ok := authTwinID.(uint64)
 	if !ok {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid authentication type"})
+		AbortResponse(c, http.StatusUnauthorized, "invalid authentication type", nil)
 		return
 	}
 
 	// Ensure that the retrieved twinID equals to the passed twinID
 	if authID != twinID || twinID == 0 {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "not authorized"})
+		AbortResponse(c, http.StatusUnauthorized, "not authorized", nil)
 		return
 	}
 }

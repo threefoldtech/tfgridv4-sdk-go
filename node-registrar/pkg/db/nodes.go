@@ -9,6 +9,10 @@ import (
 
 const ZOS4VersionKey = "zos_4"
 
+var (
+	ErrVersionAlreadySet = errors.New("version already set")
+)
+
 // ListNodes retrieves all nodes from the database with applied filters and pagination
 func (db *Database) ListNodes(filter NodeFilter, limit Limit) (nodes []Node, err error) {
 	query := db.gormDB.Model(&Node{})

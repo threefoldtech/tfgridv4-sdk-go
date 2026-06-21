@@ -491,7 +491,7 @@ func parseListNodeOpts(filter NodeFilter) map[string]any {
 	}
 	data["page"] = page
 
-	size := uint32(50)
+	size := uint32(DefaultPageSize)
 	if filter.Size != nil {
 		size = *filter.Size
 	}

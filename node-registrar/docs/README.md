@@ -1,5 +1,7 @@
 # Node Registrar client
 
+> **Note:** The constant `PubKeySize = 32` is used for ED25519/SR25519 public key/seed size in all code examples below.
+
 To be able to use the node registrar you can use the following scripts.
 
 ## Account Management
@@ -8,7 +10,7 @@ To be able to use the node registrar you can use the following scripts.
 
 ```go
 // Generate new seed
-seed := make([]byte, 32)
+seed := make([]byte, PubKeySize)
 _, err := rand.Read(seed)
 if err != nil {
     panic(err)

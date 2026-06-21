@@ -16,6 +16,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+const PubKeySize = 32 // ED25519/SR25519 public key/seed size
+
 var urls = map[string]string{
 	"dev":  "https://registrar.dev4.grid.tf/v1",
 	"qa":   "https://registrar.qa4.grid.tf/v1",
@@ -41,7 +43,7 @@ func main() {
 	var err error
 
 	if len(seed) == 0 {
-		s := make([]byte, 32)
+		s := make([]byte, PubKeySize)
 		_, err := rand.Read(s)
 		if err != nil {
 			log.Fatal().Err(err).Send()

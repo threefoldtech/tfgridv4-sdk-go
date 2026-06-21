@@ -129,7 +129,6 @@ type NodeUpdate struct {
 	Virtualized  *bool
 	SerialNumber *string
 	Status       *string
-	Healthy      *bool
 	Approved     *bool
 }
 
@@ -326,7 +325,6 @@ type NodeFilter struct {
 	FarmID   *uint64
 	TwinID   *uint64
 	Status   *string
-	Healthy  *bool
 	Online   *bool
 	LastSeen *int64
 	Page     *uint32
@@ -447,14 +445,8 @@ func (c *RegistrarClient) parseUpdateNodeOpts(node Node, update NodeUpdate) Node
 	if update.Virtualized != nil {
 		node.Virtualized = *update.Virtualized
 	}
-	if update.Status != nil {
-		node.Virtualized = *update.Virtualized
-	}
-	if update.Healthy != nil {
-		node.Virtualized = *update.Virtualized
-	}
 	if update.Approved != nil {
-		node.Virtualized = *update.Virtualized
+		node.Approved = *update.Approved
 	}
 
 	return node
@@ -474,9 +466,6 @@ func parseListNodeOpts(filter NodeFilter) map[string]any {
 	}
 	if filter.Status != nil && *filter.Status != "" {
 		data["status"] = *filter.Status
-	}
-	if filter.Healthy != nil {
-		data["healthy"] = *filter.Healthy
 	}
 	if filter.Online != nil {
 		data["online"] = *filter.Online

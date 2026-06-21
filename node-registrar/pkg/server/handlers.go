@@ -5,11 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
+	"github.com/go-playground/validator/v10"
 	"github.com/lib/pq"
 	"github.com/threefoldtech/tfgrid4-sdk-go/node-registrar/pkg/db"
 )
@@ -713,7 +716,8 @@ func (s *Server) getAccountHandler(c *gin.Context) {
 }
 
 type ZOSVersionRequest struct {
-	Version string `json:"version" binding:"required,base64"`
+	Version       string `json:"version" binding:"required,versionfmt"`
+	SafeToUpgrade bool   `json:"safe_to_upgrade" binding:"required"`
 }
 
 // @Summary Set ZOS Version
@@ -735,13 +739,18 @@ func (s *Server) setZOSVersionHandler(c *gin.Context) {
 		return
 	}
 
+	if err := addVersionValidator(); err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
 	var req ZOSVersionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	if err := s.db.SetZOSVersion(req.Version); err != nil {
+	if err := s.db.SetZOSVersion(db.ZosVersion{Version: req.Version, SafeToUpgrade: req.SafeToUpgrade}); err != nil {
 		status := http.StatusInternalServerError
 		if err.Error() == "version already set" {
 			status = http.StatusConflict
@@ -823,5 +832,20 @@ func validateTimestampHint(timestampHint int64) error {
 		return fmt.Errorf("invalid timestamp hint: must be within ±%d seconds of the current time (%s)", UptimeReportTimestampHintDrift, now)
 	}
 
+	return nil
+}
+
+// addVersionValidato registers a custom validator for version
+func addVersionValidator() error {
+	versionRegex := regexp.MustCompile(`^v\d+\.\d+\.\d+$`)
+
+	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
+		if err := v.RegisterValidation("versionfmt", func(fl validator.FieldLevel) bool {
+			version := fl.Field().String()
+			return versionRegex.MatchString(version)
+		}); err != nil {
+			return err
+		}
+	}
 	return nil
 }

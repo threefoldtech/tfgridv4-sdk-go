@@ -28,7 +28,7 @@ func TestNewRegistrarClient(t *testing.T) {
 	}))
 	defer testServer.Close()
 
-	baseURL, err := url.JoinPath(testServer.URL, "v1")
+	baseURL, err := url.JoinPath(testServer.URL, "api", "v1")
 	require.NoError(err)
 
 	t.Run("test new registrar client with no account", func(t *testing.T) {

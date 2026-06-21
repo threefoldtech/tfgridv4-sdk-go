@@ -45,6 +45,17 @@ func (c *RegistrarClient) ListNodes(opts NodeFilter) (nodes []Node, err error) {
 	return c.listNodesWithFilter(opts)
 }
 
+// ListUnapprovedNodes gets a list of unapproved nodes for a specific farm
+func (c *RegistrarClient) ListUnapprovedNodes(farmID uint64) ([]Node, error) {
+	falseVal := false
+	filter := NodeFilter{
+		FarmID:   &farmID,
+		Approved: &falseVal,
+	}
+
+	return c.ListNodes(filter)
+}
+
 func (c *RegistrarClient) registerNode(node Node) (nodeID uint64, err error) {
 	err = c.ensureTwinID()
 	if err != nil {
@@ -149,7 +160,7 @@ func (c *RegistrarClient) updateNode(opts NodeUpdate) (err error) {
 		return errors.Wrap(err, "failed to construct registrar url")
 	}
 
-	node = c.parseUpdateNodeOpts(node, opts)
+	node = parseUpdateNodeOpts(node, opts)
 
 	handler := func(body bytes.Buffer) error {
 		req, err := http.NewRequest("PATCH", url, &body)
@@ -331,6 +342,7 @@ type NodeFilter struct {
 	LastSeen *int64
 	Page     *uint32
 	Size     *uint32
+	Approved *bool
 }
 
 func (c *RegistrarClient) listNodesWithFilter(filter NodeFilter) (nodes []Node, err error) {
@@ -425,7 +437,7 @@ func (c *RegistrarClient) ensureNodeID() error {
 	return nil
 }
 
-func (c *RegistrarClient) parseUpdateNodeOpts(node Node, update NodeUpdate) Node {
+func parseUpdateNodeOpts(node Node, update NodeUpdate) Node {
 	if update.FarmID != nil {
 		node.FarmID = *update.FarmID
 	}
@@ -483,6 +495,9 @@ func parseListNodeOpts(filter NodeFilter) map[string]any {
 	}
 	if filter.LastSeen != nil {
 		data["last_seen"] = *filter.LastSeen
+	}
+	if filter.Approved != nil {
+		data["approved"] = *filter.Approved
 	}
 
 	page := uint32(1)

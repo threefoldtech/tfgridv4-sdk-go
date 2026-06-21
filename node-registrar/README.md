@@ -1,4 +1,3 @@
-
 # Node Registrar Service
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/threefoldtech/tfgrid-sdk-go/node-registrar)](https://goreportcard.com/report/github.com/threefoldtech/tfgrid-sdk-go/node-registrar)
@@ -40,6 +39,7 @@ It offers operations like registring, listing, and updating farms and nodes, as 
 | GET | `/farms/:farm_id` | Get a specific farm by ID |
 | POST | `/farms/` | Create a new farm |
 | PATCH | `/farms/` | Update an existing farm |
+| POST | `/farms/:farm_id/approve` | Approve multiple nodes for a specific farm |
 
 ### Nodes Endpoints
 
@@ -50,6 +50,27 @@ It offers operations like registring, listing, and updating farms and nodes, as 
 | POST | `/nodes/` | Register a new node |
 | POST | `/nodes/:node_id/uptime` | Report uptime for a specific node |
 | POST | `/nodes/:node_id/consumption` | Report consumption for a specific node |
+
+### Node Approval
+
+The `/farms/:farm_id/approve` allows farmers to approve multiple nodes at once. This endpoint:
+
+- Requires farm owner authentication
+- Accepts a list of node IDs in the request body
+- Only approves nodes that:
+  - Belong to the specified farm
+  - Are currently not approved
+
+Example request:
+
+```json
+POST /farms/123/approve
+{
+    "node_ids": [1, 2, 3]
+}
+```
+
+The operation is atomic - either all nodes are approved or none are. If any node cannot be approved (not found, already approved, or doesn't belong to the farm), the entire operation fails.
 
 ## Setup Instructions
 
@@ -94,7 +115,7 @@ Replace `<domain>` and `<port>` with the appropriate values.
 docker build -t registrar:latest -f node-registrar/Dockerfile .
 ```
 
-2. run the image
+1. run the image
 
    ```bash
    docker run -d \

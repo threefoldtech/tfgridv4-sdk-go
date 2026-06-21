@@ -28,7 +28,7 @@ func TestCreateFarm(t *testing.T) {
 	}))
 	defer testServer.Close()
 
-	baseURL, err := url.JoinPath(testServer.URL, "v1")
+	baseURL, err := url.JoinPath(testServer.URL, "api", "v1")
 	require.NoError(err)
 
 	request = newClientWithAccountNoNode
@@ -68,7 +68,7 @@ func TestUpdateFarm(t *testing.T) {
 	}))
 	defer testServer.Close()
 
-	baseURL, err := url.JoinPath(testServer.URL, "v1")
+	baseURL, err := url.JoinPath(testServer.URL, "api", "v1")
 	require.NoError(err)
 
 	t.Run("test update farm with status unauthorzed", func(t *testing.T) {
@@ -113,7 +113,7 @@ func TestGetFarm(t *testing.T) {
 	}))
 	defer testServer.Close()
 
-	baseURL, err := url.JoinPath(testServer.URL, "v1")
+	baseURL, err := url.JoinPath(testServer.URL, "api", "v1")
 	require.NoError(err)
 
 	count = 0
@@ -132,5 +132,49 @@ func TestGetFarm(t *testing.T) {
 		result, err := c.GetFarm(farmID)
 		require.NoError(err)
 		require.Equal(result, farm)
+	})
+}
+
+func TestApproveNodes(t *testing.T) {
+	var request int
+	var count int
+	require := require.New(t)
+
+	keyPair, err := parseKeysFromMnemonicOrSeed(testMnemonic)
+	require.NoError(err)
+	account.PublicKey = base64.StdEncoding.EncodeToString(keyPair.Public())
+
+	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		statusCode, body := serverHandler(r, request, count, require)
+		w.WriteHeader(statusCode)
+		_, err := w.Write(body)
+		require.NoError(err)
+		count++
+	}))
+	defer testServer.Close()
+
+	baseURL, err := url.JoinPath(testServer.URL, "api", "v1")
+	require.NoError(err)
+
+	t.Run("test approve nodes with status unauthorized", func(t *testing.T) {
+		count = 0
+		request = newClientWithAccountNoNode
+		c, err := NewRegistrarClient(baseURL, testMnemonic)
+		require.NoError(err)
+
+		request = approveNodesWithStatusUnauthorized
+		err = c.ApproveNodes(farmID, []uint64{1, 2, 3})
+		require.Error(err)
+	})
+
+	t.Run("test approve nodes with status ok", func(t *testing.T) {
+		count = 0
+		request = newClientWithAccountNoNode
+		c, err := NewRegistrarClient(baseURL, testMnemonic)
+		require.NoError(err)
+
+		request = approveNodesWithStatusOK
+		err = c.ApproveNodes(farmID, []uint64{1, 2, 3})
+		require.NoError(err)
 	})
 }

@@ -20,13 +20,27 @@ type Server struct {
 	db          db.Database
 	network     string
 	adminTwinID uint64
+	auditConfig AuditConfig
 }
 
-func NewServer(db db.Database, network string, adminTwinID uint64) Server {
+// AuditConfig holds configuration for audit logging
+type AuditConfig struct {
+	EnableDetailedLogging bool
+}
+
+func NewServer(db db.Database, network string, adminTwinID uint64, enableLogging bool) Server {
 	router := gin.Default()
 	router.RedirectTrailingSlash = true
 
-	server := Server{router, db, network, adminTwinID}
+	server := Server{
+		router:      router,
+		db:          db,
+		network:     network,
+		adminTwinID: adminTwinID,
+		auditConfig: AuditConfig{
+			EnableDetailedLogging: enableLogging,
+		},
+	}
 	server.SetupRoutes()
 
 	return server

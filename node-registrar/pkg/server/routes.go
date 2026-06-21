@@ -20,6 +20,7 @@ func (s *Server) SetupRoutes() {
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}))
+	s.router.Use(s.AuditLogMiddleware())
 
 	s.router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
